@@ -9,7 +9,7 @@ RAGnificent natively combines the expressiveness of Python with the *raw perform
 
 > While the rust implementation is optional, it's worth noting that the `.xml` and `.json` formats do rely on the Rust target being built prior to scraping, while the `.md` format only requires python 3.12 and a few py dependencies.
 
-## � Key Features:
+## 🚀 Key Features:
 
 * **Semantic Chunking**: Intelligently preserves document structure throughout the chunking and scraping process, maintaining context for LLMs
 * **Multi-Format Output**: Export to clean Markdown, structured JSON, or XML formats
@@ -19,7 +19,7 @@ RAGnificent natively combines the expressiveness of Python with the *raw perform
 * **Rate Limiting & Caching**: Built-in request throttling and caching to be a good web citizen
 * **Parallel Processing**: Optional multi-threaded operation for processing multiple URLs simultaneously, making larger scraping tasks a breeze
 
-## � Ideal For:
+## 🔍 Ideal For:
 
 * Building custom LLM knowledge bases from documentation sites
 * Preparing web content for vector database ingestion
