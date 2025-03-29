@@ -1,3 +1,12 @@
+# Temporary files and directories
+.request_cache/
+tmp/
+markdown_scraper.log
+
+# Cached Files
+*cache*
+!cache.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -94,12 +103,6 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
-
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
@@ -151,14 +154,9 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# Type checking cache
 .pyre/
-
-# pytype static type analyzer
 .pytype/
-
-# Cython debug symbols
-cython_debug/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
@@ -167,8 +165,21 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Ruff stuff:
-.ruff_cache/
 
-# PyPI configuration file
-.pypirc
+# Added by cargo
+
+/target
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
+
+
+# Added by cargo
+#
+# already existing elements were commented out
+
+#/target
