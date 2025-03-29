@@ -1,7 +1,10 @@
 # 🦀 RAGnificent 🐍
 A developer first, speedy, hypermodern Rust/Python hybrid webscraper that intuitively converts `any` accessible webpages into structured markdown, JSON, and XML formats optimized for preparing LLM retrieval augmented generation (RAG).
 
-RAGnificent natively combines the expressiveness of Python with the performance of Rust to scrape web content and convert it into semantically meaningful document chunks. It's specifically engineered for building high-quality training sets and knowledge bases for RAG applications. The Rust / Python implementation is achieved natively thanks to the maturin and pyo3 crates.  <https://github.com/PyO3/maturin> and <https://github.com/PyO3/pyo3](https://github.com/PyO3/pyo3> 
+RAGnificent natively combines the expressiveness of Python with the performance of Rust to scrape web content and convert it into semantically meaningful document chunks. It's specifically engineered for building high-quality training sets and knowledge bases for RAG applications. The Rust / Python integration is achieved natively through the maturin and pyo3 crates thanks to the hardwork of the legendary engineers at Pythonium Trioxide. Links to those crates are directly below.
+
+[Maturin] (https://github.com/PyO3/maturin)
+[Pyo3] (https://github.com/PyO3/pyo3)
 
 While the rust implementation is optional, it's worth noting that the .xml and .json formats do rely on the Rust target being built prior to scraping, while the .md format only requires python 3.12 and a few py dependencies.
 
