@@ -34,7 +34,7 @@ Markdown Lab combines Python and Rust components to scrape websites and convert 
 ## Installation
 
 ```bash
-git clone https://github.com/ursisterbtw/markdown_lab.git
+git clone https://github.com/krljakob/RAGnificent.git
 cd markdown_lab
 pip install -r requirements.txt
 
@@ -372,7 +372,7 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 
 ## Author
 
-🐍🦀 ursister
+🐍🦀 krljakob
 
 ---
 
