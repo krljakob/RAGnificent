@@ -1,8 +1,8 @@
-# Refactoring Summary: Markdown Lab Project
+# Refactoring Summary: RAGnificent Project
 
 ## Overview
 
-This document summarizes the major structural reorganization of the Markdown Lab project, transforming it from a flat, loosely organized codebase to a proper Python package with a clear and maintainable structure. The refactoring focused on:
+This document summarizes the major structural reorganization of the RAGnificent project, transforming it from a flat, loosely organized codebase to a proper Python package with a clear and maintainable structure. The refactoring focused on:
 
 1. Creating a proper Python package structure
 2. Organizing code by functionality
@@ -14,7 +14,7 @@ This document summarizes the major structural reorganization of the Markdown Lab
 
 ### Before:
 ```
-markdown_lab/
+RAGnificent/
 ├── Cargo.lock
 ├── Cargo.toml
 ├── LICENSE
@@ -25,7 +25,7 @@ markdown_lab/
 ├── flowchart.svg
 ├── github-banner.svg
 ├── main.py
-├── markdown_lab_rs.py
+├── RAGnificent_rs.py
 ├── sitemap_utils.py
 ├── src/
 ├── test_chunk_utils.py
@@ -37,7 +37,7 @@ markdown_lab/
 
 ### After:
 ```
-markdown_lab/
+RAGnificent/
 ├── Cargo.lock
 ├── Cargo.toml
 ├── LICENSE
@@ -53,7 +53,7 @@ markdown_lab/
 │   ├── demo_formats.py
 │   ├── demo_output/
 │   └── hello.py
-├── markdown_lab/
+├── RAGnificent/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── core/
@@ -61,7 +61,7 @@ markdown_lab/
 │   │   ├── cache.py
 │   │   ├── scraper.py
 │   │   └── throttle.py
-│   ├── markdown_lab_rs.py
+│   ├── RAGnificent_rs.py
 │   └── utils/
 │       ├── __init__.py
 │       ├── chunk_utils.py
@@ -88,18 +88,18 @@ markdown_lab/
 ## Key Changes
 
 ### 1. Package Structure
-- Created a proper `markdown_lab` Python package with:
+- Created a proper `RAGnificent` Python package with:
   - Package-level `__init__.py` with version information
   - Module-level `__main__.py` for CLI usage
   - Subpackages for core functionality and utilities
 
 ### 2. Code Organization
-- **Core Functionality**: Moved main components to `markdown_lab/core/`
+- **Core Functionality**: Moved main components to `RAGnificent/core/`
   - Extracted `RequestCache` class to its own module (`cache.py`)
   - Moved and reorganized the `main.py` content into `core/scraper.py`
   - Moved request throttling to `core/throttle.py`
   
-- **Utilities**: Moved utility modules to `markdown_lab/utils/`
+- **Utilities**: Moved utility modules to `RAGnificent/utils/`
   - Placed chunking utilities in `utils/chunk_utils.py`
   - Placed sitemap parsing in `utils/sitemap_utils.py`
   - Created a version module in `utils/version.py`
@@ -128,9 +128,9 @@ markdown_lab/
 
 ## Import Updates
 - Updated all imports throughout the codebase to use the new package structure:
-  - Changed `from main import MarkdownScraper` to `from markdown_lab.core.scraper import MarkdownScraper`
-  - Changed `from sitemap_utils import SitemapParser` to `from markdown_lab.utils.sitemap_utils import SitemapParser`
-  - Changed `from markdown_lab_rs import convert_html` to `from markdown_lab.markdown_lab_rs import convert_html`
+  - Changed `from main import MarkdownScraper` to `from RAGnificent.core.scraper import MarkdownScraper`
+  - Changed `from sitemap_utils import SitemapParser` to `from RAGnificent.utils.sitemap_utils import SitemapParser`
+  - Changed `from RAGnificent_rs import convert_html` to `from RAGnificent.RAGnificent_rs import convert_html`
 
 ## Dependency Management
 - Made `psutil` optional and platform-specific
@@ -139,7 +139,7 @@ markdown_lab/
 
 ## CLI Interface
 - Updated CLI usage to use the Python module format:
-  - Changed `python main.py` to `python -m markdown_lab`
+  - Changed `python main.py` to `python -m RAGnificent`
 - Ensured backward compatibility by maintaining the same command-line arguments
 
 ## Documentation Updates

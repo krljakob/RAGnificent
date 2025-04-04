@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from markdown_lab.utils.chunk_utils import Chunk, ContentChunker, create_semantic_chunks
+from RAGnificent.utils.chunk_utils import Chunk, ContentChunker, create_semantic_chunks
 
 
 class TestChunkUtils(unittest.TestCase):

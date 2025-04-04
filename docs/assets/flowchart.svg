@@ -425,7 +425,7 @@
 <g id="node38" class="node">
 <title>node_ab2c150a81</title>
 <path fill="#1a1a1a" stroke="#ff00cc" stroke-width="1.5" d="M152.46,-1521C152.46,-1521 81.46,-1521 81.46,-1521 75.46,-1521 69.46,-1515 69.46,-1509 69.46,-1509 69.46,-1497 69.46,-1497 69.46,-1491 75.46,-1485 81.46,-1485 81.46,-1485 152.46,-1485 152.46,-1485 158.46,-1485 164.46,-1491 164.46,-1497 164.46,-1497 164.46,-1509 164.46,-1509 164.46,-1515 158.46,-1521 152.46,-1521"/>
-<text text-anchor="middle" x="116.96" y="-1499.9" font-family="Arial" font-size="12.00" fill="#00ffcc">markdown_lab</text>
+<text text-anchor="middle" x="116.96" y="-1499.9" font-family="Arial" font-size="12.00" fill="#00ffcc">RAGnificent</text>
 </g>
 <!-- node_1ea751d079 -->
 <g id="node39" class="node">
@@ -479,7 +479,7 @@
 <g id="node47" class="node">
 <title>node_0e05c8682e</title>
 <ellipse fill="#1a1a1a" stroke="#ff00cc" stroke-width="1.5" cx="384.42" cy="-1422" rx="78.59" ry="18"/>
-<text text-anchor="middle" x="384.42" y="-1418.9" font-family="Arial" font-size="12.00" fill="#00ffcc">markdown_lab_rs.py</text>
+<text text-anchor="middle" x="384.42" y="-1418.9" font-family="Arial" font-size="12.00" fill="#00ffcc">RAGnificent_rs.py</text>
 </g>
 <!-- node_ab2c150a81&#45;&gt;node_0e05c8682e -->
 <g id="edge30" class="edge">
@@ -761,7 +761,7 @@
 <g id="node69" class="node">
 <title>node_9fe7b1904d</title>
 <path fill="#1a1a1a" stroke="#ffff00" stroke-width="1.5" d="M443.42,-2034C443.42,-2034 325.42,-2034 325.42,-2034 319.42,-2034 313.42,-2028 313.42,-2022 313.42,-2022 313.42,-2010 313.42,-2010 313.42,-2004 319.42,-1998 325.42,-1998 325.42,-1998 443.42,-1998 443.42,-1998 449.42,-1998 455.42,-2004 455.42,-2010 455.42,-2010 455.42,-2022 455.42,-2022 455.42,-2028 449.42,-2034 443.42,-2034"/>
-<text text-anchor="middle" x="384.42" y="-2012.9" font-family="Arial" font-size="12.00" fill="#00ffcc">markdown_lab.egg&#45;info</text>
+<text text-anchor="middle" x="384.42" y="-2012.9" font-family="Arial" font-size="12.00" fill="#00ffcc">RAGnificent.egg&#45;info</text>
 </g>
 <!-- node_93d0337c6c&#45;&gt;node_9fe7b1904d -->
 <g id="edge47" class="edge">

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
-Demo script to showcase markdown_lab's multiple output formats.
+Demo script to showcase RAGnificent's multiple output formats.
 """
 
 from pathlib import Path
 
-from markdown_lab.markdown_lab_rs import OutputFormat, convert_html
+from RAGnificent.ragnificent_rs import OutputFormat, convert_html
 
 # HTML sample for conversion testing
 SAMPLE_HTML = """
@@ -14,8 +14,8 @@ SAMPLE_HTML = """
     <title>Output Format Demo</title>
 </head>
 <body>
-    <h1>Markdown Lab Output Formats</h1>
-    <p>This demo shows the three output formats supported by markdown_lab:</p>
+    <h1>RAGnificent Output Formats</h1>
+    <p>This demo shows the three output formats supported by RAGnificent:</p>
     <ul>
         <li>Markdown - Human-readable plain text format</li>
         <li>JSON - Structured data format for programmatic usage</li>
@@ -36,7 +36,7 @@ SAMPLE_HTML = """
     
     <pre><code>
 # Sample Python code
-from markdown_lab.markdown_lab_rs import convert_html, OutputFormat
+from RAGnificent.RAGnificent_rs import convert_html, OutputFormat
 
 result = convert_html(html_content, url, OutputFormat.JSON)
     </code></pre>

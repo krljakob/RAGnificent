@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Simple demo example of using markdown_lab to convert HTML to markdown.
+Simple demo example of using RAGnificent to convert HTML to markdown.
 """
 
-from markdown_lab.markdown_lab_rs import convert_html_to_markdown
+from RAGnificent.ragnificent_rs import convert_html_to_markdown
 
 # Sample HTML
 html = """
 <html>
 <head>
-    <title>Hello Markdown Lab</title>
+    <title>Hello RAGnificent</title>
 </head>
 <body>
-    <h1>Hello from Markdown Lab!</h1>
+    <h1>Hello from RAGnificent!</h1>
     <p>This is a simple example of converting HTML to Markdown.</p>
     <ul>
         <li>Simple to use</li>

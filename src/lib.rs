@@ -41,7 +41,7 @@ impl From<OutputFormat> for markdown_converter::OutputFormat {
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn markdown_lab_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<OutputFormat>()?;
     m.add_function(wrap_pyfunction!(convert_html_to_markdown, py)?)?;
     m.add_function(wrap_pyfunction!(convert_html_to_format, py)?)?;

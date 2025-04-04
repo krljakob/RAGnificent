@@ -1,6 +1,6 @@
 import pytest
 
-import markdown_lab_rs
+import ragnificent_rs
 
 
 def test_convert_html_to_markdown():
@@ -14,7 +14,7 @@ def test_convert_html_to_markdown():
         </html>
     """
     base_url = "https://example.com"
-    markdown = markdown_lab_rs.convert_html_to_markdown(html, base_url)
+    markdown = ragnificent_rs.convert_html_to_markdown(html, base_url)
 
     assert "# Test Page" in markdown
     assert "# Main Title" in markdown
@@ -35,7 +35,7 @@ This is a test paragraph.
 * List item 2
     """
 
-    chunks = markdown_lab_rs.chunk_markdown(markdown, 500, 50)
+    chunks = ragnificent_rs.chunk_markdown(markdown, 500, 50)
     assert len(chunks) > 0
     assert any("# Title" in chunk for chunk in chunks)
     assert any("## Section 1" in chunk for chunk in chunks)
@@ -44,17 +44,17 @@ This is a test paragraph.
 
 def test_render_js_page():
     url = "https://example.com"
-    html = markdown_lab_rs.render_js_page(url)
+    html = ragnificent_rs.render_js_page(url)
     assert isinstance(html, str)
     assert len(html) > 0
 
 
 def test_error_handling():
     with pytest.raises(RuntimeError):
-        markdown_lab_rs.convert_html_to_markdown(None, "https://example.com")
+        ragnificent_rs.convert_html_to_markdown(None, "https://example.com")
 
     with pytest.raises(RuntimeError):
-        markdown_lab_rs.chunk_markdown(None, 500, 50)
+        ragnificent_rs.chunk_markdown(None, 500, 50)
 
     with pytest.raises(RuntimeError):
-        markdown_lab_rs.render_js_page(None)
+        ragnificent_rs.render_js_page(None)

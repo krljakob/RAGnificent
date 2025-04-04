@@ -1,5 +1,5 @@
 """
-Test configuration and fixtures for markdown_lab.
+Test configuration and fixtures for RAGnificent.
 """
 
 import sys

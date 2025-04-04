@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Command line interface for markdown_lab.
+Command line interface for RAGnificent.
 """
 
 import sys
-from markdown_lab.core.scraper import main
+from RAGnificent.core.scraper import main
 
 if __name__ == "__main__":
     # Re-execute main with the same arguments

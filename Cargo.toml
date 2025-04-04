@@ -1,10 +1,10 @@
 [package]
-name = "markdown_lab"
+name = "RAGnificent"
 version = "1.0.0"
 edition = "2024"
 
 [lib]
-name = "markdown_lab_rs"
+name = "ragnificent_rs"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
@@ -30,7 +30,7 @@ criterion = { version = "0.5.1", features = ["html_reports"] }
 tokio = { version = "1.36.0", features = ["full", "test-util"] }
 
 [[bench]]
-name = "markdown_bench"
+name = "RAGnificent_bench"
 harness = false
 
 [profile.release]

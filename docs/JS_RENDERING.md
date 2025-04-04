@@ -1,10 +1,10 @@
 # JavaScript Rendering Support
 
-This document outlines how to use the JavaScript rendering capabilities in Markdown Lab to scrape JavaScript-heavy websites.
+This document outlines how to use the JavaScript rendering capabilities in RAGnificent to scrape JavaScript-heavy websites.
 
 ## Overview
 
-Many modern websites rely heavily on JavaScript to load and render content dynamically. Traditional scraping methods that only fetch the initial HTML won't capture this dynamically generated content. Markdown Lab now includes support for rendering JavaScript-enabled pages before scraping.
+Many modern websites rely heavily on JavaScript to load and render content dynamically. Traditional scraping methods that only fetch the initial HTML won't capture this dynamically generated content. RAGnificent now includes support for rendering JavaScript-enabled pages before scraping.
 
 ## Requirements
 

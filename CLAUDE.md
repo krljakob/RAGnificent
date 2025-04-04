@@ -1,4 +1,4 @@
-# Commands & Guidelines for markdown_lab
+# Commands & Guidelines for RAGnificent
 
 ## Build & Test Commands
 - `cargo build` - Build Rust components
@@ -39,7 +39,7 @@
   - **markdown_converter.rs**: HTML to Markdown/JSON/XML conversion
   - **lib.rs**: PyO3 bindings and Python module exports
 - **Python modules**: Main functionality (main.py, chunk_utils.py, etc.)
-  - **markdown_lab_rs.py**: Python interface to Rust implementations
+  - **RAGnificent_rs.py**: Python interface to Rust implementations
   - **main.py**: CLI interface and MarkdownScraper implementation
 - **tests/**: Test files for both Python and Rust components
 - **benches/**: Performance benchmarks

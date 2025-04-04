@@ -1,5 +1,5 @@
 """
-Python interface to the Rust implementation of markdown_lab components.
+Python interface to the Rust implementation of RAGnificent components.
 This module provides a fallback to Python implementations if the Rust extension is not available.
 
 To build the Rust extension:
@@ -27,10 +27,9 @@ class OutputFormat(str, Enum):
 
 # Try to import the Rust extension
 try:
-    from .markdown_lab_rs import chunk_markdown as _rs_chunk_markdown
-    from .markdown_lab_rs import \
-        convert_html_to_format as _rs_convert_html_to_format
-    from .markdown_lab_rs import render_js_page as _rs_render_js_page
+    from .ragnificent_rs import chunk_markdown as _rs_chunk_markdown
+    from .ragnificent_rs import convert_html_to_markdown as _rs_convert_html_to_markdown
+    from .ragnificent_rs import render_js_page as _rs_render_js_page
 
     RUST_AVAILABLE = True
     logger.info("Using Rust implementation for improved performance")
@@ -80,7 +79,7 @@ def convert_html(
             )
 
     # Fall back to Python implementation
-    from markdown_lab.core.scraper import MarkdownScraper
+    from RAGnificent.core.scraper import MarkdownScraper
 
     scraper = MarkdownScraper()
 
@@ -246,7 +245,7 @@ def chunk_markdown(
             logger.warning(f"Error in Rust chunking, falling back to Python: {e}")
 
     # Fall back to Python implementation
-    from markdown_lab.utils.chunk_utils import create_semantic_chunks
+    from RAGnificent.utils.chunk_utils import create_semantic_chunks
 
     chunks = create_semantic_chunks(
         content=markdown,

@@ -1,5 +1,5 @@
 """
-Markdown Lab - A powerful and modular web scraper that converts web content into
+RAGnificent - A powerful and modular web scraper that converts web content into
 well-structured Markdown files with RAG-ready chunking capabilities.
 """
 
@@ -8,7 +8,7 @@ __version__ = "0.1.0"
 import importlib.util
 
 # Try to import Rust implementations if the module is available
-if importlib.util.find_spec("markdown_lab.markdown_lab_rs") is not None:
+if importlib.util.find_spec("RAGnificent.RAGnificent_rs") is not None:
     # Import will happen in __all__ section if RUST_AVAILABLE is True
     RUST_AVAILABLE = True
 else:
@@ -17,7 +17,7 @@ else:
         # Just check if the module can be imported
         import importlib.util
 
-        if importlib.util.find_spec(".markdown_lab_rs", __name__) is not None:
+        if importlib.util.find_spec(".RAGnificent_rs", __name__) is not None:
             RUST_AVAILABLE = True
     except ImportError:
         import logging

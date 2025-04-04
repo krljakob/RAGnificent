@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use markdown_lab_rs::{
+use ragnificent_rs::{
     chunker::create_semantic_chunks,
     html_parser::{clean_html, extract_links, extract_main_content},
     markdown_converter::convert_to_markdown,

@@ -15,10 +15,10 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from markdown_lab.utils.chunk_utils import ContentChunker, create_semantic_chunks
-from markdown_lab.utils.sitemap_utils import SitemapParser
-from markdown_lab.core.cache import RequestCache
-from markdown_lab.core.throttle import RequestThrottler
+from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
+from RAGnificent.utils.sitemap_utils import SitemapParser
+from RAGnificent.core.cache import RequestCache
+from RAGnificent.core.throttle import RequestThrottler
 
 # Configure logging with more detailed formatting
 logging.basicConfig(
@@ -76,7 +76,7 @@ class MarkdownScraper:
 
         # Try to use the Rust implementation if available
         try:
-            from markdown_lab.markdown_lab_rs import OutputFormat, convert_html
+            from RAGnificent.ragnificent_rs import OutputFormat, convert_html
 
             self.rust_available = True
             self.OutputFormat = OutputFormat
@@ -501,8 +501,8 @@ class MarkdownScraper:
 
             # Then convert to the requested format
             try:
-                # Try to use functions from markdown_lab_rs for conversion
-                from markdown_lab.markdown_lab_rs import (document_to_xml,
+                # Try to use functions from ragnificent_rs for conversion
+                from RAGnificent.ragnificent_rs import (document_to_xml,
                                          parse_markdown_to_document)
 
                 document = parse_markdown_to_document(markdown_content, url)
@@ -1104,7 +1104,7 @@ def _check_rust_availability() -> None:
     """Check if Rust implementation is available."""
     with contextlib.suppress(ImportError):
         import importlib.util
-        if importlib.util.find_spec("markdown_lab.markdown_lab_rs") is not None:
+        if importlib.util.find_spec("RAGnificent.ragnificent_rs") is not None:
             pass  # Rust implementation is available
 
 def _process_sitemap_mode(

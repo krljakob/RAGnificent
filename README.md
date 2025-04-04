@@ -1,16 +1,16 @@
-![Markdown Lab](docs/assets/github-banner.svg)
+![RAGnificent](docs/assets/github-banner.svg)
 
-# Markdown Lab 🔄📝
+# RAGnificent 🔄📝
 
-Markdown Lab combines Python and Rust components to scrape websites and convert HTML content to markdown, JSON, or XML formats. It supports sitemap parsing, semantic chunking for RAG
+RAGnificent combines Python and Rust components to scrape websites and convert HTML content to markdown, JSON, or XML formats. It supports sitemap parsing, semantic chunking for RAG
   (Retrieval-Augmented Generation), and includes performance optimizations through Rust integration.
 
   Key features include HTML-to-markdown/JSON/XML conversion with support for various elements (headers, links, images, lists, code blocks), intelligent content chunking that preserves document structure, and systematic content discovery
   through sitemap parsing. The hybrid architecture uses Python for high-level operations and Rust for performance-critical tasks.
 
-[![Python CI](https://github.com/ursisterbtw/markdown_lab/actions/workflows/CI.yml/badge.svg)](https://github.com/ursisterbtw/markdown_lab/actions/workflows/CI.yml)
-[![Rust](https://github.com/ursisterbtw/markdown_lab/actions/workflows/rust.yml/badge.svg)](https://github.com/ursisterbtw/markdown_lab/actions/workflows/rust.yml)
-[![Release](https://github.com/ursisterbtw/markdown_lab/actions/workflows/release.yml/badge.svg)](https://github.com/ursisterbtw/markdown_lab/actions/workflows/release.yml)
+[![Python CI](https://github.com/ursisterbtw/RAGnificent/actions/workflows/CI.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/CI.yml)
+[![Rust](https://github.com/ursisterbtw/RAGnificent/actions/workflows/rust.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/rust.yml)
+[![Release](https://github.com/ursisterbtw/RAGnificent/actions/workflows/release.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/release.yml)
 
 ## Features
 
@@ -35,7 +35,7 @@ Markdown Lab combines Python and Rust components to scrape websites and convert 
 
 ```bash
 git clone https://github.com/krljakob/RAGnificent.git
-cd markdown_lab
+cd RAGnificent
 pip install -r requirements.txt
 
 # Build the Rust library
@@ -48,25 +48,25 @@ cargo build --release
 
 ```bash
 # Convert to Markdown (default)
-python -m markdown_lab https://www.example.com -o output.md
+python -m RAGnificent https://www.example.com -o output.md
 
 # Convert to JSON
-python -m markdown_lab https://www.example.com -o output.json -f json
+python -m RAGnificent https://www.example.com -o output.json -f json
 
 # Convert to XML
-python -m markdown_lab https://www.example.com -o output.xml -f xml
+python -m RAGnificent https://www.example.com -o output.xml -f xml
 ```
 
 ### With RAG Chunking
 
 ```bash
-python -m markdown_lab https://www.example.com -o output.md --save-chunks --chunk-dir my_chunks
+python -m RAGnificent https://www.example.com -o output.md --save-chunks --chunk-dir my_chunks
 ```
 
 ### Scraping with Sitemap
 
 ```bash
-python -m markdown_lab https://www.example.com -o output_dir --use-sitemap --save-chunks
+python -m RAGnificent https://www.example.com -o output_dir --use-sitemap --save-chunks
 ```
 
 ### Scraping with a List of URLs
@@ -75,10 +75,10 @@ The library automatically looks for a `links.txt` file in the current directory.
 
 ```bash
 # Automatically use links.txt in the current directory
-python -m markdown_lab -o output_dir
+python -m RAGnificent -o output_dir
 
 # Or specify a different file
-python -m markdown_lab -o output_dir --links-file my_urls.txt
+python -m RAGnificent -o output_dir --links-file my_urls.txt
 ```
 
 ### Parallel URL Processing
@@ -87,13 +87,13 @@ For faster processing of multiple URLs, you can enable parallel processing:
 
 ```bash
 # Process URLs from links.txt in parallel with 8 workers
-python -m markdown_lab -o output_dir --parallel --max-workers 8
+python -m RAGnificent -o output_dir --parallel --max-workers 8
 ```
 
 ### Advanced Sitemap Scraping
 
 ```bash
-python -m markdown_lab https://www.example.com -o output_dir \
+python -m RAGnificent https://www.example.com -o output_dir \
     --use-sitemap \
     --min-priority 0.5 \
     --include "blog/*" "products/*" \
@@ -131,7 +131,7 @@ python -m markdown_lab https://www.example.com -o output_dir \
 #### Basic Scraping and Conversion
 
 ```python
-from markdown_lab.core.scraper import MarkdownScraper
+from RAGnificent.core.scraper import MarkdownScraper
 
 # Using default Markdown format
 scraper = MarkdownScraper()
@@ -140,7 +140,7 @@ markdown_content = scraper.convert_to_markdown(html_content, "https://example.co
 scraper.save_content(markdown_content, "output.md")
 
 # Using JSON or XML format with the Rust implementation
-from markdown_lab.markdown_lab_rs import convert_html, OutputFormat
+from RAGnificent.ragnificent_rs import convert_html, OutputFormat
 
 html_content = scraper.scrape_website("https://example.com")
 # Convert to JSON
@@ -154,7 +154,7 @@ scraper.save_content(xml_content, "output.xml")
 #### With Sitemap Discovery
 
 ```python
-from markdown_lab.core.scraper import MarkdownScraper
+from RAGnificent.core.scraper import MarkdownScraper
 
 scraper = MarkdownScraper(requests_per_second=2.0)
 # Scrape using sitemap discovery
@@ -175,7 +175,7 @@ print(f"Successfully scraped {len(scraped_urls)} URLs")
 #### Using Links File
 
 ```python
-from markdown_lab.core.scraper import MarkdownScraper
+from RAGnificent.core.scraper import MarkdownScraper
 
 scraper = MarkdownScraper(requests_per_second=2.0)
 # Scrape URLs from a links file
@@ -192,7 +192,7 @@ scraper.scrape_by_links_file(
 #### Direct Sitemap Access
 
 ```python
-from markdown_lab.utils.sitemap_utils import SitemapParser, discover_site_urls
+from RAGnificent.utils.sitemap_utils import SitemapParser, discover_site_urls
 
 # Quick discovery of URLs from sitemap
 urls = discover_site_urls(
@@ -285,7 +285,7 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
 
 ### Code Organization
 
-- `markdown_lab/`: Main Python package
+- `RAGnificent/`: Main Python package
   - `__init__.py`: Package initialization
   - `__main__.py`: Command-line entry point
   - `core/`: Core functionality
@@ -296,7 +296,7 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
     - `chunk_utils.py`: Utilities for chunking text for RAG
     - `sitemap_utils.py`: Sitemap parsing and URL discovery
     - `version.py`: Version information
-  - `markdown_lab_rs.py`: Python interface to Rust components
+  - `ragnificent_rs.py`: Python interface to Rust components
 
 - `src/`: Rust source code
   - `lib.rs`: Main library and Python bindings
@@ -381,7 +381,7 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 To create an official release, follow these steps:
 
 1. **Update Version Numbers**:
-   - Update the version number in `Cargo.toml`, `pyproject.toml`, and `markdown_lab/__init__.py` to the new release version.
+   - Update the version number in `Cargo.toml`, `pyproject.toml`, and `RAGnificent/__init__.py` to the new release version.
 
 2. **Commit Changes**:
    - Commit the changes to the version numbers and any other updates.
