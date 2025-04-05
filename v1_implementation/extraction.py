@@ -25,7 +25,7 @@ data_dir = Path(__file__).parent.parent / 'data'
 os.makedirs(data_dir, exist_ok=True)
 
 
-def extract_documents(base_url: str, limit: Optional[int] = None) -> List[dict]:
+def extract_documents(base_url: str, limit: Optional[int] = None, debug: bool = False) -> List[dict]:
     """Extract documents from a website.
     
     Args:
@@ -36,14 +36,28 @@ def extract_documents(base_url: str, limit: Optional[int] = None) -> List[dict]:
         A list of extracted documents.
     """
     logger.info(f"Extracting documents from {base_url}")
+    if debug:
+        logger.setLevel(logging.DEBUG)
     
-    # Get URLs from sitemap
-    urls = get_sitemap_urls(base_url)
-    logger.info(f"Found {len(urls)} URLs in sitemap")
+    # Get URLs from sitemap with fallback to crawling
+    try:
+        urls = get_sitemap_urls(base_url)
+        logger.info(f"Found {len(urls)} URLs in sitemap")
+    except Exception as e:
+        logger.warning(f"Sitemap discovery failed: {str(e)}")
+        logger.info("Falling back to crawling base URL and linked pages")
+        try:
+            from ..utils.crawler import crawl_urls
+            urls = crawl_urls(base_url, max_pages=limit or 20)
+            logger.info(f"Crawled {len(urls)} URLs")
+        except Exception as e:
+            logger.error(f"Crawling failed: {str(e)}")
+            logger.info("Falling back to base URL only")
+            urls = [base_url]
     
-    if limit:
+    if limit and len(urls) > limit:
         urls = urls[:limit]
-        logger.info(f"Limited to processing {limit} URLs")
+        logger.info(f"Limited to processing {limit} URLs (from {len(urls)} available)")
     
     # Initialize converter
     converter = DocumentConverter()
@@ -67,7 +81,10 @@ def extract_documents(base_url: str, limit: Optional[int] = None) -> List[dict]:
     
     # Return the documents
     with open(output_path, 'r', encoding='utf-8') as f:
-        documents = json.load(f)
+        try:
+            documents = json.load(f)
+        except json.JSONDecodeError:
+            documents = []
     
     return documents
 

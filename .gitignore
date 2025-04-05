@@ -183,3 +183,5 @@ dmypy.json
 # already existing elements were commented out
 
 #/target
+.ssh
+.ssh.pub

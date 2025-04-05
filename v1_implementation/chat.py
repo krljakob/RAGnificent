@@ -65,32 +65,44 @@ def get_response_from_openai(prompt: str, model: str = "gpt-3.5-turbo") -> str:
         Model response
     """
     try:
-        from openai import OpenAI
-        
-        # Get API key
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OpenAI API key not found in environment variables")
-        
-        client = OpenAI(api_key=api_key)
-        logger.info(f"Sending prompt to {model}")
-        
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=1000
-        )
-        
-        return response.choices[0].message.content
-        
-    except (ImportError, ValueError, Exception) as e:
+        return _extracted_from_get_response_from_openai_(model, prompt)
+    except Exception as e:
         logger.error(f"Error getting OpenAI response: {str(e)}")
         logger.info("Falling back to local alternative")
         return get_response_from_local_model(prompt)
+
+
+# TODO Rename this here and in `get_response_from_openai`
+def _extracted_from_get_response_from_openai_(model, prompt):
+    from openai import OpenAI
+
+    # Get API key
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OpenAI API key not found in environment variables")
+
+    client = OpenAI(api_key=api_key)
+    logger.info(f"Sending prompt to {model}")
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that answers questions based on the provided context."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,
+        max_tokens=1000
+    )
+
+    return response.choices[0].message.content
+
+
+def chat_interface(query: str, context: Optional[str] = None) -> str:
+    """Basic chat interface for RAG pipeline."""
+    if context:
+        prompt = format_rag_prompt(query, context)
+        return get_response_from_openai(prompt)
+    return get_response_from_openai(query)
 
 
 def get_response_from_local_model(prompt: str) -> str:
@@ -107,15 +119,13 @@ def get_response_from_local_model(prompt: str) -> str:
     try:
         # Try using a local model like llama-cpp-python if installed
         from llama_cpp import Llama
-        
+
         # Find models in models directory
         models_dir = Path(__file__).parent.parent / 'models'
-        model_files = list(models_dir.glob("*.gguf"))
-        
-        if model_files:
+        if model_files := list(models_dir.glob("*.gguf")):
             model_path = str(model_files[0])
             logger.info(f"Using local model: {model_path}")
-            
+
             llm = Llama(model_path=model_path, n_ctx=2048)
             response = llm(prompt, max_tokens=1000, temperature=0.7, stop=["\n\n"])
             return response["choices"][0]["text"]
@@ -123,12 +133,12 @@ def get_response_from_local_model(prompt: str) -> str:
         logger.warning("llama-cpp-python not installed, falling back to simple summary")
     except Exception as e:
         logger.error(f"Error with local model: {str(e)}")
-        
+
     # If all else fails, extract key sentences from context as a simple summary
     lines = prompt.split('\n')
     context_lines = []
     in_context = False
-    
+
     for line in lines:
         if line.startswith("Context:"):
             in_context = True
@@ -136,28 +146,25 @@ def get_response_from_local_model(prompt: str) -> str:
         elif line.startswith("User Question:"):
             in_context = False
             question = line.replace("User Question:", "").strip()
-        
+
         if in_context and line.strip():
             context_lines.append(line.strip())
-    
+
     if not context_lines:
         return "I don't have enough context to answer that question."
-    
+
     # Extract important sentences containing keywords from the question
     keywords = [word.lower() for word in question.split() if len(word) > 3]
-    relevant_lines = []
-    
-    for line in context_lines:
-        if any(keyword in line.lower() for keyword in keywords):
-            relevant_lines.append(line)
-    
-    if not relevant_lines:
-        relevant_lines = context_lines[:3]  # Just take the first few lines
-    
+    relevant_lines = [
+            line
+            for line in context_lines
+            if any(keyword in line.lower() for keyword in keywords)
+        ] or context_lines[:3]  # Just take the first few lines
+
     # Construct a simple response
     response = f"Based on the available information:\n\n"
     response += "\n\n".join(relevant_lines)
-    
+
     return response
 
 

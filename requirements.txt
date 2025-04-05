@@ -19,3 +19,5 @@ seaborn>=0.13.0
 pandas>=2.1.0
 # Optional dependencies for Rust integration
 maturin>=0.14.0
+qdrant-client>=0.10.0
+python-dotenv>=1.0.0

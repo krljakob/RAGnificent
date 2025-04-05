@@ -1,100 +1,77 @@
-"""
-Utility to extract URLs from a sitemap.
-"""
-import re
-import requests
-from typing import List
-from bs4 import BeautifulSoup
+import contextlib
 import xml.etree.ElementTree as ET
 from urllib.parse import urljoin
+import requests
+from typing import List
+
+def parse_sitemap_index(xml_content: str) -> List[str]:
+    """Parse sitemap index XML and return sitemap URLs."""
+    namespaces = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+    try:
+        root = ET.fromstring(xml_content)
+        sitemaps = []
+        for sitemap in root.findall('ns:sitemap', namespaces):
+            loc = sitemap.find('ns:loc', namespaces)
+            if loc is not None:
+                sitemaps.append(loc.text)
+        return sitemaps
+    except ET.ParseError as e:
+        raise ValueError(f"Invalid sitemap index XML: {str(e)}") from e
+
+def parse_sitemap(xml_content: str) -> List[str]:
+    """Parse sitemap XML with namespace handling and return URLs."""
+    namespaces = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+    try:
+        root = ET.fromstring(xml_content)
+        urls = []
+        for url in root.findall('ns:url', namespaces):
+            loc = url.find('ns:loc', namespaces)
+            if loc is not None:
+                urls.append(loc.text)
+        return urls
+    except ET.ParseError as e:
+        raise ValueError(f"Invalid sitemap XML: {str(e)}") from e
 
 
 def get_sitemap_urls(base_url: str) -> List[str]:
-    """
-    Extract all URLs from a website's sitemap.
-    
-    Args:
-        base_url: The base URL of the website (e.g., 'https://example.com')
-        
-    Returns:
-        A list of URLs found in the sitemap
-    """
-    # First try to locate the sitemap at the standard location
-    sitemap_url = urljoin(base_url, 'sitemap.xml')
-    response = requests.get(sitemap_url)
-    
-    # If not found at standard location, try robots.txt
-    if response.status_code != 200:
+    """Discover and parse sitemap(s) for a given base URL using concurrent requests."""
+    sitemap_locations = [
+        'sitemap.xml',
+        'sitemap_index.xml',
+        'sitemap/sitemap.xml',
+        'sitemap.txt',
+        'sitemap/sitemap_index.xml'
+    ]
+
+    # Also check robots.txt for sitemap reference
+    with contextlib.suppress(requests.RequestException):
         robots_url = urljoin(base_url, 'robots.txt')
-        robots_response = requests.get(robots_url)
-        
-        if robots_response.status_code == 200:
-            # Look for sitemap declarations in robots.txt
-            sitemap_matches = re.findall(r'Sitemap: (.*)', robots_response.text, re.IGNORECASE)
-            if sitemap_matches:
-                sitemap_url = sitemap_matches[0].strip()
-                response = requests.get(sitemap_url)
-    
-    urls = []
-    
-    if response.status_code == 200:
-        content_type = response.headers.get('Content-Type', '')
-        
-        # Handle XML sitemaps
-        if 'xml' in content_type:
+        robots_resp = requests.get(robots_url, timeout=3)
+        if robots_resp.status_code == 200:
+            for line in robots_resp.text.split('\n'):
+                if line.lower().startswith('sitemap:'):
+                    sitemap_locations.insert(0, line.split(':', 1)[1].strip())
+
+    with ThreadPoolExecutor(max_workers=len(sitemap_locations)) as executor:
+        futures = {executor.submit(requests.get, urljoin(base_url, loc), timeout=3): loc for loc in sitemap_locations}
+        for future in as_completed(futures):
             try:
-                # Parse XML
-                root = ET.fromstring(response.content)
-                
-                # Define namespace map if needed
-                ns = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
-                
-                # Extract URLs from sitemap using list comprehension instead of for-append loop
-                urls.extend(
-                    url_elem.text.strip() 
-                    for url_elem in (root.findall('.//sm:url/sm:loc', ns) or root.findall('.//url/loc'))
-                    if url_elem is not None and url_elem.text
-                )
-                
-                # Check if this is a sitemap index that points to other sitemaps
-                for sitemap_elem in root.findall('.//sm:sitemap/sm:loc', ns) or root.findall('.//sitemap/loc'):
-                    if sitemap_elem is not None and sitemap_elem.text:
-                        sub_sitemap_url = sitemap_elem.text.strip()
-                        sub_response = requests.get(sub_sitemap_url)
-                        if sub_response.status_code == 200:
-                            sub_root = ET.fromstring(sub_response.content)
-                            # Use list extend instead of for-append loop
-                            urls.extend(
-                                url_elem.text.strip()
-                                for url_elem in (sub_root.findall('.//sm:url/sm:loc', ns) or sub_root.findall('.//url/loc'))
-                                if url_elem is not None and url_elem.text
-                            )
-            except ET.ParseError:
-                # If XML parsing fails, try HTML parsing
-                soup = BeautifulSoup(response.content, 'html.parser')
-                for link in soup.find_all('a', href=True):
-                    urls.append(urljoin(sitemap_url, link['href']))
-        
-        # Handle HTML sitemaps
-        elif 'html' in content_type:
-            soup = BeautifulSoup(response.content, 'html.parser')
-            # Use list extend instead of for-append loop
-            urls.extend(urljoin(sitemap_url, link['href']) for link in soup.find_all('a', href=True))
-    
-    # Filter to only include URLs from the target domain
-    domain = re.search(r'https?://([^/]+)', base_url).group(1)
-    filtered_urls = [url for url in urls if domain in url]
-    
-    # Filter specifically for docs pages if looking at docs
-    if '/docs' in base_url:
-        filtered_urls = [url for url in filtered_urls if '/docs' in url]
-    
-    return filtered_urls
-
-
-if __name__ == "__main__":
-    # Example usage
-    urls = get_sitemap_urls('https://solana.com/docs')
-    print(f"Found {len(urls)} URLs in the sitemap")
-    for url in urls[:5]:  # Print first 5 URLs as a sample
-        print(url)
+                response = future.result()
+                response.raise_for_status()
+                if 'sitemapindex' in response.text.lower():
+                    index_urls = parse_sitemap_index(response.text)
+                    all_urls = []
+                    with ThreadPoolExecutor(max_workers=len(index_urls)) as sub_executor:
+                        sub_futures = {sub_executor.submit(requests.get, index_url, timeout=3): index_url for index_url in index_urls}
+                        for sub_future in as_completed(sub_futures):
+                            try:
+                                sub_response = sub_future.result()
+                                sub_response.raise_for_status()
+                                all_urls.extend(parse_sitemap(sub_response.text))
+                            except Exception:
+                                continue
+                    return all_urls
+                return parse_sitemap(response.text)
+            except Exception:
+                continue
+    return []

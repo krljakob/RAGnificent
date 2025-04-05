@@ -1,6 +1,7 @@
 # Commands & Guidelines for RAGnificent
 
 ## Build & Test Commands
+
 - `cargo build` - Build Rust components
 - `cargo build --release --features real_rendering` - Build with JS rendering support
 - `pip install -r requirements.txt` - Install Python dependencies
@@ -16,6 +17,7 @@
 - `mypy *.py` - Type checking
 
 ## Code Quality Commands
+
 - `ruff check . --fix` - Run linter and auto-fix issues
 - `ruff check . --fix --unsafe-fixes` - Run linter with more aggressive fixes
 - `black .` - Format Python code
@@ -24,6 +26,7 @@
 - `mypy *.py` - Type checking
 
 ## Code Style Guidelines
+
 - **Python**: Python 3.12+ with type annotations
 - **Imports**: Group imports (stdlib, third-party, local)
 - **Formatting**: Follow PEP 8 guidelines
@@ -35,6 +38,7 @@
 - **Type annotations**: Required for all new code
 
 ## Repository Structure
+
 - **src/**: Rust code with PyO3 bindings
   - **markdown_converter.rs**: HTML to Markdown/JSON/XML conversion
   - **lib.rs**: PyO3 bindings and Python module exports
@@ -45,6 +49,7 @@
 - **benches/**: Performance benchmarks
 
 ## Output Format Features
+
 - **Markdown**: Human-readable plain text format (default)
 - **JSON**: Structured data format for programmatic usage
   - Document structure with title, headers, paragraphs, links, images, etc.

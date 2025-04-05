@@ -98,31 +98,28 @@ def semantic_chunker(text: str, chunk_size: int = 1000, chunk_overlap: int = 200
     """
     # Split text by section headings (markdown style)
     import re
-    
+
     # Identify headings (markdown style: # Heading)
     heading_pattern = re.compile(r'^#{1,6}\s+.+$', re.MULTILINE)
-    
+
     # Find all headings and their positions
     headings = [(m.start(), m.group()) for m in heading_pattern.finditer(text)]
-    
+
     # If no headings found, fall back to recursive character chunking
     if not headings:
         return recursive_character_chunker(text, chunk_size, chunk_overlap)
-    
+
     # Add the end of text as a boundary
     headings.append((len(text), ''))
-    
+
     # Extract sections based on headings
     sections = []
     for i in range(len(headings) - 1):
         start_pos = headings[i][0]
         end_pos = headings[i+1][0]
-        section_text = text[start_pos:end_pos].strip()
-        
-        # Only add non-empty sections
-        if section_text:
+        if section_text := text[start_pos:end_pos].strip():
             sections.append(section_text)
-    
+
     # Now chunk each section, preserving heading context
     chunks = []
     for section in sections:
@@ -130,22 +127,22 @@ def semantic_chunker(text: str, chunk_size: int = 1000, chunk_overlap: int = 200
         if len(section) <= chunk_size:
             chunks.append(section)
             continue
-        
+
         # Extract the heading
         section_lines = section.split('\n')
         heading = section_lines[0] if heading_pattern.match(section_lines[0]) else ''
         content = '\n'.join(section_lines[1:]) if heading else section
-        
+
         # Split the content
         content_chunks = recursive_character_chunker(content, chunk_size - len(heading) - 1, chunk_overlap)
-        
+
         # Add the heading to each chunk
         for content_chunk in content_chunks:
             if heading:
                 chunks.append(f"{heading}\n{content_chunk}")
             else:
                 chunks.append(content_chunk)
-    
+
     return chunks
 
 
