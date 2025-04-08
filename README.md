@@ -8,10 +8,6 @@ RAGnificent combines Python and Rust components to scrape websites and convert H
   Key features include HTML-to-markdown/JSON/XML conversion with support for various elements (headers, links, images, lists, code blocks), intelligent content chunking that preserves document structure, and systematic content discovery
   through sitemap parsing. The hybrid architecture uses Python for high-level operations and Rust for performance-critical tasks.
 
-[![Python CI](https://github.com/ursisterbtw/RAGnificent/.github/actions/workflows/CI.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/CI.yml)
-[![Rust](https://github.com/ursisterbtw/RAGnificent/.github/actions/workflows/rust.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/rust.yml)
-[![Release](https://github.com/ursisterbtw/RAGnificent/.github/actions/workflows/release.yml/badge.svg)](https://github.com/ursisterbtw/RAGnificent/actions/workflows/release.yml)
-
 ## Features
 
 - 🌐 Scrapes any accessible website with robust error handling and rate limiting
