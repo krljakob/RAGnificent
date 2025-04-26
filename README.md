@@ -32,8 +32,33 @@ RAGnificent combines Python and Rust components to scrape websites and convert H
 ```bash
 git clone https://github.com/krljakob/RAGnificent.git
 cd RAGnificent
-pip install -r requirements.txt
+```
 
+## Quick Build & Test (Recommended)
+
+Use the provided one-shot scripts to set up the environment, install dependencies, build the Rust extension, and run all tests:
+
+- **Windows (PowerShell):**
+  ```powershell
+  .\build_all.ps1
+  ```
+- **Unix/macOS (Bash):**
+  ```bash
+  ./build_all.sh
+  ```
+
+These scripts will:
+- Create a virtual environment with `uv` if not present
+- Activate the environment
+- Install all Python dependencies
+- Build the Rust extension using `maturin`
+- Run the full test suite with `pytest`
+
+### Manual Setup (Advanced)
+
+If you prefer manual setup:
+```bash
+pip install -r requirements.txt
 # Build the Rust library
 cargo build --release
 ```
