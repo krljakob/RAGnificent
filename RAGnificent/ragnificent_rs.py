@@ -9,10 +9,10 @@ To build the Rust extension:
 
 import json
 import logging
-import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 from enum import Enum
 from typing import Dict, List, Optional
+from xml.dom import minidom
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,27 @@ try:
     from .ragnificent_rs import chunk_markdown as _rs_chunk_markdown
     from .ragnificent_rs import convert_html_to_markdown as _rs_convert_html_to_markdown
     from .ragnificent_rs import render_js_page as _rs_render_js_page
+
+    # Try to import the format conversion function or define one if it doesn't exist
+    try:
+        from .ragnificent_rs import convert_html_to_format as _rs_convert_html_to_format
+    except ImportError:
+        # Define a function that uses the markdown converter and then converts to the desired format
+        def _rs_convert_html_to_format(html, base_url, format_name):
+            """Convert HTML to the specified format using Rust implementations."""
+            if format_name.lower() == "markdown":
+                return _rs_convert_html_to_markdown(html, base_url)
+
+            # First convert to markdown
+            markdown = _rs_convert_html_to_markdown(html, base_url)
+
+            # Then convert to the requested format
+            document = parse_markdown_to_document(markdown, base_url)
+
+            if format_name.lower() == "json":
+                import json
+                return json.dumps(document, indent=2)
+            return document_to_xml(document) if format_name.lower() == "xml" else markdown
 
     RUST_AVAILABLE = True
     logger.info("Using Rust implementation for improved performance")
@@ -85,7 +106,7 @@ def convert_html(
 
     if output_format == OutputFormat.MARKDOWN:
         return scraper.convert_to_markdown(html, base_url)
-    
+
     # For JSON and XML, first convert to markdown to get structured content
     # This is a simplified implementation - the real one would parse the HTML directly
     markdown_content = scraper.convert_to_markdown(html, base_url)

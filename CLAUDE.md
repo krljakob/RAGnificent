@@ -14,7 +14,8 @@
 - `cargo bench` - Run all benchmarks
 - `cargo bench html_to_markdown` - Run specific benchmark
 - `python demo_formats.py` - Demonstrate all output formats (markdown, JSON, XML)
-- `mypy *.py` - Type checking
+- `./build_all.sh` - One-shot build & test (Unix/macOS)
+- `.\build_all.ps1` - One-shot build & test (Windows PowerShell)
 
 ## Code Quality Commands
 
@@ -42,7 +43,9 @@
 - **src/**: Rust code with PyO3 bindings
   - **markdown_converter.rs**: HTML to Markdown/JSON/XML conversion
   - **lib.rs**: PyO3 bindings and Python module exports
-- **Python modules**: Main functionality (main.py, chunk_utils.py, etc.)
+- **Python modules**: Main functionality
+  - **core/scraper.py**: Main scraper implementation and HTML parsing
+  - **chunk_utils.py**: Semantic chunking utilities
   - **RAGnificent_rs.py**: Python interface to Rust implementations
   - **main.py**: CLI interface and MarkdownScraper implementation
 - **tests/**: Test files for both Python and Rust components
@@ -57,5 +60,20 @@
 - **XML**: Markup format for document interchange
   - Document structure with proper XML tags and hierarchy
   - Includes XML declaration and proper escaping
+- Supported HTML elements:
+  - Headers (h1-h6)
+  - Paragraphs
+  - Links (with resolved relative URLs)
+  - Images (with resolved relative URLs)
+  - Ordered and unordered lists
+  - Blockquotes
+  - Code blocks
 - Use `-f/--format` CLI argument to specify output format
-- All formats support the same HTML elements and content structure
+
+## Command Line Arguments
+
+- `-f, --format` : Output format (markdown, json, xml)
+- `--save-chunks` : Save content chunks for RAG
+- `--chunk-dir <dir>` : Directory to save chunks
+- `--parallel` : Enable parallel URL processing
+- `--max-workers <n>` : Number of parallel workers

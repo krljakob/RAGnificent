@@ -26,6 +26,7 @@ RAGnificent combines Python and Rust components to scrape websites and convert H
 - 🪵 Comprehensive logging
 - ✅ Robust error handling with exponential backoff
 - 🏎️ Performance optimizations and best practices
+- 🏷️ Semantic RAG chunking and parallel URL processing
 
 ## Installation
 
@@ -84,6 +85,12 @@ python -m RAGnificent https://www.example.com -o output.xml -f xml
 python -m RAGnificent https://www.example.com -o output.md --save-chunks --chunk-dir my_chunks
 ```
 
+### Parallel URL Processing
+
+```bash
+python -m RAGnificent https://www.example.com -o output_dir --parallel --max-workers 8
+```
+
 ### Scraping with Sitemap
 
 ```bash
@@ -100,15 +107,6 @@ python -m RAGnificent -o output_dir
 
 # Or specify a different file
 python -m RAGnificent -o output_dir --links-file my_urls.txt
-```
-
-### Parallel URL Processing
-
-For faster processing of multiple URLs, you can enable parallel processing:
-
-```bash
-# Process URLs from links.txt in parallel with 8 workers
-python -m RAGnificent -o output_dir --parallel --max-workers 8
 ```
 
 ### Advanced Sitemap Scraping
@@ -311,13 +309,14 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
   - `__main__.py`: Command-line entry point
   - `core/`: Core functionality
     - `scraper.py`: Main scraper implementation
-    - `cache.py`: Request caching
+    - `cache.py`: Request caching with memory management
     - `throttle.py`: Rate limiting for web requests
   - `utils/`: Utility modules
     - `chunk_utils.py`: Utilities for chunking text for RAG
     - `sitemap_utils.py`: Sitemap parsing and URL discovery
+    - `sitemap.py`: Simplified sitemap parsing (to be consolidated)
     - `version.py`: Version information
-  - `ragnificent_rs.py`: Python interface to Rust components
+  - `ragnificent_rs.py`: Python interface to Rust components with fallbacks
 
 - `src/`: Rust source code
   - `lib.rs`: Main library and Python bindings
@@ -341,6 +340,10 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
 - `docs/`: Documentation
   - Various documentation files and guides
   - `assets/`: Documentation assets like images
+
+- `main.py`: Legacy CLI entry point (use `python -m RAGnificent` instead)
+
+- `v1_implementation/`: Previous version of the implementation (for reference)
 
 ### Running with Real JavaScript Rendering
 
@@ -385,11 +388,15 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 - [x] Implement chunking for RAG
 - [x] Add sitemap.xml parsing for systematic scraping
 - [x] Add JSON and XML output formats
-- [ ] Add support for JavaScript-rendered pages
+- [x] Add concurrent scraping for multiple URLs
+- [x] Implement memory management for caches
+- [x] Add support for JavaScript-rendered pages (requires feature flag)
+- [ ] Improve nested header handling in chunking algorithm
+- [ ] Consolidate sitemap implementations
 - [ ] Implement custom markdown templates
-- [ ] Add concurrent scraping for multiple URLs
 - [ ] Include CSS selector support
 - [ ] Add configuration file support
+- [ ] Add comprehensive test coverage for edge cases
 
 ## Author
 

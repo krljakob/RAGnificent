@@ -1,10 +1,13 @@
-from typing import List, Optional
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from .config import EmbeddingConfig
-from .vector_store import QdrantVectorStore
 import logging
 from functools import lru_cache
+from typing import List, Optional
+
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+from .config import EmbeddingConfig
+from .vector_store import QdrantVectorStore
+
 
 class EmbeddingService:
     def __init__(self, config: Optional[EmbeddingConfig] = None):
@@ -28,7 +31,7 @@ class EmbeddingService:
         """Batch embed texts with error handling"""
         if not texts:
             return np.array([])
-            
+
         try:
             return self.model.encode(
                 texts,
@@ -44,7 +47,7 @@ class EmbeddingService:
         """Full pipeline: embed texts and store in vector DB"""
         embeddings = self.embed_texts(texts)
         ids = [str(hash(text)) for text in texts]  # Simple deterministic ID generation
-        
+
         self.vector_store.store_embeddings(
             ids=ids,
             embeddings=embeddings,

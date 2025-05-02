@@ -4,11 +4,10 @@
 This script provides search functionality to find relevant document chunks
 using Qdrant vector database.
 """
-import os
 import json
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from dotenv import load_dotenv
 from embedding import get_qdrant_client, search_qdrant
@@ -23,9 +22,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from functools import lru_cache
-from datetime import datetime
 import hashlib
+from datetime import datetime
+from functools import lru_cache
 
 # Cache size for search results (1000 queries)
 SEARCH_CACHE_SIZE = 1000
@@ -44,15 +43,15 @@ def preprocess_query(query: str) -> str:
 def check_rate_limit():
     """Enforce rate limiting for search requests."""
     global search_timestamps
-    
+
     # Remove old timestamps (older than 1 minute)
     now = datetime.now()
-    search_timestamps = [t for t in search_timestamps 
+    search_timestamps = [t for t in search_timestamps
                         if (now - t).total_seconds() < 60]
-    
+
     if len(search_timestamps) >= MAX_SEARCHES_PER_MINUTE:
         raise RuntimeError("Search rate limit exceeded (30 searches/minute)")
-    
+
     search_timestamps.append(now)
 
 @lru_cache(maxsize=SEARCH_CACHE_SIZE)
@@ -67,16 +66,16 @@ def search_chunks(
     use_cache: bool = True
 ) -> List[Tuple[Dict[str, Any], float]]:
     """Search for chunks similar to query using Qdrant with enhanced features.
-    
+
     Args:
         query: Search query
         chunks: Optional list of chunks (not used with Qdrant)
         top_k: Number of top results to return
         use_cache: Whether to use cached results
-        
+
     Returns:
         List of (chunk_dict, similarity_score) tuples
-        
+
     Raises:
         RuntimeError: If rate limit is exceeded
         ValueError: For invalid queries
@@ -89,28 +88,28 @@ def search_chunks(
 
         processed_query = preprocess_query(query)
         logger.info(f"Processing search query: {processed_query}")
-        
+
         # Check rate limiting
         check_rate_limit()
-        
+
         # Generate cache key
-        cache_key = get_query_cache_key(processed_query, top_k) if use_cache else None
-        
+        get_query_cache_key(processed_query, top_k) if use_cache else None
+
         # Load chunks and embeddings from file if chunks not provided
         if chunks is None:
             embeddings_file = Path(__file__).parent.parent / 'data' / 'embeddings.json'
             if not embeddings_file.exists():
                 raise FileNotFoundError(f"Embeddings file not found: {embeddings_file}")
-                
+
             with open(embeddings_file) as f:
                 data = json.load(f)
                 chunks = data.get('chunks', [])
-                
+
         # Simple vector search implementation (fallback if Qdrant not available)
         if not chunks:
             logger.warning("No chunks available for search")
             return []
-            
+
         # Try using Qdrant for search
         try:
             results = search_qdrant(processed_query, top_k=top_k)
@@ -123,20 +122,21 @@ def search_chunks(
                 # Calculate a simple relevance score based on word overlap
                 query_words = set(processed_query.lower().split())
                 chunk_text = chunk.get('text', '').lower()
-                word_matches = sum(1 for word in query_words if word in chunk_text)
+                word_matches = sum(bool(word in chunk_text)
+                               for word in query_words)
                 score = word_matches / max(1, len(query_words))
                 if score > 0:
                     results.append((chunk, score))
-            
+
             # Sort by score descending
             results = sorted(results, key=lambda x: x[1], reverse=True)[:top_k]
             logger.info("Used fallback local search")
-        
+
         # Format the results
         formatted_results = results
         logger.info(f"Found {len(formatted_results)} relevant chunks")
         return formatted_results
-        
+
     except RuntimeError as e:
         logger.error(f"Rate limit exceeded: {e}")
         raise
@@ -153,10 +153,10 @@ def search_chunks(
 
 def format_search_results(results: List[Tuple[Dict[str, Any], float]]) -> str:
     """Format search results for display.
-    
+
     Args:
         results: List of (chunk, similarity_score) tuples
-        
+
     Returns:
         Formatted string of results
     """
@@ -189,22 +189,18 @@ def format_search_results(results: List[Tuple[Dict[str, Any], float]]) -> str:
 if __name__ == "__main__":
     # Initialize Qdrant client
     client = get_qdrant_client()
-    
+
     # Interactive search
-    print("\nRAG Semantic Search Interface (Qdrant)")
-    print("=" * 50)
-    print("Enter your search query (or 'quit' to exit)")
-    
+
     while True:
         query = input("\nSearch: ").strip()
         if query.lower() in ('quit', 'exit', 'q'):
             break
-            
+
         if not query:
             continue
-        
+
         # Search Qdrant
         results = search_chunks(query)
-        
+
         # Display results
-        print("\n" + format_search_results(results))

@@ -9,6 +9,11 @@ pub mod js_renderer;
 pub mod markdown_converter;
 
 /// Python-friendly enumeration of output formats
+///
+/// Attributes:
+///     MARKDOWN (int): Format for Markdown output (0)
+///     JSON (int): Format for JSON output (1)
+///     XML (int): Format for XML output (2)
 #[pyclass]
 #[derive(Clone, Copy)]
 pub enum OutputFormat {
@@ -19,6 +24,17 @@ pub enum OutputFormat {
 
 #[pymethods]
 impl OutputFormat {
+    /// Convert a string representation to an OutputFormat
+    ///
+    /// Args:
+    ///     format_str (str): String representation of format ("markdown", "json", or "xml")
+    ///
+    /// Returns:
+    ///     OutputFormat: The corresponding OutputFormat enum value
+    ///
+    /// Example:
+    ///     >>> format = OutputFormat.from_str("json")
+    ///     >>> print(format)  # OutputFormat.JSON
     #[staticmethod]
     fn from_str(format_str: &str) -> Self {
         match format_str.to_lowercase().as_str() {
@@ -39,7 +55,18 @@ impl From<OutputFormat> for markdown_converter::OutputFormat {
     }
 }
 
-/// A Python module implemented in Rust.
+/// A Python module implemented in Rust for RAGnificent.
+///
+/// This module provides high-performance implementations of key RAGnificent functions:
+/// - HTML to Markdown/JSON/XML conversion
+/// - Semantic text chunking for RAG applications
+/// - JavaScript page rendering (when compiled with the 'real_rendering' feature)
+///
+/// Example:
+///     >>> from ragnificent_rs import convert_html_to_markdown, OutputFormat
+///     >>> html = "<h1>Title</h1><p>Content</p>"
+///     >>> markdown = convert_html_to_markdown(html, "https://example.com")
+///     >>> json_output = convert_html_to_format(html, "https://example.com", "json")
 #[pymodule]
 fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<OutputFormat>()?;
@@ -50,7 +77,25 @@ fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// Converts HTML content to markdown (legacy method)
+/// Converts HTML content to markdown format
+///
+/// Args:
+///     html (str): The HTML content to convert
+///     base_url (str): The base URL for resolving relative links
+///
+/// Returns:
+///     str: The converted markdown content
+///
+/// Raises:
+///     RuntimeError: If conversion fails
+///
+/// Example:
+///     >>> html = "<h1>Title</h1><p>This is a <a href='/page'>link</a></p>"
+///     >>> markdown = convert_html_to_markdown(html, "https://example.com")
+///     >>> print(markdown)
+///     # Title
+///
+///     This is a [link](https://example.com/page)
 #[pyfunction]
 fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> {
     let result = markdown_converter::convert_to_markdown(html, base_url)
@@ -58,7 +103,23 @@ fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> {
     Ok(result)
 }
 
-/// Converts HTML content to the specified format
+/// Converts HTML content to the specified format (markdown, JSON, or XML)
+///
+/// Args:
+///     html (str): The HTML content to convert
+///     base_url (str): The base URL for resolving relative links
+///     format (str, optional): The output format - "markdown" (default), "json", or "xml"
+///
+/// Returns:
+///     str: The converted content in the specified format
+///
+/// Raises:
+///     RuntimeError: If conversion fails
+///
+/// Example:
+///     >>> html = "<h1>Title</h1><p>Content with <a href='/link'>link</a></p>"
+///     >>> json_content = convert_html_to_format(html, "https://example.com", "json")
+///     >>> xml_content = convert_html_to_format(html, "https://example.com", "xml")
 #[pyfunction]
 fn convert_html_to_format(html: &str, base_url: &str, format: Option<String>) -> PyResult<String> {
     let output_format = match format.as_deref() {
@@ -72,7 +133,24 @@ fn convert_html_to_format(html: &str, base_url: &str, format: Option<String>) ->
     Ok(result)
 }
 
-/// Chunks markdown content for RAG
+/// Chunks markdown content into semantic sections for RAG (Retrieval Augmented Generation)
+///
+/// Args:
+///     markdown (str): The markdown content to chunk
+///     chunk_size (int): Maximum size of chunks in characters
+///     chunk_overlap (int): Overlap between chunks in characters
+///
+/// Returns:
+///     List[str]: List of markdown chunks
+///
+/// Raises:
+///     RuntimeError: If chunking fails
+///
+/// Example:
+///     >>> markdown = "# Title\n\nContent paragraph 1\n\n## Section\n\nContent paragraph 2"
+///     >>> chunks = chunk_markdown(markdown, 1000, 200)
+///     >>> len(chunks)
+///     2
 #[pyfunction]
 fn chunk_markdown(
     markdown: &str,
@@ -85,6 +163,24 @@ fn chunk_markdown(
 }
 
 /// Renders a JavaScript-enabled page and returns the HTML content
+///
+/// This function requires the 'real_rendering' feature to be enabled during compilation.
+/// It uses a headless browser to execute JavaScript and return the fully rendered HTML.
+///
+/// Args:
+///     url (str): The URL of the page to render
+///     wait_time (int, optional): Time to wait for JavaScript execution in milliseconds (default: 2000)
+///
+/// Returns:
+///     str: The fully rendered HTML content
+///
+/// Raises:
+///     RuntimeError: If rendering fails or if the 'real_rendering' feature is not enabled
+///
+/// Example:
+///     >>> html = render_js_page("https://example.com/js-heavy-page", 5000)
+///     >>> "dynamically-generated-content" in html
+///     True
 #[pyfunction]
 fn render_js_page(url: &str, wait_time: Option<u64>) -> PyResult<String> {
     let runtime = tokio::runtime::Runtime::new()

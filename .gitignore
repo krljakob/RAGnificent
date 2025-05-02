@@ -185,3 +185,4 @@ dmypy.json
 #/target
 .ssh
 .ssh.pub
+**/.claude/settings.local.json

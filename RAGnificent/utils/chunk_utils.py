@@ -42,7 +42,7 @@ class ContentChunker:
         self, markdown_content: str, source_url: str
     ) -> List[Chunk]:
         """
-        Split the markdown content into chunks for RAG processing.
+        Split the markdown content into chunks for RAG processing, preserving header hierarchy.
 
         Args:
             markdown_content: The markdown content to chunk
@@ -51,47 +51,36 @@ class ContentChunker:
         Returns:
             A list of Chunk objects
         """
-        # Split markdown into sections based on headers
-        sections = []
-        current_section = ""
-        current_heading = ""
+        # Parse hierarchy of sections using header levels
+        sections = self._parse_markdown_sections(markdown_content)
 
-        for line in markdown_content.split("\n"):
-            # Check if the line is a header
-            if line.startswith("#"):
-                # If we have content in the current section, save it
-                if current_section:
-                    sections.append((current_heading, current_section))
-
-                current_heading = line
-                current_section = line + "\n"
-            else:
-                current_section += line + "\n"
-
-        # Add the last section if it has content
-        if current_section:
-            sections.append((current_heading, current_section))
-
-        # Now create chunks from sections
+        # Now create chunks from hierarchical sections
         chunks = []
 
         # Parse domain for metadata
         domain = urlparse(source_url).netloc
 
-        for section_heading, section_content in sections:
+        for section in sections:
+            heading = section["heading"]
+            content = section["content"]
+            heading_level = section["level"]
+            heading_path = section["path"]
+
             # If the section is smaller than chunk_size, keep it as one chunk
-            if len(section_content) <= self.chunk_size:
+            if len(content) <= self.chunk_size:
                 chunk_id = hashlib.md5(
-                    f"{source_url}:{section_heading}".encode()
+                    f"{source_url}:{heading_path}".encode()
                 ).hexdigest()
                 chunk = Chunk(
                     id=chunk_id,
-                    content=section_content,
+                    content=content,
                     metadata={
-                        "heading": section_heading,
+                        "heading": heading,
+                        "heading_level": heading_level,
+                        "heading_path": heading_path,
                         "domain": domain,
-                        "word_count": len(section_content.split()),
-                        "char_count": len(section_content),
+                        "word_count": len(content.split()),
+                        "char_count": len(content),
                     },
                     source_url=source_url,
                     created_at=datetime.now().isoformat(),
@@ -100,7 +89,7 @@ class ContentChunker:
                 chunks.append(chunk)
             else:
                 # Split into overlapping chunks
-                words = section_content.split()
+                words = content.split()
                 words_per_chunk = (
                     self.chunk_size // 5
                 )  # Approximate words per character
@@ -111,16 +100,23 @@ class ContentChunker:
                     if not chunk_words:
                         continue
 
-                    chunk_content = " ".join(chunk_words)
+                    # Always include the heading at the start of each chunk for context
+                    if i > 0 and heading and not " ".join(chunk_words).startswith(heading):
+                        chunk_content = f"{heading}\n\n" + " ".join(chunk_words)
+                    else:
+                        chunk_content = " ".join(chunk_words)
+
                     chunk_id = hashlib.md5(
-                        f"{source_url}:{section_heading}:{i}".encode()
+                        f"{source_url}:{heading_path}:{i}".encode()
                     ).hexdigest()
 
                     chunk = Chunk(
                         id=chunk_id,
                         content=chunk_content,
                         metadata={
-                            "heading": section_heading,
+                            "heading": heading,
+                            "heading_level": heading_level,
+                            "heading_path": heading_path,
                             "domain": domain,
                             "position": i // (words_per_chunk - overlap_words),
                             "word_count": len(chunk_words),
@@ -133,6 +129,74 @@ class ContentChunker:
                     chunks.append(chunk)
 
         return chunks
+
+    def _parse_markdown_sections(self, markdown_content: str) -> List[Dict[str, Any]]:
+        """
+        Parse markdown into hierarchical sections based on headers.
+
+        Args:
+            markdown_content: The markdown content to parse
+
+        Returns:
+            A list of section dictionaries containing heading, content, level, and path
+        """
+        sections = []
+        lines = markdown_content.split("\n")
+
+        # Track header stack for maintaining hierarchy
+        header_stack = []
+        current_section = None
+
+        for line in lines:
+            if header_match := re.match(r'^(#+)\s+(.*)', line):
+                # This is a header line
+                level = len(header_match[1])
+                heading_text = header_match[2].strip()
+
+                # If we have a current section, finalize it and add to sections list
+                if current_section:
+                    sections.append(current_section)
+
+                # Update header stack based on new header level
+                while header_stack and header_stack[-1]["level"] >= level:
+                    header_stack.pop()
+
+                # Create path representation of current location in hierarchy
+                path = " > ".join([h["text"] for h in header_stack] + [heading_text])
+
+                # Create new header entry
+                header_entry = {
+                    "level": level,
+                    "text": heading_text
+                }
+
+                # Push to stack
+                header_stack.append(header_entry)
+
+                # Start new section
+                current_section = {
+                    "heading": line,
+                    "content": line + "\n",
+                    "level": level,
+                    "path": path
+                }
+            elif current_section:
+                # Add line to current section content
+                current_section["content"] += line + "\n"
+            elif line.strip():
+                # Create a default section for content before first header
+                current_section = {
+                    "heading": "Document Start",
+                    "content": line + "\n",
+                    "level": 0,
+                    "path": "Document Start"
+                }
+
+        # Add the final section if it exists
+        if current_section:
+            sections.append(current_section)
+
+        return sections
 
     def save_chunks(
         self, chunks: List[Chunk], output_dir: str, output_format: str = "jsonl"
@@ -156,12 +220,11 @@ class ContentChunker:
                 for chunk in chunks:
                     f.write(json.dumps(asdict(chunk)) + "\n")
             return
-        else:
-            # Save each chunk as a separate JSON file
-            for chunk in chunks:
-                output_file = chunk_dir / f"{chunk.id}.json"
-                with open(output_file, "w", encoding="utf-8") as f:
-                    json.dump(asdict(chunk), f, indent=2)
+        # Save each chunk as a separate JSON file
+        for chunk in chunks:
+            output_file = chunk_dir / f"{chunk.id}.json"
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(asdict(chunk), f, indent=2)
 
 
 def create_semantic_chunks(

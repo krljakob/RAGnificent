@@ -2,15 +2,16 @@
 """Document embedding module for RAG implementation
 
 This script converts text chunks into vector embeddings for semantic search
-and stores them in Qdrant vector database. Multiple embedding models are 
+and stores them in Qdrant vector database. Multiple embedding models are
 supported, with a fallback to simpler models when API keys are not available.
 """
-import os
 import json
 import logging
+import os
 import pickle
+import sys
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 from dotenv import load_dotenv
@@ -39,7 +40,7 @@ def init_qdrant_collection(
     embedding_dim: int = 384  # Default for all-MiniLM-L6-v2
 ) -> None:
     """Initialize Qdrant collection with proper configuration.
-    
+
     Args:
         client: Qdrant client instance
         collection_name: Name of the collection to create
@@ -48,7 +49,7 @@ def init_qdrant_collection(
     # Check if collection exists
     collections = client.get_collections()
     collection_names = [collection.name for collection in collections.collections]
-    
+
     if collection_name not in collection_names:
         client.create_collection(
             collection_name=collection_name,
@@ -75,11 +76,11 @@ os.makedirs(data_dir, exist_ok=True)
 
 def get_openai_embeddings(texts: List[str], model: str = "text-embedding-3-small") -> np.ndarray:
     """Generate embeddings using OpenAI's API.
-    
+
     Args:
         texts: List of text strings to embed
         model: OpenAI embedding model to use
-        
+
     Returns:
         Numpy array of embeddings, shape [num_texts, embedding_dim]
     """
@@ -129,11 +130,11 @@ def _extracted_from_get_openai_embeddings_(texts, model):
 
 def get_sentence_transformer_embeddings(texts: List[str], model_name: str = "all-MiniLM-L6-v2") -> np.ndarray:
     """Generate embeddings using Sentence Transformers locally.
-    
+
     Args:
         texts: List of text strings to embed
         model_name: Name of the sentence-transformers model
-        
+
     Returns:
         Numpy array of embeddings, shape [num_texts, embedding_dim]
     """
@@ -173,43 +174,43 @@ def _extracted_from_get_sentence_transformer_embeddings_12(model_name, texts):
 
 def get_tfidf_embeddings(texts: List[str]) -> np.ndarray:
     """Generate TF-IDF embeddings as a fallback method.
-    
+
     Args:
         texts: List of text strings to embed
-        
+
     Returns:
         Numpy array of embeddings, shape [num_texts, vocab_size]
     """
     from sklearn.feature_extraction.text import TfidfVectorizer
-    
+
     logger.info(f"Generating TF-IDF embeddings for {len(texts)} texts")
-    
+
     # Create vectorizer
     vectorizer = TfidfVectorizer()
-    
+
     # Fit and transform
     embeddings = vectorizer.fit_transform(texts).toarray()
-    
+
     logger.info(f"Generated TF-IDF embeddings with shape {embeddings.shape}")
-    
+
     # Also save the vectorizer for later use in search
     vectorizer_path = data_dir / 'tfidf_vectorizer.pkl'
     with open(vectorizer_path, 'wb') as f:
         pickle.dump(vectorizer, f)
     logger.info(f"Saved TF-IDF vectorizer to {vectorizer_path}")
-    
+
     return embeddings
 
 
 def get_local_embeddings(texts: List[str]) -> np.ndarray:
     """Get embeddings using locally available models.
-    
+
     This is a convenience function that attempts to use the best
     locally available embedding method.
-    
+
     Args:
         texts: List of text strings to embed
-        
+
     Returns:
         Numpy array of embeddings
     """
@@ -227,25 +228,25 @@ def embed_chunks(
     chunk_key: str = 'text'
 ) -> List[Dict[str, Any]]:
     """Embed text chunks and store in Qdrant vector database.
-    
+
     Args:
         chunks: List of chunk dictionaries with 'text' field
         embedding_function: Function to generate embeddings
         chunk_key: Key in chunk dictionaries containing the text to embed
-        
+
     Returns:
         List of chunk dictionaries with added 'embedding' field
     """
     logger.info(f"Embedding {len(chunks)} chunks")
-    
+
     # Extract texts to embed
     texts = [chunk[chunk_key] for chunk in chunks if chunk_key in chunk]
-    
+
     # Skip if no texts to embed
     if not texts:
         logger.warning(f"No texts found to embed with key '{chunk_key}'")
         return chunks
-    
+
     # Use appropriate embedding function
     if embedding_function is None:
         # Try OpenAI first, fall back to local methods
@@ -253,23 +254,23 @@ def embed_chunks(
             embedding_function = get_openai_embeddings
         else:
             embedding_function = get_local_embeddings
-    
+
     # Initialize Qdrant client
     qdrant_client = get_qdrant_client()
-    
+
     try:
         # Generate embeddings
         embeddings = embedding_function(texts)
-        
+
         # Prepare points for Qdrant
         points = []
-        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings, strict=False)):
             if chunk_key not in chunk:
                 continue
-                
+
             # Add embedding to chunk
             chunk['embedding'] = embedding.tolist()
-            
+
             # Create point for Qdrant
             point = models.PointStruct(
                 id=i,
@@ -280,10 +281,10 @@ def embed_chunks(
                 }
             )
             points.append(point)
-        
+
         # Initialize collection with correct embedding dimension
         init_qdrant_collection(qdrant_client, embedding_dim=len(embeddings[0]))
-        
+
         # Upsert points to Qdrant in batches
         batch_size = 100
         for i in range(0, len(points), batch_size):
@@ -294,9 +295,9 @@ def embed_chunks(
                 wait=True
             )
             logger.info(f"Upserted batch {i//batch_size + 1}/{(len(points)-1)//batch_size + 1}")
-        
+
         logger.info(f"Successfully embedded and stored {len(points)} chunks in Qdrant")
-        
+
     except Exception as e:
         logger.error(f"Error embedding chunks or storing in Qdrant: {str(e)}")
         # Fallback to JSON storage
@@ -304,7 +305,7 @@ def embed_chunks(
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(chunks, f, ensure_ascii=False, indent=2)
         logger.info(f"Saved embedded chunks to {output_path} as fallback")
-    
+
     return chunks
 
 
@@ -315,30 +316,30 @@ def search_qdrant(
     score_threshold: float = 0.7
 ) -> List[Dict[str, Any]]:
     """Search Qdrant collection for similar documents.
-    
+
     Args:
         query: Search query text
         embedding_function: Function to generate query embedding
         limit: Maximum number of results to return
         score_threshold: Minimum similarity score for results
-        
+
     Returns:
         List of matching documents with scores
     """
     # Initialize Qdrant client
     qdrant_client = get_qdrant_client()
-    
+
     # Use appropriate embedding function
     if embedding_function is None:
         if os.environ.get("OPENAI_API_KEY"):
             embedding_function = get_openai_embeddings
         else:
             embedding_function = get_local_embeddings
-    
+
     try:
         # Generate query embedding
         query_embedding = embedding_function([query])[0].tolist()
-        
+
         # Search Qdrant
         results = qdrant_client.search(
             collection_name=QDRANT_COLLECTION_NAME,
@@ -346,7 +347,7 @@ def search_qdrant(
             limit=limit,
             score_threshold=score_threshold
         )
-        
+
         # Format results
         matches = []
         for result in results:
@@ -356,9 +357,9 @@ def search_qdrant(
                 'metadata': result.payload['metadata']
             }
             matches.append(match)
-        
+
         return matches
-        
+
     except Exception as e:
         logger.error(f"Error searching Qdrant: {str(e)}")
         return []
@@ -370,7 +371,7 @@ if __name__ == "__main__":
     if not chunks_path.exists():
         logger.error(f"Document chunks not found at {chunks_path}")
         logger.info("Run 2_chunking.py first to create document chunks")
-        exit(1)
+        sys.exit(1)
 
     with open(chunks_path, 'r', encoding='utf-8') as f:
         chunks = json.load(f)
@@ -380,12 +381,9 @@ if __name__ == "__main__":
 
     # Print summary
     num_with_embeddings = sum('embedding' in chunk for chunk in embedded_chunks)
-    print(f"\nEmbedded {num_with_embeddings} out of {len(embedded_chunks)} chunks")
 
     if num_with_embeddings > 0:
         sample_chunk = next(chunk for chunk in embedded_chunks if 'embedding' in chunk)
         embedding_dim = len(sample_chunk['embedding'])
-        print(f"Embedding dimension: {embedding_dim}")
 
         # Print first few dimensions of first embedding
-        print(f"Sample embedding values: {sample_chunk['embedding'][:5]}...")

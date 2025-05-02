@@ -1,8 +1,10 @@
 import contextlib
 import xml.etree.ElementTree as ET
-from urllib.parse import urljoin
-import requests
 from typing import List
+from urllib.parse import urljoin
+
+import requests
+
 
 def parse_sitemap_index(xml_content: str) -> List[str]:
     """Parse sitemap index XML and return sitemap URLs."""

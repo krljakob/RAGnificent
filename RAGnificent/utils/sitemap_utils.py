@@ -1,5 +1,8 @@
 """
 Utility module for parsing XML sitemaps to map website structure before scraping.
+
+This module consolidates functionality from the simplified sitemap.py and the more
+robust sitemap_utils.py implementations.
 """
 
 import logging
@@ -8,11 +11,12 @@ import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
-from urllib.parse import urlparse
+from typing import Dict, List, Optional, Set, Tuple, Union
+from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import ParseError
 
 import requests
+from bs4 import BeautifulSoup
 
 from RAGnificent.core.throttle import RequestThrottler
 
@@ -61,7 +65,7 @@ class SitemapParser:
         self.discovered_urls: List[SitemapURL] = []
         self.processed_sitemaps: Set[str] = set()
 
-    def _make_request(self, url: str) -> Optional[str]:
+    def _make_request(self, url: str) -> Optional[Union[str, requests.Response]]:
         """
         Make an HTTP request with retry logic.
 
@@ -69,14 +73,15 @@ class SitemapParser:
             url: The URL to request
 
         Returns:
-            The response text or None if failed
+            Either the response text or the full Response object if return_full_response=True,
+            or None if the request failed
         """
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
-                return response.text
+                return response
             except (
                 requests.exceptions.RequestException,
                 requests.exceptions.HTTPError,
@@ -91,6 +96,10 @@ class SitemapParser:
                     return None
                 time.sleep(2**attempt)  # Exponential backoff
         return None
+
+    def _get_response_text(self, response: Optional[requests.Response]) -> Optional[str]:
+        """Extract text from response or return None if response is None."""
+        return response.text if response else None
 
     def _find_sitemaps_in_robots(self, base_url: str) -> List[str]:
         """
@@ -140,25 +149,24 @@ class SitemapParser:
             namespace = self._extract_namespace(content)
             ns_map = {"sm": namespace} if namespace else {}
             root = ET.fromstring(content)
-            
+
             # Determine if this is a sitemap index or a regular sitemap
             if root.tag.endswith("sitemapindex"):
                 return self._handle_sitemap_index(root, namespace, ns_map)
-            else:
-                return self._handle_sitemap(root, namespace, ns_map)
-                
+            return self._handle_sitemap(root, namespace, ns_map)
+
         except ParseError as e:
             logger.error(f"XML parsing error: {e}")
             return [], []
         except Exception as e:
             logger.error(f"Error parsing sitemap XML: {e}")
             return [], []
-            
+
     def _extract_namespace(self, content: str) -> Optional[str]:
         """Extract XML namespace from content."""
         ns_match = re.search(r'xmlns\s*=\s*["\']([^"\']+)["\']', content)
         return ns_match[1] if ns_match else None
-        
+
     def _handle_sitemap_index(self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Tuple[List[SitemapURL], List[str]]:
         """Process a sitemap index, extracting child sitemap URLs."""
         sitemap_index_urls = [
@@ -169,59 +177,94 @@ class SitemapParser:
             )
             if sitemap is not None and sitemap.text is not None
         ]
-        
+
         logger.info(f"Found sitemap index with {len(sitemap_index_urls)} sitemaps")
         return [], sitemap_index_urls
-        
+
     def _handle_sitemap(self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Tuple[List[SitemapURL], List[str]]:
         """Process a regular sitemap, extracting URLs and their metadata."""
         sitemap_urls = []
-        
+
         for url in root.findall(".//sm:url" if namespace else ".//url", ns_map):
             if sitemap_url := self._extract_url_data(url, namespace, ns_map):
                 sitemap_urls.append(sitemap_url)
-                
+
         logger.info(f"Parsed sitemap with {len(sitemap_urls)} URLs")
         return sitemap_urls, []
-        
+
     def _extract_url_data(self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[SitemapURL]:
         """Extract data for a single URL from a sitemap."""
         loc_elem = url_elem.find("sm:loc" if namespace else "loc", ns_map)
         if loc_elem is None or not loc_elem.text:
             return None
-            
+
         url_loc = loc_elem.text.strip()
         lastmod = self._get_element_text(url_elem, "lastmod", namespace, ns_map)
         changefreq = self._get_element_text(url_elem, "changefreq", namespace, ns_map)
         priority = self._get_priority(url_elem, namespace, ns_map)
-        
+
         return SitemapURL(
             loc=url_loc,
             lastmod=lastmod,
             changefreq=changefreq,
             priority=priority,
         )
-        
+
     def _get_element_text(self, parent: ET.Element, element_name: str, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[str]:
         """Get text from a child element if it exists."""
         prefixed_name = f"sm:{element_name}" if namespace else element_name
         elem = parent.find(prefixed_name, ns_map)
         return elem.text.strip() if elem is not None and elem.text else None
-        
+
     def _get_priority(self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[float]:
         """Extract and convert priority value."""
         priority_text = self._get_element_text(url_elem, "priority", namespace, ns_map)
         if not priority_text:
             return None
-            
+
         try:
             return float(priority_text)
         except (ValueError, TypeError):
             return None
 
+    def _parse_html_sitemap(self, content: str, base_url: str) -> List[SitemapURL]:
+        """
+        Parse HTML sitemap content.
+
+        Args:
+            content: The HTML content to parse
+            base_url: Base URL for resolving relative links
+
+        Returns:
+            List of SitemapURLs found
+        """
+        try:
+            urls = []
+            soup = BeautifulSoup(content, 'html.parser')
+
+            # Find all links in the HTML
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                # Skip empty, javascript, or anchor links
+                if not href or href.startswith('javascript:') or href.startswith('#'):
+                    continue
+
+                # Resolve relative URLs
+                full_url = urljoin(base_url, href)
+
+                # Create a SitemapURL object (without priority, lastmod, or changefreq)
+                urls.append(SitemapURL(loc=full_url))
+
+            logger.info(f"Found {len(urls)} URLs in HTML sitemap")
+            return urls
+
+        except Exception as e:
+            logger.error(f"Error parsing HTML sitemap: {e}")
+            return []
+
     def _process_sitemap(self, sitemap_url: str) -> List[SitemapURL]:
         """
-        Process a sitemap URL, handling both regular sitemaps and sitemap indices.
+        Process a sitemap URL, handling XML sitemaps, sitemap indices, and HTML sitemaps.
 
         Args:
             sitemap_url: The URL of the sitemap to process
@@ -236,25 +279,54 @@ class SitemapParser:
         logger.info(f"Processing sitemap: {sitemap_url}")
         self.processed_sitemaps.add(sitemap_url)
 
-        content = self._make_request(sitemap_url)
-        if not content:
+        response = self._make_request(sitemap_url)
+        if not response:
             logger.warning(f"Could not retrieve sitemap from {sitemap_url}")
             return []
 
-        urls, sitemap_indices = self._parse_sitemap_xml(content)
+        # Check content type to determine how to handle the response
+        content_type = response.headers.get('Content-Type', '').lower()
 
-        # Process any sitemap indices recursively
-        for index_url in sitemap_indices:
-            urls.extend(self._process_sitemap(index_url))
+        if 'xml' in content_type:
+            # Handle XML sitemap
+            content = response.text
+            urls, sitemap_indices = self._parse_sitemap_xml(content)
 
-        return urls
+            # Process any sitemap indices recursively
+            for index_url in sitemap_indices:
+                urls.extend(self._process_sitemap(index_url))
 
-    def parse_sitemap(self, base_url: str) -> List[SitemapURL]:
+            return urls
+
+        if 'html' in content_type:
+            # Handle HTML sitemap
+            logger.info(f"Detected HTML sitemap at {sitemap_url}")
+            return self._parse_html_sitemap(response.text, sitemap_url)
+
+        # Unknown content type
+        logger.warning(f"Unknown content type for sitemap at {sitemap_url}: {content_type}")
+        # Try to parse as XML anyway as a fallback
+        try:
+            content = response.text
+            urls, sitemap_indices = self._parse_sitemap_xml(content)
+
+            # Process any sitemap indices recursively
+            for index_url in sitemap_indices:
+                urls.extend(self._process_sitemap(index_url))
+
+            return urls
+        except Exception as e:
+            logger.error(f"Failed to parse sitemap with unknown content type: {e}")
+            return []
+
+    def parse_sitemap(self, base_url: str, filter_by_domain: bool = True, docs_path_filter: bool = False) -> List[SitemapURL]:
         """
         Parse sitemaps for a website and extract all URLs.
 
         Args:
             base_url: The base URL of the website
+            filter_by_domain: Whether to filter URLs to only include those from the same domain
+            docs_path_filter: Whether to apply a specific filter for /docs paths (used in simplified sitemap)
 
         Returns:
             List of SitemapURLs found across all sitemaps
@@ -263,6 +335,7 @@ class SitemapParser:
         self.processed_sitemaps = set()
         parsed_url = urlparse(base_url)
         base_domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        domain = parsed_url.netloc
 
         # List of potential sitemap locations to try
         sitemap_locations = []
@@ -289,6 +362,22 @@ class SitemapParser:
                 self.discovered_urls.extend(urls)
                 # If we found URLs in this sitemap, we can stop looking
                 break
+
+        # Apply domain filtering if requested
+        if filter_by_domain:
+            original_count = len(self.discovered_urls)
+            self.discovered_urls = [
+                url for url in self.discovered_urls if domain in url.loc
+            ]
+            logger.info(f"Filtered {original_count} URLs down to {len(self.discovered_urls)} from domain {domain}")
+
+            # Apply docs path filter if requested
+            if docs_path_filter and '/docs' in base_url:
+                original_count = len(self.discovered_urls)
+                self.discovered_urls = [
+                    url for url in self.discovered_urls if '/docs' in url.loc
+                ]
+                logger.info(f"Filtered for /docs paths: {original_count} URLs down to {len(self.discovered_urls)}")
 
         logger.info(f"Total URLs discovered from sitemaps: {len(self.discovered_urls)}")
         return self.discovered_urls
@@ -399,7 +488,7 @@ def discover_site_urls(
     parser = SitemapParser(respect_robots_txt=respect_robots_txt)
 
     # Parse sitemaps
-    parser.parse_sitemap(base_url)
+    parser.parse_sitemap(base_url, filter_by_domain=True)
 
     # Filter URLs
     filtered_urls = parser.filter_urls(
@@ -411,3 +500,24 @@ def discover_site_urls(
 
     # Extract URL strings
     return [url.loc for url in filtered_urls]
+
+
+def get_sitemap_urls(base_url: str) -> List[str]:
+    """
+    Extract all URLs from a website's sitemap.
+
+    This is a compatibility function for the simplified sitemap.py implementation.
+
+    Args:
+        base_url: The base URL of the website (e.g., 'https://example.com')
+
+    Returns:
+        A list of URLs found in the sitemap
+    """
+    parser = SitemapParser(respect_robots_txt=True)
+
+    # Parse sitemaps with domain filtering and docs path filtering
+    parser.parse_sitemap(base_url, filter_by_domain=True, docs_path_filter=True)
+
+    # Extract URL strings
+    return [url.loc for url in parser.discovered_urls]

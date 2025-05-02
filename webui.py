@@ -1,8 +1,8 @@
-from fastapi import FastAPI, BackgroundTasks, Request
+import uuid
+
+from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-import uuid
-import os
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -34,10 +34,10 @@ async def scrape(request: Request, background_tasks: BackgroundTasks):
 
 @app.get("/status/{job_id}")
 async def status(job_id: str):
-    info = SCRAPE_RESULTS.get(job_id)
-    if not info:
+    if info := SCRAPE_RESULTS.get(job_id):
+        return info
+    else:
         return JSONResponse({"error": "Job not found"}, status_code=404)
-    return info
 
 @app.get("/result/{job_id}")
 async def result(job_id: str):

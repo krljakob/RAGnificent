@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 """
-Command line interface for RAGnificent.
+Legacy command line interface for RAGnificent.
+
+Note: For better compatibility with the package structure, consider using:
+    python -m RAGnificent [arguments]
+instead of:
+    python main.py [arguments]
 """
 
 import sys
+
 from RAGnificent.core.scraper import main
 
 if __name__ == "__main__":

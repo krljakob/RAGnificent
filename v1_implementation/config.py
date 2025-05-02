@@ -1,8 +1,10 @@
-from typing import Optional
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
 import logging
 from pathlib import Path
+from typing import Optional
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class QdrantConfig(BaseSettings):
     host: str = Field(":memory:", env="QDRANT_HOST")
@@ -25,7 +27,7 @@ class EmbeddingConfig(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="EMBEDDING_",
-        env_file=".env", 
+        env_file=".env",
         env_file_encoding="utf-8"
     )
 
@@ -33,7 +35,7 @@ class AppConfig:
     def __init__(self):
         self.qdrant = QdrantConfig()
         self.embedding = EmbeddingConfig()
-        
+
         # Validate configs
         self._validate()
 
@@ -41,7 +43,7 @@ class AppConfig:
         """Validate configuration values"""
         if self.qdrant.vector_size <= 0:
             raise ValueError("Vector size must be positive")
-        
+
         if not 0 < self.embedding.batch_size <= 256:
             raise ValueError("Batch size must be between 1 and 256")
 
@@ -54,7 +56,7 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
             else:
                 QdrantConfig.Config.env_file = str(config_path)
                 EmbeddingConfig.Config.env_file = str(config_path)
-        
+
         return AppConfig()
     except Exception as e:
         logging.error(f"Failed to load config: {e}")

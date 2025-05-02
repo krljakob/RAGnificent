@@ -4,9 +4,9 @@
 This script extracts content from web pages and converts them to a standardized
 document format that can be used in the RAG pipeline.
 """
-import os
 import json
 import logging
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -27,18 +27,18 @@ os.makedirs(data_dir, exist_ok=True)
 
 def extract_documents(base_url: str, limit: Optional[int] = None, debug: bool = False) -> List[dict]:
     """Extract documents from a website.
-    
+
     Args:
         base_url: The base URL to extract documents from.
         limit: Maximum number of URLs to process (None for all).
-        
+
     Returns:
         A list of extracted documents.
     """
     logger.info(f"Extracting documents from {base_url}")
     if debug:
         logger.setLevel(logging.DEBUG)
-    
+
     # Get URLs from sitemap with fallback to crawling
     try:
         urls = get_sitemap_urls(base_url)
@@ -54,14 +54,14 @@ def extract_documents(base_url: str, limit: Optional[int] = None, debug: bool = 
             logger.error(f"Crawling failed: {str(e)}")
             logger.info("Falling back to base URL only")
             urls = [base_url]
-    
+
     if limit and len(urls) > limit:
         urls = urls[:limit]
         logger.info(f"Limited to processing {limit} URLs (from {len(urls)} available)")
-    
+
     # Initialize converter
     converter = DocumentConverter()
-    
+
     # Process each URL
     successful = 0
     for i, url in enumerate(urls):
@@ -71,21 +71,21 @@ def extract_documents(base_url: str, limit: Optional[int] = None, debug: bool = 
             successful += 1
         except Exception as e:
             logger.error(f"Error processing {url}: {str(e)}")
-    
+
     logger.info(f"Successfully processed {successful} out of {len(urls)} URLs")
-    
+
     # Save to disk
     output_path = data_dir / 'raw_documents.json'
     converter.save(str(output_path))
     logger.info(f"Saved raw documents to {output_path}")
-    
+
     # Return the documents
     with open(output_path, 'r', encoding='utf-8') as f:
         try:
             documents = json.load(f)
         except json.JSONDecodeError:
             documents = []
-    
+
     return documents
 
 
@@ -93,9 +93,3 @@ if __name__ == "__main__":
     # Extract documents
     base_url = "https://solana.com/docs"
     documents = extract_documents(base_url, limit=20)  # Limit for testing
-    
-    # Print summary
-    print(f"\nExtracted {len(documents)} documents")
-    if documents:
-        print(f"Sample document title: {documents[0].get('title', 'No title')}")
-        print(f"Sample document length: {len(documents[0].get('text', ''))} characters")

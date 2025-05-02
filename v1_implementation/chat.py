@@ -4,16 +4,17 @@
 This script provides a chat interface that combines semantic search
 with a language model to generate contextually informed responses.
 """
-import os
 import json
 import logging
+import os
+import sys
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union, Callable, Tuple
+from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
 # Import local modules
-from search import search_chunks, format_search_results
+from search import search_chunks
 
 # Load environment variables for API keys
 load_dotenv()
@@ -32,11 +33,11 @@ os.makedirs(data_dir, exist_ok=True)
 
 def format_rag_prompt(query: str, context: str) -> str:
     """Format a prompt for RAG with retrieved context.
-    
+
     Args:
         query: User query
         context: Retrieved context
-        
+
     Returns:
         Formatted prompt
     """
@@ -56,11 +57,11 @@ Your Answer:
 
 def get_response_from_openai(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     """Get a response from OpenAI's API.
-    
+
     Args:
         prompt: Formatted prompt
         model: OpenAI model name
-        
+
     Returns:
         Model response
     """
@@ -107,12 +108,12 @@ def chat_interface(query: str, context: Optional[str] = None) -> str:
 
 def get_response_from_local_model(prompt: str) -> str:
     """Get a response from a local model or simple heuristic.
-    
+
     This is a fallback when API models are not available.
-    
+
     Args:
         prompt: Formatted prompt
-        
+
     Returns:
         Model response
     """
@@ -143,7 +144,7 @@ def get_response_from_local_model(prompt: str) -> str:
         if line.startswith("Context:"):
             in_context = True
             continue
-        elif line.startswith("User Question:"):
+        if line.startswith("User Question:"):
             in_context = False
             question = line.replace("User Question:", "").strip()
 
@@ -162,7 +163,7 @@ def get_response_from_local_model(prompt: str) -> str:
         ] or context_lines[:3]  # Just take the first few lines
 
     # Construct a simple response
-    response = f"Based on the available information:\n\n"
+    response = "Based on the available information:\n\n"
     response += "\n\n".join(relevant_lines)
 
     return response
@@ -175,38 +176,38 @@ def chat(
     model: str = "gpt-3.5-turbo"
 ) -> str:
     """Chat with RAG-enhanced responses.
-    
+
     Args:
         query: User query
         chunks: List of chunk dictionaries with 'text' and 'embedding' fields
         top_k: Number of top results to use as context
         model: LLM model to use for responses
-        
+
     Returns:
         Generated response
     """
     logger.info(f"Processing query: {query}")
-    
+
     # Get relevant chunks
     search_results = search_chunks(query, chunks, top_k=top_k)
-    
+
     if not search_results:
         return "I couldn't find any relevant information to answer your question."
-    
+
     # Format search results as context
     context = "\n\n".join([chunk['text'] for chunk, _ in search_results])
-    
+
     # Create prompt
     prompt = format_rag_prompt(query, context)
-    
+
     # Get response
     if os.environ.get("OPENAI_API_KEY"):
         response = get_response_from_openai(prompt, model)
     else:
         response = get_response_from_local_model(prompt)
-    
+
     logger.info("Generated response from model")
-    
+
     return response
 
 
@@ -216,41 +217,34 @@ if __name__ == "__main__":
     if not chunks_path.exists():
         logger.error(f"Embedded chunks not found at {chunks_path}")
         logger.info("Run 3_embedding.py first to create embeddings")
-        exit(1)
-    
+        sys.exit(1)
+
     with open(chunks_path, 'r', encoding='utf-8') as f:
         chunks = json.load(f)
-    
+
     # Verify chunks have embeddings
     chunks_with_embeddings = [chunk for chunk in chunks if 'embedding' in chunk]
     logger.info(f"Loaded {len(chunks_with_embeddings)} chunks with embeddings")
-    
+
     if not chunks_with_embeddings:
         logger.error("No chunks have embeddings")
-        exit(1)
-    
+        sys.exit(1)
+
     # Interactive chat
-    print("\nRAG-Powered Chat Interface")
-    print("=" * 50)
-    print("Ask questions about the documents (or 'quit' to exit)")
-    
+
     model = "gpt-3.5-turbo"
     if not os.environ.get("OPENAI_API_KEY"):
-        print("\nNote: No OpenAI API key found. Using fallback response generation.")
-    
+        pass
+
     while True:
         query = input("\nQuestion: ").strip()
         if query.lower() in ('quit', 'exit', 'q'):
             break
-            
+
         if not query:
             continue
-        
+
         # Get RAG-enhanced response
         response = chat(query, chunks_with_embeddings)
-        
+
         # Display response
-        print("\nAnswer:")
-        print("-" * 50)
-        print(response)
-        print("-" * 50)

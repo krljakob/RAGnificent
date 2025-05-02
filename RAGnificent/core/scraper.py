@@ -3,22 +3,25 @@ Main module for scraping websites and converting content to markdown, JSON, or X
 """
 
 import argparse
+import concurrent.futures
 import contextlib
-import hashlib
+import importlib.util
+import json
 import logging
 import re
 import time
+import tracemalloc
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
 
-from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
-from RAGnificent.utils.sitemap_utils import SitemapParser
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.throttle import RequestThrottler
+from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
+from RAGnificent.utils.sitemap_utils import SitemapParser
 
 # Configure logging with more detailed formatting
 logging.basicConfig(
@@ -35,6 +38,10 @@ logger = logging.getLogger("markdown_scraper")
 
 class MarkdownScraper:
     """Scrapes websites and converts content to markdown, JSON, or XML with chunking support."""
+
+    # Precompiled regex patterns for better performance
+    _whitespace_pattern = re.compile(r"\s+")
+    _url_path_pattern = re.compile(r'[\\/*?:"<>|]')
 
     def __init__(
         self,
@@ -98,8 +105,6 @@ class MarkdownScraper:
         Raises:
             requests.exceptions.RequestException: If the request fails after retries
         """
-        import time
-        import tracemalloc
         try:
             import psutil  # type: ignore
             psutil_available = True
@@ -138,9 +143,6 @@ class MarkdownScraper:
 
     def _start_performance_monitoring(self, psutil_available: bool):
         """Start monitoring performance metrics."""
-        import time
-        import tracemalloc
-
         start_time = time.time()
         tracemalloc.start()
 
@@ -149,6 +151,7 @@ class MarkdownScraper:
                 "start_time": start_time,
                 "process": None,
             }
+        # Using the psutil module that was already imported in scrape_website
         import psutil
         process = psutil.Process()
         return {
@@ -158,9 +161,6 @@ class MarkdownScraper:
 
     def _log_performance_metrics(self, url: str, monitor, psutil_available: bool):
         """Log performance metrics for the request."""
-        import time
-        import tracemalloc
-
         end_time = time.time()
         execution_time = end_time - monitor["start_time"]
         memory_usage = tracemalloc.get_traced_memory()
@@ -181,8 +181,6 @@ class MarkdownScraper:
 
     def _fetch_with_retries(self, url: str) -> str:
         """Fetch URL content with retry logic."""
-        import time
-
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
@@ -224,8 +222,6 @@ class MarkdownScraper:
 
     def _handle_request_error(self, url: str, attempt: int, error, warning_msg: str, error_msg: str) -> None:
         """Handle request errors with appropriate logging and retries."""
-        import time
-
         logger.warning(warning_msg)
 
         # If this is the last attempt, log error and raise
@@ -240,7 +236,8 @@ class MarkdownScraper:
         """Extract clean text from a BeautifulSoup element."""
         if element is None:
             return ""
-        return re.sub(r"\s+", " ", element.get_text().strip())
+        # Use the precompiled class pattern for better performance
+        return self._whitespace_pattern.sub(" ", element.get_text().strip())
 
     def _get_element_markdown(self, element: Tag, base_url: str) -> str:
         """Convert a single HTML element to markdown."""
@@ -249,22 +246,21 @@ class MarkdownScraper:
         # Dispatch to specific handler methods based on element type
         if element_type in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             return self._convert_heading(element)
-        elif element_type == "p":
+        if element_type == "p":
             return self._convert_paragraph(element)
-        elif element_type == "a" and element.get("href"):
+        if element_type == "a" and element.get("href"):
             return self._convert_link(element, base_url)
-        elif element_type == "img" and element.get("src"):
+        if element_type == "img" and element.get("src"):
             return self._convert_image(element, base_url)
-        elif element_type == "ul":
+        if element_type == "ul":
             return self._convert_unordered_list(element)
-        elif element_type == "ol":
+        if element_type == "ol":
             return self._convert_ordered_list(element)
-        elif element_type == "blockquote":
+        if element_type == "blockquote":
             return self._convert_blockquote(element)
-        elif element_type in ["pre", "code"]:
+        if element_type in ["pre", "code"]:
             return self._convert_code(element)
-        else:
-            return self._get_text_from_element(element)
+        return self._get_text_from_element(element)
 
     def _convert_heading(self, element: Tag) -> str:
         """Convert heading elements to markdown."""
@@ -502,14 +498,15 @@ class MarkdownScraper:
             # Then convert to the requested format
             try:
                 # Try to use functions from ragnificent_rs for conversion
-                from RAGnificent.ragnificent_rs import (document_to_xml,
-                                         parse_markdown_to_document)
+                from RAGnificent.ragnificent_rs import (
+                    document_to_xml,
+                    parse_markdown_to_document,
+                )
 
                 document = parse_markdown_to_document(markdown_content, url)
 
                 if output_format == "json":
-                    import json
-
+                    # Using json that was already imported at the top level
                     content = json.dumps(document, indent=2)
                 elif output_format == "xml":
                     content = document_to_xml(document)
@@ -656,8 +653,8 @@ class MarkdownScraper:
         else:
             filename = "_".join(path_parts)
 
-        # Remove or replace invalid characters
-        filename = re.sub(r'[\\/*?:"<>|]', "_", filename)
+        # Remove or replace invalid characters using the precompiled pattern
+        filename = self._url_path_pattern.sub("_", filename)
 
         # Ensure correct file extension based on output format
         output_ext = ".md" if output_format == "markdown" else f".{output_format}"
@@ -732,7 +729,8 @@ class MarkdownScraper:
         chunk_format: str = "jsonl",
         output_format: str = "markdown",
         parallel: bool = False,
-        max_workers: int = 4
+        max_workers: int = 4,
+        worker_timeout: Optional[int] = None
     ) -> List[str]:
         """
         Scrape multiple pages from a list of links in a file.
@@ -745,6 +743,7 @@ class MarkdownScraper:
             chunk_format: Format to save chunks (json or jsonl)
             parallel: Whether to use parallel processing for faster scraping
             max_workers: Maximum number of parallel workers when parallel=True
+            worker_timeout: Timeout in seconds for each worker (None for no timeout)
 
         Returns:
             List of successfully scraped URLs
@@ -794,8 +793,7 @@ class MarkdownScraper:
 
         if parallel:
             try:
-                import concurrent.futures
-
+                # Using concurrent.futures that was already imported at the top level
                 def process_url(args):
                     url, idx = args
                     try:
@@ -809,7 +807,27 @@ class MarkdownScraper:
 
                 # Process URLs in parallel with a thread pool
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    results = list(executor.map(process_url, [(url, i) for i, url in enumerate(links)]))
+                    if worker_timeout is not None:
+                        # Use submit and as_completed with timeout
+                        logger.info(f"Processing URLs in parallel with {max_workers} workers and {worker_timeout}s timeout")
+                        futures = [executor.submit(process_url, (url, i)) for i, url in enumerate(links)]
+                        results = []
+
+                        for future in concurrent.futures.as_completed(futures, timeout=None):
+                            try:
+                                result = future.result(timeout=worker_timeout)
+                                results.append(result)
+                            except concurrent.futures.TimeoutError:
+                                # This worker timed out
+                                idx = futures.index(future)
+                                if idx < len(links):
+                                    url = links[idx]
+                                    logger.error(f"Worker timed out after {worker_timeout}s while processing {url}")
+                                    results.append((False, url, f"Timed out after {worker_timeout}s"))
+                    else:
+                        # Use map without timeout
+                        logger.info(f"Processing URLs in parallel with {max_workers} workers (no timeout)")
+                        results = list(executor.map(process_url, [(url, i) for i, url in enumerate(links)]))
 
                 # Process results
                 for success, url, error in results:
@@ -874,6 +892,7 @@ def main(
     links_file: Optional[str] = None,
     parallel: bool = False,
     max_workers: int = 4,
+    worker_timeout: Optional[int] = None,
 ) -> None:
     """
     Main entry point for the scraper.
@@ -900,6 +919,7 @@ def main(
         links_file: Path to a file containing links to scrape (defaults to links.txt if found)
         parallel: Whether to use parallel processing for faster scraping
         max_workers: Maximum number of parallel workers when parallel=True
+        worker_timeout: Timeout in seconds for each worker (None for no timeout)
     """
     if args_list is not None:
         # Parse command line arguments
@@ -927,6 +947,7 @@ def main(
         links_file = args.links_file
         parallel = args.parallel
         max_workers = args.max_workers
+        worker_timeout = args.worker_timeout
 
     # Setup
     validated_format = _validate_output_format(output_format)
@@ -953,7 +974,8 @@ def main(
                 chunk_dir=chunk_dir,
                 chunk_format=chunk_format,
                 parallel=parallel,
-                max_workers=max_workers
+                max_workers=max_workers,
+                worker_timeout=worker_timeout
             )
         elif use_sitemap:
             _process_sitemap_mode(
@@ -1088,6 +1110,11 @@ def _create_argument_parser():
         default=4,
         help="Maximum number of parallel workers when using --parallel (default: 4)",
     )
+    parser.add_argument(
+        "--worker-timeout",
+        type=int,
+        help="Timeout in seconds for each worker (default: no timeout)",
+    )
     return parser
 
 def _validate_output_format(output_format: str) -> str:
@@ -1103,7 +1130,7 @@ def _validate_output_format(output_format: str) -> str:
 def _check_rust_availability() -> None:
     """Check if Rust implementation is available."""
     with contextlib.suppress(ImportError):
-        import importlib.util
+        # Using importlib.util that was already imported at the top level
         if importlib.util.find_spec("RAGnificent.ragnificent_rs") is not None:
             pass  # Rust implementation is available
 
@@ -1184,7 +1211,8 @@ def _process_links_file_mode(
     chunk_dir: str,
     chunk_format: str,
     parallel: bool = False,
-    max_workers: int = 4
+    max_workers: int = 4,
+    worker_timeout: Optional[int] = None
 ) -> None:
     """Process multiple URLs from a links file."""
     # If links_file is None, use the default links.txt
@@ -1207,7 +1235,8 @@ def _process_links_file_mode(
         chunk_format=chunk_format,
         output_format=output_format,
         parallel=parallel,
-        max_workers=max_workers
+        max_workers=max_workers,
+        worker_timeout=worker_timeout
     )
 
 def _ensure_correct_extension(
@@ -1254,4 +1283,7 @@ if __name__ == "__main__":
         cache_max_age=args.cache_max_age,
         skip_cache=args.skip_cache,
         links_file=args.links_file,
+        parallel=args.parallel,
+        max_workers=args.max_workers,
+        worker_timeout=args.worker_timeout,
     )

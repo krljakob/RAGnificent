@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from RAGnificent.core.scraper import MarkdownScraper
 from RAGnificent.core.cache import RequestCache
+from RAGnificent.core.scraper import MarkdownScraper
 
 
 @pytest.fixture
@@ -60,7 +60,6 @@ def test_convert_to_markdown(scraper):
     # Get the result and check that it contains the expected elements
     # The exact format might vary, so we check for key content instead of exact matching
     result = scraper.convert_to_markdown(html_content)
-    print(f"Conversion result: {result}")  # Debugging output
 
     assert "# Test" in result
     assert "Header 1" in result
@@ -116,7 +115,10 @@ def test_format_conversion(mock_get, scraper):
 
     except ImportError:
         # Fall back to Python implementation (import a helper)
-        from RAGnificent.ragnificent_rs import document_to_xml, parse_markdown_to_document
+        from RAGnificent.ragnificent_rs import (
+            document_to_xml,
+            parse_markdown_to_document,
+        )
 
         # Convert to markdown first
         markdown_content = scraper.convert_to_markdown(mock_response.text)

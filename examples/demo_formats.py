@@ -21,7 +21,7 @@ SAMPLE_HTML = """
         <li>JSON - Structured data format for programmatic usage</li>
         <li>XML - Markup format for document interchange</li>
     </ul>
-    
+
     <h2>Benefits of Multiple Formats</h2>
     <p>Having multiple output formats provides several advantages:</p>
     <ol>
@@ -29,11 +29,11 @@ SAMPLE_HTML = """
         <li>Integration with various systems</li>
         <li>Easier data processing and transformation</li>
     </ol>
-    
+
     <blockquote>
         <p>Format conversion is performed efficiently using Rust implementations.</p>
     </blockquote>
-    
+
     <pre><code>
 # Sample Python code
 from RAGnificent.RAGnificent_rs import convert_html, OutputFormat
@@ -65,14 +65,9 @@ def main():
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(content)
 
-        print(f"Generated {name} output in {output_file}")
 
         # Show a preview of each format
-        preview = content.split("\n")[:5]
-        print(f"\n{name.upper()} PREVIEW:")
-        print("-" * 40)
-        print("\n".join(preview))
-        print("-" * 40)
+        content.split("\n")[:5]
 
 
 if __name__ == "__main__":

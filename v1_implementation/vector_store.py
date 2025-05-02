@@ -1,9 +1,12 @@
-from typing import List, Dict, Optional
+import logging
+from typing import Dict, List, Optional
+
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-import logging
+
 from .config import QdrantConfig
+
 
 class QdrantVectorStore:
     def __init__(self, config: Optional[QdrantConfig] = None):
@@ -53,9 +56,9 @@ class QdrantVectorStore:
                 vector=embedding.tolist(),
                 payload=metadata
             )
-            for idx, embedding, metadata in zip(ids, embeddings, metadatas)
+            for idx, embedding, metadata in zip(ids, embeddings, metadatas, strict=False)
         ]
-        
+
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]
             try:
