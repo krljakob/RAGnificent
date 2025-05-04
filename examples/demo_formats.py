@@ -65,7 +65,6 @@ def main():
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(content)
 
-
         # Show a preview of each format
         content.split("\n")[:5]
 

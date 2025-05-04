@@ -31,7 +31,9 @@ class TestChunkingEdgeCases(unittest.TestCase):
     def test_whitespace_only_content(self):
         """Test handling of whitespace-only content."""
         chunks = create_semantic_chunks("   \n   \t   ", "https://example.com")
-        self.assertEqual(len(chunks), 0, "Whitespace-only content should yield no chunks")
+        self.assertEqual(
+            len(chunks), 0, "Whitespace-only content should yield no chunks"
+        )
 
     def test_very_small_content(self):
         """Test handling of very small content."""
@@ -64,10 +66,26 @@ Content under second level 2.
 
         # Verify we have the correct paths
         self.assertTrue(any("Top Level Header" in path for path in paths))
-        self.assertTrue(any("Top Level Header > Second Level Header 1" in path for path in paths))
-        self.assertTrue(any("Top Level Header > Second Level Header 1 > Third Level Header A" in path for path in paths))
-        self.assertTrue(any("Top Level Header > Second Level Header 1 > Third Level Header B" in path for path in paths))
-        self.assertTrue(any("Top Level Header > Second Level Header 2" in path for path in paths))
+        self.assertTrue(
+            any("Top Level Header > Second Level Header 1" in path for path in paths)
+        )
+        self.assertTrue(
+            any(
+                "Top Level Header > Second Level Header 1 > Third Level Header A"
+                in path
+                for path in paths
+            )
+        )
+        self.assertTrue(
+            any(
+                "Top Level Header > Second Level Header 1 > Third Level Header B"
+                in path
+                for path in paths
+            )
+        )
+        self.assertTrue(
+            any("Top Level Header > Second Level Header 2" in path for path in paths)
+        )
 
     def test_very_long_header(self):
         """Test handling of extremely long headers."""
@@ -110,7 +128,9 @@ Very deep header.
 
         # Should handle without memory issues
         chunks = create_semantic_chunks(large_content, "https://example.com")
-        self.assertTrue(len(chunks) > 50, "Should create many chunks for large document")
+        self.assertTrue(
+            len(chunks) > 50, "Should create many chunks for large document"
+        )
 
     def test_special_characters(self):
         """Test handling of special characters in markdown."""
@@ -143,8 +163,13 @@ def special_func(x):
         chunker = ContentChunker(chunk_size=100, chunk_overlap=150)
 
         # Should still work, but overlap will effectively be reduced
-        chunks = chunker.create_chunks_from_markdown("# Header\nSome content.\n\n## Another header\nMore content.", "https://example.com")
-        self.assertTrue(len(chunks) > 0, "Should handle invalid chunking parameters gracefully")
+        chunks = chunker.create_chunks_from_markdown(
+            "# Header\nSome content.\n\n## Another header\nMore content.",
+            "https://example.com",
+        )
+        self.assertTrue(
+            len(chunks) > 0, "Should handle invalid chunking parameters gracefully"
+        )
 
     def test_jsonl_save_format(self):
         """Test saving to JSONL format."""
@@ -173,7 +198,10 @@ def special_func(x):
         # Verify the output files exist
         for chunk in chunks:
             output_file = output_dir / f"{chunk.id}.json"
-            self.assertTrue(output_file.exists(), f"JSON output file for chunk {chunk.id} should be created")
+            self.assertTrue(
+                output_file.exists(),
+                f"JSON output file for chunk {chunk.id} should be created",
+            )
 
     def test_identical_chunks_get_unique_ids(self):
         """Test that identical chunks from different source URLs get unique IDs."""
@@ -183,7 +211,11 @@ def special_func(x):
         chunks2 = create_semantic_chunks(content, "https://example.com/page2")
 
         # Check that the chunks have different IDs
-        self.assertNotEqual(chunks1[0].id, chunks2[0].id, "Identical chunks from different sources should have unique IDs")
+        self.assertNotEqual(
+            chunks1[0].id,
+            chunks2[0].id,
+            "Identical chunks from different sources should have unique IDs",
+        )
 
 
 if __name__ == "__main__":

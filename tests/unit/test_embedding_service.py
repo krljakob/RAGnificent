@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from v1_implementation.config import EmbeddingConfig
 from v1_implementation.embedding_service import EmbeddingService
 

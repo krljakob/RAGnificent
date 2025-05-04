@@ -49,8 +49,11 @@ try:
 
             if format_name.lower() == "json":
                 import json
+
                 return json.dumps(document, indent=2)
-            return document_to_xml(document) if format_name.lower() == "xml" else markdown
+            return (
+                document_to_xml(document) if format_name.lower() == "xml" else markdown
+            )
 
     RUST_AVAILABLE = True
     logger.info("Using Rust implementation for improved performance")

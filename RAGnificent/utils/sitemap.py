@@ -14,8 +14,9 @@ warnings.warn(
     "The sitemap.py module is deprecated and will be removed in a future version. "
     "Please use sitemap_utils.py instead.",
     DeprecationWarning,
-    stacklevel=2
+    stacklevel=2,
 )
+
 
 def get_sitemap_urls(base_url: str) -> List[str]:
     """
@@ -34,4 +35,4 @@ def get_sitemap_urls(base_url: str) -> List[str]:
 
 if __name__ == "__main__":
     # Example usage
-    urls = get_sitemap_urls('https://solana.com/docs')
+    urls = get_sitemap_urls("https://solana.com/docs")
