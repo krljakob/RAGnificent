@@ -90,12 +90,15 @@ fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///     RuntimeError: If conversion fails
 ///
 /// Example:
-///     >>> html = "<h1>Title</h1><p>This is a <a href='/page'>link</a></p>"
-///     >>> markdown = convert_html_to_markdown(html, "https://example.com")
-///     >>> print(markdown)
-///     # Title
-///
-///     "This is a [link](https://example.com/page)"
+/// ```python
+/// html = "<h1>Title</h1><p>This is a <a href='/page'>link</a></p>"
+/// markdown = convert_html_to_markdown(html, "https://example.com")
+/// print(markdown)
+/// # Output:
+/// # # Title
+/// #
+/// # This is a [link](https://example.com/page)
+/// ```
 #[pyfunction]
 fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> {
     let result = markdown_converter::convert_to_markdown(html, base_url)
