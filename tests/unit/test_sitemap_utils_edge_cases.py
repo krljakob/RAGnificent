@@ -156,7 +156,11 @@ class TestSitemapEdgeCases(unittest.TestCase):
         urls = parser.parse_sitemap("https://example.com")
 
         # Should find 3 URLs that match the domain (https://, http://, and protocol-relative)
-        matches = [url for url in urls if "example.com" in url.loc]
+        from urllib.parse import urlparse
+        matches = [
+            url for url in urls
+            if urlparse(url.loc).hostname == "example.com"
+        ]
         self.assertEqual(
             len(matches),
             3,
