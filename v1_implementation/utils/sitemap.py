@@ -1,5 +1,6 @@
 import contextlib
 import xml.etree.ElementTree as ET
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 from urllib.parse import urljoin
 

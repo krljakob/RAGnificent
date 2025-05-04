@@ -106,31 +106,8 @@ def main():
     data_dir = Path(__file__).parent.parent / 'data'
     os.makedirs(data_dir, exist_ok=True)
 
-    # Run selected pipeline steps
-    range(1, 6) if args.steps == "all" else [int(s) for s in args.steps.split(",")]
-    parser = argparse.ArgumentParser(description="Run the RAG pipeline")
-    parser.add_argument(
-        "--steps",
-        default="all",
-        help="Steps to run (comma-separated, e.g. '1,2,3,4,5') or 'all'"
-    )
-    parser.add_argument(
-        "--url",
-        default="https://www.terminaltrove.com/",
-        help="Website to scrape for documentation"
-    )
-    parser.add_argument(
-        "--limit",
-        type=int,
-        default=20,
-        help="Limit the number of documents to process"
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging"
-    )
-    return parser.parse_args()
+    # Determine which steps to run
+    steps_to_run = list(range(1, 6)) if args.steps == "all" else [int(s) for s in args.steps.split(",")]
 
 
 def run_step_1(args):
@@ -138,14 +115,16 @@ def run_step_1(args):
     logger.info("Step 1: Extracting documents...")
 
     try:
-        documents = extract_documents(args.url, limit=args.limit)
+        documents = extract_documents(args.url, limit=args.limit, debug=args.debug)
         if not documents:
             logger.warning("No documents were extracted - check the source URL and sitemap")
             return False
         logger.info(f"Extracted {len(documents)} documents")
         return True
     except Exception as e:
-        logger.error(f"Document extraction failed: {str(e)}")
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Document extraction failed: {str(e)}\nTraceback:\n{error_trace}")
         return False
 
 
@@ -264,36 +243,43 @@ def main():
     """Run the RAG pipeline."""
     args = parse_args()
 
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+
+    # Ensure data directory exists
+    data_dir = Path(__file__).parent.parent / 'data'
+    os.makedirs(data_dir, exist_ok=True)
+    
     # Determine which steps to run
-    if args.steps.lower() == "all":
-        steps = [1, 2, 3, 4, 5]
-    else:
-        steps = [int(s.strip()) for s in args.steps.split(",") if s.strip().isdigit()]
+    steps_to_run = list(range(1, 6)) if args.steps == "all" else [int(s) for s in args.steps.split(",")]
 
 
     # Run each step in sequence
     step_functions = {
         1: run_step_1,
-        2: run_step_2,
-        3: run_step_3,
-        4: run_step_4,
-        5: run_step_5
+        # Uncomment these as they are implemented
+        # 2: run_step_2,
+        # 3: run_step_3,
+        # 4: run_step_4,
+        # 5: run_step_5
     }
-
-    for step in steps:
-        if step in step_functions:
-            console.print(f"\n{'='*20} Running Step {step} {'='*20}\n", style="bold green")
-            try:
-                success = step_functions[step](args)
-                if not success:
-                    logger.error(f"Step {step} failed, stopping pipeline")
-                    break
-            except Exception as e:
-                logger.error(f"Unexpected error in step {step}: {str(e)}")
-                logger.error("Pipeline stopped due to error")
-                break
-        else:
-            logger.warning(f"Invalid step {step}, skipping")
+    
+    for step in steps_to_run:
+        if step not in step_functions:
+            logger.warning(f"Step {step} not implemented yet, skipping")
+            continue
+            
+        console.print(
+            f"\n==================== Running Step {step} ====================",
+            style="bold green"
+        )
+        
+        if not step_functions[step](args):
+            logger.error(f"Step {step} failed, stopping pipeline")
+            sys.exit(1)
 
 
 
