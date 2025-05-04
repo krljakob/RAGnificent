@@ -320,16 +320,7 @@ class SitemapParser:
         content_type = response.headers.get("Content-Type", "").lower()
 
         if "xml" in content_type:
-            # Handle XML sitemap
-            content = response.text
-            urls, sitemap_indices = self._parse_sitemap_xml(content)
-
-            # Process any sitemap indices recursively
-            for index_url in sitemap_indices:
-                urls.extend(self._process_sitemap(index_url))
-
-            return urls
-
+            return self._extracted_from__process_sitemap_28(response)
         if "html" in content_type:
             # Handle HTML sitemap
             logger.info(f"Detected HTML sitemap at {sitemap_url}")
@@ -341,17 +332,22 @@ class SitemapParser:
         )
         # Try to parse as XML anyway as a fallback
         try:
-            content = response.text
-            urls, sitemap_indices = self._parse_sitemap_xml(content)
-
-            # Process any sitemap indices recursively
-            for index_url in sitemap_indices:
-                urls.extend(self._process_sitemap(index_url))
-
-            return urls
+            return self._extracted_from__process_sitemap_28(response)
         except Exception as e:
             logger.error(f"Failed to parse sitemap with unknown content type: {e}")
             return []
+
+    # TODO Rename this here and in `_process_sitemap`
+    def _extracted_from__process_sitemap_28(self, response):
+        # Handle XML sitemap
+        content = response.text
+        urls, sitemap_indices = self._parse_sitemap_xml(content)
+
+        # Process any sitemap indices recursively
+        for index_url in sitemap_indices:
+            urls.extend(self._process_sitemap(index_url))
+
+        return urls
 
     def parse_sitemap(
         self,

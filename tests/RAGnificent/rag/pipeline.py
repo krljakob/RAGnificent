@@ -755,10 +755,7 @@ Always cite your sources by referencing the document numbers.
         # Skip step if it depends on a previous step that failed
         if depends_on_previous and not previous_successful:
             logger.error(f"No input data for {step_name} step")
-            result["steps"][step_name] = False
-            result["success"] = False
-            return False, None, result
-
+            return self._extracted_from__execute_pipeline_step_27(result, step_name)
         try:
             # Execute the step function
             output_data = step_fn(input_data)
@@ -768,10 +765,7 @@ Always cite your sources by referencing the document numbers.
                 logger.error(
                     f"{step_name.capitalize()} step failed - no output created"
                 )
-                result["steps"][step_name] = False
-                result["success"] = False
-                return False, None, result
-
+                return self._extracted_from__execute_pipeline_step_27(result, step_name)
             # Log success and update result
             if isinstance(output_data, list):
                 logger.info(
@@ -787,9 +781,13 @@ Always cite your sources by referencing the document numbers.
         except Exception as e:
             # Handle errors consistently
             logger.error(f"{step_name.capitalize()} step failed: {e}")
-            result["steps"][step_name] = False
-            result["success"] = False
-            return False, None, result
+            return self._extracted_from__execute_pipeline_step_27(result, step_name)
+
+    # TODO Rename this here and in `_execute_pipeline_step`
+    def _extracted_from__execute_pipeline_step_27(self, result, step_name):
+        result["steps"][step_name] = False
+        result["success"] = False
+        return False, None, result
 
     def _get_default_input(self, step_name: str, output_file: str) -> Any:
         """

@@ -89,21 +89,7 @@ def run_pipeline_mode(args):
     steps_to_run = {"extract": True, "chunk": True, "embed": True, "store": True}
 
     if args.steps != "all":
-        # Reset all steps to False
-        for step in steps_to_run:
-            steps_to_run[step] = False
-
-        # Enable only requested steps
-        step_nums = [int(s) for s in args.steps.split(",")]
-        if 1 in step_nums:
-            steps_to_run["extract"] = True
-        if 2 in step_nums:
-            steps_to_run["chunk"] = True
-        if 3 in step_nums:
-            steps_to_run["embed"] = True
-        if 4 in step_nums:
-            steps_to_run["store"] = True
-
+        _extracted_from_run_pipeline_mode_13(steps_to_run, args)
     if success := pipeline.run_pipeline(
         url=args.url,
         limit=args.limit,
@@ -115,6 +101,24 @@ def run_pipeline_mode(args):
         console.print("[bold green]Pipeline completed successfully![/bold green]")
     else:
         console.print("[bold red]Pipeline failed![/bold red]")
+
+
+# TODO Rename this here and in `run_pipeline_mode`
+def _extracted_from_run_pipeline_mode_13(steps_to_run, args):
+    # Reset all steps to False
+    for step in steps_to_run:
+        steps_to_run[step] = False
+
+    # Enable only requested steps
+    step_nums = [int(s) for s in args.steps.split(",")]
+    if 1 in step_nums:
+        steps_to_run["extract"] = True
+    if 2 in step_nums:
+        steps_to_run["chunk"] = True
+    if 3 in step_nums:
+        steps_to_run["embed"] = True
+    if 4 in step_nums:
+        steps_to_run["store"] = True
 
 
 def run_chat_mode(args):
