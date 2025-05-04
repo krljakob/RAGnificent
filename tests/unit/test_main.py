@@ -7,12 +7,13 @@ import sys
 # This allows tests to run even with inconsistent Python package installation
 # Import fix applied
 project_root = Path(__file__).parent.parent.parent
-ragnificent_path = project_root / "RAGnificent"
-sys.path.insert(0, str(project_root))
+core_path = project_root / "RAGnificent" / "core"
+sys.path.insert(0, str(core_path.parent))
 
 import pytest
 import requests
 
+# Direct imports from the module files
 from core.cache import RequestCache
 from core.scraper import MarkdownScraper
 
@@ -22,7 +23,7 @@ def scraper():
     return MarkdownScraper(cache_enabled=False)
 
 
-@patch("RAGnificent.core.scraper.requests.Session.get")
+@patch("core.scraper.requests.Session.get")
 def test_scrape_website_success(mock_get, scraper):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -34,7 +35,7 @@ def test_scrape_website_success(mock_get, scraper):
     assert result == "<html><head><title>Test</title></head><body></body></html>"
 
 
-@patch("RAGnificent.core.scraper.requests.Session.get")
+@patch("core.scraper.requests.Session.get")
 def test_scrape_website_http_error(mock_get, scraper):
     mock_response = MagicMock()
     mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
@@ -46,7 +47,7 @@ def test_scrape_website_http_error(mock_get, scraper):
         scraper.scrape_website("http://example.com")
 
 
-@patch("RAGnificent.core.scraper.requests.Session.get")
+@patch("core.scraper.requests.Session.get")
 def test_scrape_website_general_error(mock_get, scraper):
     mock_get.side_effect = Exception("Connection error")
 
@@ -79,7 +80,7 @@ def test_convert_to_markdown(scraper):
     assert "Item 2" in result
 
 
-@patch("RAGnificent.core.scraper.requests.Session.get")
+@patch("core.scraper.requests.Session.get")
 def test_format_conversion(mock_get, scraper):
     mock_response = MagicMock()
     mock_response.status_code = 200
@@ -95,11 +96,11 @@ def test_format_conversion(mock_get, scraper):
     # Test the JSON output format
     try:
         # Try to use the Rust implementation first
-        from ragnificent_rs import OutputFormat, convert_html
+        from ragnificent_rs import OutputFormat, convert_html_to_format
 
         # Convert to JSON
-        json_content = convert_html(
-            mock_response.text, "http://example.com", OutputFormat.JSON
+        json_content = convert_html_to_format(
+            mock_response.text, "http://example.com", "json"
         )
 
         # Basic validation
@@ -110,8 +111,8 @@ def test_format_conversion(mock_get, scraper):
         assert "Item B" in json_content
 
         # XML output test
-        xml_content = convert_html(
-            mock_response.text, "http://example.com", OutputFormat.XML
+        xml_content = convert_html_to_format(
+            mock_response.text, "http://example.com", "xml"
         )
 
         # Basic validation
@@ -194,7 +195,7 @@ def test_request_cache():
         assert (Path(temp_dir) / key).exists()
 
 
-@patch("RAGnificent.core.scraper.requests.Session.get")
+@patch("core.scraper.requests.Session.get")
 def test_scrape_website_with_cache(mock_get):
     with tempfile.TemporaryDirectory() as temp_dir:
         # Setup mock response

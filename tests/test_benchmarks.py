@@ -60,7 +60,7 @@ def test_save_chunks_benchmark(benchmark, tmp_path):
 def test_benchmark_scrape_with_cache_enabled(benchmark):
     """Benchmark scraping with cache enabled."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with patch("main.requests.Session.get") as mock_get:
+        with patch("core.scraper.requests.Session.get") as mock_get:
             # Setup mock response for first call
             mock_response = MagicMock()
             mock_response.status_code = 200
@@ -87,7 +87,7 @@ def test_benchmark_scrape_with_cache_enabled(benchmark):
 @pytest.mark.benchmark(group="caching")
 def test_benchmark_scrape_with_cache_disabled(benchmark):
     """Benchmark scraping with cache disabled."""
-    with patch("main.requests.Session.get") as mock_get:
+    with patch("core.scraper.requests.Session.get") as mock_get:
         # Setup mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
