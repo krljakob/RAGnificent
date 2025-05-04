@@ -89,14 +89,20 @@ fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 /// Raises:
 ///     RuntimeError: If conversion fails
 ///
-/// Example:
+/// Example (in Python):
 /// ```text
+/// # In Python:
 /// html = "<h1>Title</h1><p>This is a <a href='/page'>link</a></p>"
 /// markdown = convert_html_to_markdown(html, "https://example.com")
 /// # Result will contain:
-/// # # Title
-/// #
-/// # This is a [link](https://example.com/page)
+/// # "# Title"
+/// # "This is a [link](https://example.com/page)"
+/// ```
+///
+/// Example (in Rust, not for doctest):
+/// ```ignore
+/// let html = "<h1>Title</h1><p>This is a <a href='/page'>link</a></p>";
+/// let result = markdown_converter::convert_to_markdown(html, "https://example.com");
 /// ```
 #[pyfunction]
 fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> {
