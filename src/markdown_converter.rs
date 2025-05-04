@@ -345,7 +345,8 @@ fn render_lists_markdown(lists: &[List]) -> String {
     for list in lists {
         if list.ordered {
             for (i, item) in list.items.iter().enumerate() {
-                markdown.push_str(&format!("{}. {}\n", i + 1, item));
+                let num = i + 1;
+                markdown.push_str(&format!("{num}. {item}\n"));
             }
         } else {
             for item in &list.items {
