@@ -1,0 +1,128 @@
+[
+  {
+    "id": "e5935177e3cc100d65faaac48ba457f7",
+    "content": "# Learn Rust - Rust Programming Language\n\n",
+    "metadata": {
+      "heading": "# Learn Rust - Rust Programming Language",
+      "heading_level": 1,
+      "heading_path": "Learn Rust - Rust Programming Language",
+      "domain": "www.rust-lang.org",
+      "word_count": 7,
+      "char_count": 42,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154018",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "82ab760eb5a7d45597c1f9eb0ff645aa",
+    "content": "# Learn Rust\n\n",
+    "metadata": {
+      "heading": "# Learn Rust",
+      "heading_level": 1,
+      "heading_path": "Learn Rust",
+      "domain": "www.rust-lang.org",
+      "word_count": 3,
+      "char_count": 14,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154027",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "f0634c7631471f61cf4030537512db54",
+    "content": "## Get started with Rust\n\nAffectionately nicknamed “the book,” The Rust Programming Language will give you an overview of the language from first principles. You’ll build a few projects along the way, and by the end, you’ll have a solid grasp of the language.\n\nAlternatively, Rustlings guides you through downloading and setting up the Rust toolchain, and teaches you the basics of reading and writing Rust syntax, on the command line. It's an alternative to Rust by Example that works with your own environment.\n\nIf reading multiple hundreds of pages about a language isn’t your style, then Rust By Example has you covered. While the book talks about code with a lot of words, RBE shows off a bunch of code, and keeps the talking to a minimum. It also includes exercises!\n\n",
+    "metadata": {
+      "heading": "## Get started with Rust",
+      "heading_level": 2,
+      "heading_path": "Learn Rust > Get started with Rust",
+      "domain": "www.rust-lang.org",
+      "word_count": 132,
+      "char_count": 774,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154045",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "fd9ea0616695d5a89d7c18efbc6a331f",
+    "content": "## Documentation\n\n",
+    "metadata": {
+      "heading": "## Documentation",
+      "heading_level": 2,
+      "heading_path": "Learn Rust > Documentation",
+      "domain": "www.rust-lang.org",
+      "word_count": 2,
+      "char_count": 18,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154048",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "f42929f6cbee21001394563b14fdea61",
+    "content": "### Read the core documentation\n\nAll of this documentation is also available locally using the rustup doc command, which will open up these resources for you in your browser without requiring a network connection!\n\nComprehensive guide to the Rust standard library APIs.\n\nGuide to the Rust editions.\n\nA book on Rust’s package manager and build system.\n\nLearn how to make awesome documentation for your crate.\n\nFamiliarize yourself with the knobs available in the Rust compiler.\n\nIn-depth explanations of the errors you may see from the Rust compiler.\n\n",
+    "metadata": {
+      "heading": "### Read the core documentation",
+      "heading_level": 3,
+      "heading_path": "Learn Rust > Documentation > Read the core documentation",
+      "domain": "www.rust-lang.org",
+      "word_count": 87,
+      "char_count": 551,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154055",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "c61c6e0934d483784fd6ba1e991d6b49",
+    "content": "### Build your skills in an application domain\n\nLearn how to build effective command line applications in Rust.\n\nUse Rust to build browser-native libraries through WebAssembly.\n\nBecome proficient with Rust for Microcontrollers and other embedded systems.\n\n",
+    "metadata": {
+      "heading": "### Build your skills in an application domain",
+      "heading_level": 3,
+      "heading_path": "Learn Rust > Documentation > Build your skills in an application domain",
+      "domain": "www.rust-lang.org",
+      "word_count": 36,
+      "char_count": 256,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154058",
+    "chunk_type": "section",
+    "has_embedding": true
+  },
+  {
+    "id": "7447fd05a1a6b61d4cdefcf052127db3",
+    "content": "## Master Rust\n\nCurious about the darkest corners of the language? Here’s where you can get into the nitty-gritty:\n\n![A bookshelf icon](https://www.rust-lang.org/static/images/reference.svg)\n\nThe Reference is not a formal spec, but is more detailed and comprehensive than the book.\n\n![Two hands cradling fire](https://www.rust-lang.org/static/images/nomicon.svg)\n\nThe Rustonomicon is your guidebook to the dark arts of unsafe Rust. It’s also sometimes called “the ’nomicon.”\n\n![A hand sharing sparkles](https://www.rust-lang.org/static/images/unstable.svg)\n\nThe Unstable Book has documentation for unstable features that you can only use with nightly Rust.\n",
+    "metadata": {
+      "heading": "## Master Rust",
+      "heading_level": 2,
+      "heading_path": "Learn Rust > Master Rust",
+      "domain": "www.rust-lang.org",
+      "word_count": 80,
+      "char_count": 657,
+      "title": "Learn Rust - Rust Programming Language",
+      "document_url": "https://www.rust-lang.org/learn"
+    },
+    "source_url": "https://www.rust-lang.org/learn",
+    "created_at": "2025-05-04T03:50:15.154064",
+    "chunk_type": "section",
+    "has_embedding": true
+  }
+]

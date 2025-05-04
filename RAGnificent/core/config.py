@@ -1,13 +1,11 @@
-#!/usr/bin/env python
 """
-Configuration module for RAG implementation
+Configuration module for RAGnificent.
 
-Centralized configuration management for all RAG components with
+Centralized configuration management for all components with
 environment variable integration, validation, and proper defaults.
 """
 import logging
 import os
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -24,12 +22,15 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 # Define global constants
-DATA_DIR = Path(__file__).parent.parent / 'data'
-MODELS_DIR = Path(__file__).parent.parent / 'models'
+ROOT_DIR = Path(__file__).parent.parent.parent
+DATA_DIR = ROOT_DIR / 'data'
+MODELS_DIR = ROOT_DIR / 'models'
+CACHE_DIR = ROOT_DIR / 'cache'
 
 # Ensure directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 class LogLevel(str, Enum):
@@ -46,7 +47,7 @@ class EmbeddingModelType(str, Enum):
     OPENAI = "openai"
     SENTENCE_TRANSFORMER = "sentence_transformer"
     TFIDF = "tfidf"
-    SIMPLER = "simpler"  # Fallback basic embedding
+    SIMPLER = "simpler"
 
 
 class ChunkingStrategy(str, Enum):
@@ -60,25 +61,24 @@ class QdrantConfig(BaseSettings):
     """Qdrant vector database configuration"""
     host: str = Field(":memory:", description="Qdrant server host or :memory: for in-memory", env="QDRANT_HOST")
     port: int = Field(6333, description="Qdrant server port", env="QDRANT_PORT")
-    collection: str = Field("rag_documents", description="Qdrant collection name", env="QDRANT_COLLECTION")
+    collection: str = Field("ragnificent", description="Qdrant collection name", env="QDRANT_COLLECTION")
     api_key: Optional[str] = Field(None, description="Qdrant API key", env="QDRANT_API_KEY")
     https: bool = Field(False, description="Use HTTPS for Qdrant connection", env="QDRANT_HTTPS")
     vector_size: int = Field(384, description="Vector size for embeddings", env="QDRANT_VECTOR_SIZE")
     timeout: int = Field(10, description="Qdrant client timeout in seconds", env="QDRANT_TIMEOUT")
     prefer_grpc: bool = Field(True, description="Use gRPC protocol for better performance", env="QDRANT_PREFER_GRPC")
-
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
     @field_validator('vector_size')
     def check_vector_size(cls, v):
         """Validate vector size is positive"""
         if v <= 0:
             raise ValueError("Vector size must be positive")
         return v
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
 
 
 class OpenAIConfig(BaseSettings):
@@ -90,19 +90,18 @@ class OpenAIConfig(BaseSettings):
     temperature: float = Field(0.7, description="Temperature for completions", env="OPENAI_TEMPERATURE")
     request_timeout: int = Field(30, description="Request timeout in seconds", env="OPENAI_REQUEST_TIMEOUT")
     max_retries: int = Field(3, description="Maximum retries for API requests", env="OPENAI_MAX_RETRIES")
-
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
     @field_validator('temperature')
     def check_temperature(cls, v):
         """Validate temperature is between 0 and 1"""
         if not 0 <= v <= 1:
             raise ValueError("Temperature must be between 0 and 1")
         return v
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
 
 
 class EmbeddingConfig(BaseSettings):
@@ -112,25 +111,26 @@ class EmbeddingConfig(BaseSettings):
         description="Embedding model type to use",
         env="EMBEDDING_MODEL_TYPE"
     )
-    model_name: str = Field("all-MiniLM-L6-v2", description="Model name for SentenceTransformer", env="EMBEDDING_MODEL_NAME")
+    model_name: str = Field("BAAI/bge-small-en-v1.5", description="Model name for SentenceTransformer", env="EMBEDDING_MODEL_NAME")
     batch_size: int = Field(32, description="Batch size for embedding generation", env="EMBEDDING_BATCH_SIZE")
     device: str = Field("cpu", description="Device to use (cpu/cuda)", env="EMBEDDING_DEVICE")
-    cache_dir: Optional[Path] = Field(None, description="Cache directory for embeddings", env="EMBEDDING_CACHE_DIR")
+    cache_dir: Optional[Path] = Field(CACHE_DIR / "embeddings", description="Cache directory for embeddings", env="EMBEDDING_CACHE_DIR")
     use_cache: bool = Field(True, description="Whether to use embedding cache", env="EMBEDDING_USE_CACHE")
-
-    @field_validator('batch_size')
-    def check_batch_size(cls, v):
-        """Validate batch size is reasonable"""
-        if not 1 <= v <= 512:
-            raise ValueError("Batch size must be between 1 and 512")
-        return v
-
+    dimension: int = Field(384, description="Embedding dimension", env="EMBEDDING_DIMENSION")
+    normalize: bool = Field(True, description="Whether to normalize embeddings", env="EMBEDDING_NORMALIZE")
     model_config = SettingsConfigDict(
         env_prefix="EMBEDDING_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
+    
+    @field_validator('batch_size')
+    def check_batch_size(cls, v):
+        """Validate batch size is reasonable"""
+        if not 1 <= v <= 512:
+            raise ValueError("Batch size must be between 1 and 512")
+        return v
 
 
 class ChunkingConfig(BaseSettings):
@@ -144,14 +144,20 @@ class ChunkingConfig(BaseSettings):
     chunk_overlap: int = Field(200, description="Overlap between chunks in characters", env="CHUNKING_OVERLAP")
     separator: str = Field("\n", description="Default separator for boundary decisions", env="CHUNKING_SEPARATOR")
     keep_separator: bool = Field(True, description="Whether to keep separators in chunks", env="CHUNKING_KEEP_SEPARATOR")
-
+    model_config = SettingsConfigDict(
+        env_prefix="CHUNKING_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+    
     @field_validator('chunk_size')
     def check_chunk_size(cls, v):
         """Validate chunk size is positive"""
         if v <= 0:
             raise ValueError("Chunk size must be positive")
         return v
-
+        
     @field_validator('chunk_overlap')
     def check_chunk_overlap(cls, v, values):
         """Validate chunk overlap is less than chunk size"""
@@ -159,30 +165,25 @@ class ChunkingConfig(BaseSettings):
             raise ValueError("Chunk overlap must be less than chunk size")
         return v
 
-    model_config = SettingsConfigDict(
-        env_prefix="CHUNKING_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
 
-
-class ExtractionConfig(BaseSettings):
-    """Document extraction configuration"""
-    use_sitemap: bool = Field(True, description="Whether to use sitemap for URL discovery", env="EXTRACTION_USE_SITEMAP")
-    follow_links: bool = Field(True, description="Whether to follow links during extraction", env="EXTRACTION_FOLLOW_LINKS")
-    max_depth: int = Field(2, description="Maximum depth for link following", env="EXTRACTION_MAX_DEPTH")
-    timeout: int = Field(10, description="Request timeout in seconds", env="EXTRACTION_TIMEOUT")
+class ScraperConfig(BaseSettings):
+    """Document scraping configuration"""
+    use_sitemap: bool = Field(True, description="Whether to use sitemap for URL discovery", env="SCRAPER_USE_SITEMAP")
+    follow_links: bool = Field(True, description="Whether to follow links during extraction", env="SCRAPER_FOLLOW_LINKS")
+    max_depth: int = Field(2, description="Maximum depth for link following", env="SCRAPER_MAX_DEPTH")
+    timeout: int = Field(10, description="Request timeout in seconds", env="SCRAPER_TIMEOUT")
     user_agent: str = Field(
         "Mozilla/5.0 RAGnificent/1.0",
         description="User agent for web requests",
-        env="EXTRACTION_USER_AGENT"
+        env="SCRAPER_USER_AGENT"
     )
-    respect_robots_txt: bool = Field(True, description="Whether to respect robots.txt", env="EXTRACTION_RESPECT_ROBOTS")
-    rate_limit: float = Field(0.5, description="Seconds between requests (rate limiting)", env="EXTRACTION_RATE_LIMIT")
-
+    respect_robots_txt: bool = Field(True, description="Whether to respect robots.txt", env="SCRAPER_RESPECT_ROBOTS")
+    rate_limit: float = Field(0.5, description="Seconds between requests (rate limiting)", env="SCRAPER_RATE_LIMIT")
+    use_rust_implementation: bool = Field(True, description="Whether to use Rust implementation", env="SCRAPER_USE_RUST")
+    cache_enabled: bool = Field(True, description="Whether to enable request caching", env="SCRAPER_CACHE_ENABLED")
+    cache_max_age: int = Field(3600, description="Maximum age of cached responses in seconds", env="SCRAPER_CACHE_MAX_AGE")
     model_config = SettingsConfigDict(
-        env_prefix="EXTRACTION_",
+        env_prefix="SCRAPER_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
@@ -197,20 +198,19 @@ class SearchConfig(BaseSettings):
     rate_limit_per_minute: int = Field(60, description="Maximum searches per minute", env="SEARCH_RATE_LIMIT")
     enable_caching: bool = Field(True, description="Whether to cache search results", env="SEARCH_ENABLE_CACHE")
     cache_ttl: int = Field(3600, description="Cache TTL in seconds", env="SEARCH_CACHE_TTL")
-
-    @field_validator('score_threshold')
-    def check_score_threshold(cls, v):
-        """Validate score threshold is between 0 and 1"""
-        if not 0 <= v <= 1:
-            raise ValueError("Score threshold must be between 0 and 1")
-        return v
-
     model_config = SettingsConfigDict(
         env_prefix="SEARCH_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
+    
+    @field_validator('score_threshold')
+    def check_score_threshold(cls, v):
+        """Validate score threshold is between 0 and 1"""
+        if not 0 <= v <= 1:
+            raise ValueError("Score threshold must be between 0 and 1")
+        return v
 
 
 class LoggingConfig(BaseSettings):
@@ -223,7 +223,6 @@ class LoggingConfig(BaseSettings):
     )
     file: Optional[Path] = Field(None, description="Log file path", env="LOGGING_FILE")
     console: bool = Field(True, description="Whether to log to console", env="LOGGING_CONSOLE")
-
     model_config = SettingsConfigDict(
         env_prefix="LOGGING_",
         env_file=".env",
@@ -232,105 +231,102 @@ class LoggingConfig(BaseSettings):
     )
 
 
-@dataclass
 class AppConfig:
     """Main application configuration"""
-    qdrant: QdrantConfig
-    embedding: EmbeddingConfig
-    openai: OpenAIConfig
-    chunking: ChunkingConfig
-    extraction: ExtractionConfig
-    search: SearchConfig
-    logging: LoggingConfig
-
-    # Path constants
-    data_dir: Path = DATA_DIR
-    models_dir: Path = MODELS_DIR
-
+    def __init__(self):
+        self.qdrant = QdrantConfig()
+        self.embedding = EmbeddingConfig()
+        self.openai = OpenAIConfig()
+        self.chunking = ChunkingConfig()
+        self.scraper = ScraperConfig()
+        self.search = SearchConfig()
+        self.logging = LoggingConfig()
+        self.data_dir = DATA_DIR
+        self.models_dir = MODELS_DIR
+        self.cache_dir = CACHE_DIR
+        
+        # Configure logging based on settings
+        self.configure_logging()
+        
     def configure_logging(self):
         """Configure logging based on settings"""
         handlers = []
-
+        
+        # Console handler
         if self.logging.console:
             handlers.append(logging.StreamHandler())
-
+            
+        # File handler
         if self.logging.file:
             os.makedirs(os.path.dirname(self.logging.file), exist_ok=True)
             handlers.append(logging.FileHandler(self.logging.file))
-
+            
+        # Configure root logger
         logging.basicConfig(
             level=getattr(logging, self.logging.level.value),
             format=self.logging.format,
             handlers=handlers
         )
-
+        
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary for serialization"""
         return {
             "qdrant": self.qdrant.model_dump(),
             "embedding": self.embedding.model_dump(),
-            "openai": {**self.openai.model_dump(), "api_key": "[REDACTED]" if self.openai.api_key else None},
+            "openai": self.openai.model_dump(),
             "chunking": self.chunking.model_dump(),
-            "extraction": self.extraction.model_dump(),
+            "scraper": self.scraper.model_dump(),
             "search": self.search.model_dump(),
             "logging": self.logging.model_dump(),
+            "data_dir": str(self.data_dir),
+            "models_dir": str(self.models_dir),
+            "cache_dir": str(self.cache_dir)
         }
 
 
-def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
-    """Load configuration with optional env file override
+_CONFIG_INSTANCE = None
 
+def get_config() -> AppConfig:
+    """
+    Get the application configuration singleton.
+    
+    Returns:
+        AppConfig instance
+    """
+    global _CONFIG_INSTANCE
+    if _CONFIG_INSTANCE is None:
+        _CONFIG_INSTANCE = AppConfig()
+    return _CONFIG_INSTANCE
+
+
+def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
+    """
+    Load configuration with optional env file override.
+    
     Args:
         config_path: Optional path to .env config file
-
+        
     Returns:
         Configured AppConfig instance
-
+        
     Raises:
         ValueError: If config is invalid
         FileNotFoundError: If config file doesn't exist
     """
-    try:
-        # If config path provided, load it first
-        if config_path:
-            config_path = Path(config_path) if isinstance(config_path, str) else config_path
-            if not config_path.exists():
-                raise FileNotFoundError(f"Config file not found at {config_path}")
-            load_dotenv(config_path)
-            logger.info(f"Loaded configuration from {config_path}")
-
-        # Load all config components
-        qdrant_config = QdrantConfig()
-        embedding_config = EmbeddingConfig()
-        openai_config = OpenAIConfig()
-        chunking_config = ChunkingConfig()
-        extraction_config = ExtractionConfig()
-        search_config = SearchConfig()
-        logging_config = LoggingConfig()
-
-        # Create app config
-        config = AppConfig(
-            qdrant=qdrant_config,
-            embedding=embedding_config,
-            openai=openai_config,
-            chunking=chunking_config,
-            extraction=extraction_config,
-            search=search_config,
-            logging=logging_config
-        )
-
-        # Configure logging
-        config.configure_logging()
-        
-        logger.info("Configuration loaded successfully")
-        return config
-
-    except ValueError as e:
-        logger.error(f"Invalid configuration: {e}")
-        raise
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file error: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to load config: {e}")
-        raise
+    global _CONFIG_INSTANCE
+    
+    # Reset previous config if any
+    _CONFIG_INSTANCE = None
+    
+    # Load custom .env file if provided
+    if config_path:
+        path = Path(config_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Config file not found: {path}")
+            
+        logger.info(f"Loading configuration from: {path}")
+        load_dotenv(path, override=True)
+    
+    # Create new config instance with updated env vars
+    _CONFIG_INSTANCE = AppConfig()
+    return _CONFIG_INSTANCE

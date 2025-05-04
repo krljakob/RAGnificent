@@ -90,6 +90,22 @@ class MarkdownScraper:
             self.convert_html = convert_html
         except ImportError:
             self.rust_available = False
+            # Define fallback OutputFormat enum-like class
+            class FallbackOutputFormat:
+                MARKDOWN = "markdown"
+                JSON = "json"
+                XML = "xml"
+            
+            self.OutputFormat = FallbackOutputFormat
+            
+            # Define fallback convert_html function
+            def fallback_convert_html(html_content, url, output_format):
+                # This is a simple implementation that always converts to markdown
+                # For other formats, the _convert_content method handles conversion
+                from markdownify import markdownify
+                return markdownify(html_content, heading_style="ATX")
+                
+            self.convert_html = fallback_convert_html
 
     def scrape_website(self, url: str, skip_cache: bool = False) -> str:
         """
