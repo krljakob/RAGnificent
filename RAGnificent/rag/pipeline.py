@@ -8,10 +8,10 @@ combining Rust-optimized scraping with embedding, vector storage, and search.
 import json
 import logging
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
-import sys
 
 # Use relative imports for internal modules
 # Import fix applied
@@ -103,22 +103,24 @@ class Pipeline:
 
         logger.info(f"Initialized RAG pipeline with collection: {self.collection_name}")
 
-    def _process_single_url(self, url: str, output_format: str, skip_cache: bool) -> Optional[Dict[str, Any]]:
+    def _process_single_url(
+        self, url: str, output_format: str, skip_cache: bool
+    ) -> Optional[Dict[str, Any]]:
         """
         Process a single URL and return a document dictionary.
-        
+
         Args:
             url: URL to scrape
             output_format: Format of output (markdown, json, or xml)
             skip_cache: Whether to bypass the request cache
-            
+
         Returns:
             Document dictionary or None if extraction failed
         """
         try:
             html_content = self.scraper.scrape_website(url, skip_cache=skip_cache)
             content = self.scraper.convert_html(html_content, url, output_format)
-            
+
             return {
                 "url": url,
                 "content": content,
@@ -129,18 +131,23 @@ class Pipeline:
         except Exception as e:
             logger.error(f"Error extracting content from {url}: {e}")
             return None
-    
-    def _process_url_list(self, urls: List[str], limit: Optional[int], output_format: str, 
-                         skip_cache: bool) -> List[Dict[str, Any]]:
+
+    def _process_url_list(
+        self,
+        urls: List[str],
+        limit: Optional[int],
+        output_format: str,
+        skip_cache: bool,
+    ) -> List[Dict[str, Any]]:
         """
         Process a list of URLs and return document dictionaries.
-        
+
         Args:
             urls: List of URLs to scrape
             limit: Maximum number of URLs to process
             output_format: Format of output (markdown, json, or xml)
             skip_cache: Whether to bypass the request cache
-            
+
         Returns:
             List of document dictionaries
         """
@@ -151,67 +158,70 @@ class Pipeline:
             urls = urls[:limit]
 
         for url in urls:
-            if document := self._process_single_url(
-                url, output_format, skip_cache
-            ):
+            if document := self._process_single_url(url, output_format, skip_cache):
                 documents.append(document)
 
         return documents
-    
-    def _get_urls_from_sitemap(self, sitemap_url: str, limit: Optional[int]) -> List[str]:
+
+    def _get_urls_from_sitemap(
+        self, sitemap_url: str, limit: Optional[int]
+    ) -> List[str]:
         """
         Extract URLs from a sitemap.
-        
+
         Args:
             sitemap_url: URL to sitemap
             limit: Maximum number of URLs to retrieve
-            
+
         Returns:
             List of URLs from the sitemap
         """
         try:
             from utils.sitemap_utils import SitemapParser
+
             parser = SitemapParser()
             return parser.parse_sitemap(sitemap_url, limit=limit)
         except Exception as e:
             logger.error(f"Error processing sitemap {sitemap_url}: {e}")
             return []
-    
+
     def _get_urls_from_file(self, links_file: str, limit: Optional[int]) -> List[str]:
         """
         Read URLs from a file.
-        
+
         Args:
             links_file: Path to file containing links
             limit: Maximum number of URLs to retrieve
-            
+
         Returns:
             List of URLs from the file
         """
         try:
             with open(links_file, "r", encoding="utf-8") as f:
                 file_urls = [line.strip() for line in f if line.strip()]
-            
+
             # Apply limit if specified
             if limit:
                 file_urls = file_urls[:limit]
-                
+
             return file_urls
         except Exception as e:
             logger.error(f"Error reading links file {links_file}: {e}")
             return []
-    
-    def _save_documents(self, documents: List[Dict[str, Any]], output_file: str) -> None:
+
+    def _save_documents(
+        self, documents: List[Dict[str, Any]], output_file: str
+    ) -> None:
         """
         Save documents to a JSON file.
-        
+
         Args:
             documents: List of document dictionaries to save
             output_file: Path to save documents to
         """
         if not documents:
             return
-            
+
         output_path = self.data_dir / output_file
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(documents, f, indent=2, ensure_ascii=False)
@@ -249,9 +259,7 @@ class Pipeline:
         # Process single URL
         if url:
             logger.info(f"Extracting content from URL: {url}")
-            if document := self._process_single_url(
-                url, output_format, skip_cache
-            ):
+            if document := self._process_single_url(url, output_format, skip_cache):
                 documents.append(document)
 
         elif urls:
@@ -261,12 +269,16 @@ class Pipeline:
         elif sitemap_url:
             logger.info(f"Extracting content from sitemap: {sitemap_url}")
             if sitemap_urls := self._get_urls_from_sitemap(sitemap_url, limit):
-                documents = self._process_url_list(sitemap_urls, None, output_format, skip_cache)
+                documents = self._process_url_list(
+                    sitemap_urls, None, output_format, skip_cache
+                )
 
         elif links_file:
             logger.info(f"Extracting content from links in file: {links_file}")
             if file_urls := self._get_urls_from_file(links_file, limit):
-                documents = self._process_url_list(file_urls, None, output_format, skip_cache)
+                documents = self._process_url_list(
+                    file_urls, None, output_format, skip_cache
+                )
 
         # Save raw documents if output file specified
         if output_file:
@@ -277,10 +289,10 @@ class Pipeline:
     def _load_documents_from_file(self, file_path: str) -> List[Dict[str, Any]]:
         """
         Load documents from a JSON file.
-        
+
         Args:
             file_path: Path to the documents file
-            
+
         Returns:
             List of document dictionaries
         """
@@ -290,22 +302,24 @@ class Pipeline:
         except Exception as e:
             logger.error(f"Error loading documents from {file_path}: {e}")
             return []
-    
-    def _create_semantic_chunks(self, content: str, url: str, doc_title: str) -> List[Dict[str, Any]]:
+
+    def _create_semantic_chunks(
+        self, content: str, url: str, doc_title: str
+    ) -> List[Dict[str, Any]]:
         """
         Create semantic chunks from document content.
-        
+
         Args:
             content: Document content to chunk
             url: Source URL
             doc_title: Document title
-            
+
         Returns:
             List of chunk dictionaries
         """
         # Use our advanced semantic chunker
         chunks = self.chunker.create_chunks_from_markdown(content, url)
-        
+
         # Convert Chunk objects to dictionaries
         return [
             {
@@ -322,16 +336,18 @@ class Pipeline:
             }
             for chunk in chunks
         ]
-    
-    def _create_sliding_window_chunks(self, content: str, url: str, doc_title: str) -> List[Dict[str, Any]]:
+
+    def _create_sliding_window_chunks(
+        self, content: str, url: str, doc_title: str
+    ) -> List[Dict[str, Any]]:
         """
         Create sliding window chunks from document content.
-        
+
         Args:
             content: Document content to chunk
             url: Source URL
             doc_title: Document title
-            
+
         Returns:
             List of chunk dictionaries
         """
@@ -360,16 +376,18 @@ class Pipeline:
             }
             for i, chunk_text in enumerate(text_chunks)
         ]
-    
-    def _create_recursive_chunks(self, content: str, url: str, doc_title: str) -> List[Dict[str, Any]]:
+
+    def _create_recursive_chunks(
+        self, content: str, url: str, doc_title: str
+    ) -> List[Dict[str, Any]]:
         """
         Create recursive chunks from document content.
-        
+
         Args:
             content: Document content to chunk
             url: Source URL
             doc_title: Document title
-            
+
         Returns:
             List of chunk dictionaries
         """
@@ -398,18 +416,20 @@ class Pipeline:
             }
             for i, chunk_text in enumerate(recursive_chunks)
         ]
-    
-    def _save_chunks_to_file(self, chunks: List[Dict[str, Any]], output_file: str) -> None:
+
+    def _save_chunks_to_file(
+        self, chunks: List[Dict[str, Any]], output_file: str
+    ) -> None:
         """
         Save chunks to a JSON file.
-        
+
         Args:
             chunks: Chunks to save
             output_file: Output file name
         """
         if not chunks:
             return
-            
+
         output_path = self.data_dir / output_file
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(chunks, f, indent=2, ensure_ascii=False)
@@ -709,12 +729,18 @@ Always cite your sources by referencing the document numbers.
                 "has_context": True,
             }
 
-    def _execute_pipeline_step(self, step_name: str, step_fn: Callable, 
-                           input_data: Any, depends_on_previous: bool, 
-                           previous_successful: bool, result: Dict[str, Any]) -> Tuple[bool, Any, Dict[str, Any]]:
+    def _execute_pipeline_step(
+        self,
+        step_name: str,
+        step_fn: Callable,
+        input_data: Any,
+        depends_on_previous: bool,
+        previous_successful: bool,
+        result: Dict[str, Any],
+    ) -> Tuple[bool, Any, Dict[str, Any]]:
         """
         Execute a pipeline step with standardized error handling and logging.
-        
+
         Args:
             step_name: Name of the pipeline step
             step_fn: Function to execute for this step
@@ -722,7 +748,7 @@ Always cite your sources by referencing the document numbers.
             depends_on_previous: Whether this step depends on the previous step's success
             previous_successful: Whether the previous step was successful
             result: Current result dictionary to update
-            
+
         Returns:
             Tuple of (success_flag, output_data, updated_result_dict)
         """
@@ -732,43 +758,47 @@ Always cite your sources by referencing the document numbers.
             result["steps"][step_name] = False
             result["success"] = False
             return False, None, result
-        
+
         try:
             # Execute the step function
             output_data = step_fn(input_data)
-            
+
             # Check for empty results
             if not output_data:
-                logger.error(f"{step_name.capitalize()} step failed - no output created")
+                logger.error(
+                    f"{step_name.capitalize()} step failed - no output created"
+                )
                 result["steps"][step_name] = False
                 result["success"] = False
                 return False, None, result
-            
+
             # Log success and update result
             if isinstance(output_data, list):
-                logger.info(f"{step_name.capitalize()} step completed: {len(output_data)} items")
+                logger.info(
+                    f"{step_name.capitalize()} step completed: {len(output_data)} items"
+                )
                 result["document_counts"][step_name] = len(output_data)
             else:
                 logger.info(f"{step_name.capitalize()} step completed successfully")
-                
+
             result["steps"][step_name] = True
             return True, output_data, result
-            
+
         except Exception as e:
             # Handle errors consistently
             logger.error(f"{step_name.capitalize()} step failed: {e}")
             result["steps"][step_name] = False
             result["success"] = False
             return False, None, result
-    
+
     def _get_default_input(self, step_name: str, output_file: str) -> Any:
         """
         Get default input for a pipeline step from file when the previous step was skipped.
-        
+
         Args:
             step_name: Name of the step
             output_file: File to load data from
-            
+
         Returns:
             File path as string to pass to the next step
         """
@@ -832,58 +862,64 @@ Always cite your sources by referencing the document numbers.
                 "output_file": "raw_documents.json",
                 "output_format": output_format,
             }
-            
+
             # Define the extract function to pass to _execute_pipeline_step
             def extract_fn(_):
                 return self.extract_content(**extract_params)
-            
+
             extract_success, documents, result = self._execute_pipeline_step(
                 "documents", extract_fn, None, False, True, result
             )
-            
+
             if not extract_success and run_chunk:
                 return result
-        
+
         # Step 2: Chunk documents
         if run_chunk:
             # If we didn't run extract, try to load documents from file
             if not documents and not run_extract:
                 documents = self._get_default_input("documents", "raw_documents.json")
-                
+
             # Define the chunking function
             def chunk_fn(docs):
-                return self.chunk_documents(documents=docs, output_file="document_chunks.json")
-            
+                return self.chunk_documents(
+                    documents=docs, output_file="document_chunks.json"
+                )
+
             chunk_success, chunks, result = self._execute_pipeline_step(
                 "chunks", chunk_fn, documents, run_extract, extract_success, result
             )
-            
+
             if not chunk_success and run_embed:
                 return result
-        
+
         # Step 3: Embed chunks
         if run_embed:
             # If we didn't run chunk, try to load chunks from file
             if not chunks and not run_chunk:
                 chunks = self._get_default_input("chunks", "document_chunks.json")
-                
+
             # Define the embedding function
             def embed_fn(chunk_data):
-                return self.embed_chunks(chunks=chunk_data, output_file="embedded_chunks.json")
-                
+                return self.embed_chunks(
+                    chunks=chunk_data, output_file="embedded_chunks.json"
+                )
+
             embed_success, embedded_chunks, result = self._execute_pipeline_step(
                 "embedded_chunks", embed_fn, chunks, run_chunk, chunk_success, result
             )
-            
+
             if not embed_success and run_store:
                 return result
-        
+
         # Step 4: Store chunks
         if run_store:
             # If we didn't run embed, try to load embedded chunks from file
             if not embedded_chunks and not run_embed:
-                embedded_chunks = self._get_default_input("embedded_chunks", "embedded_chunks.json")
-                
+                embedded_chunks = self._get_default_input(
+                    "embedded_chunks", "embedded_chunks.json"
+                )
+
             # Define the storage function
             def store_fn(embeds):
                 success = self.store_chunks(embeds)
@@ -892,7 +928,7 @@ Always cite your sources by referencing the document numbers.
                     doc_count = self.vector_store.count_documents()
                     result["document_counts"]["stored_vectors"] = doc_count
                 return success
-                
+
             store_success, _, result = self._execute_pipeline_step(
                 "store", store_fn, embedded_chunks, run_embed, embed_success, result
             )

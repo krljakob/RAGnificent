@@ -10,7 +10,7 @@ project_root = Path(__file__).parent.parent.parent
 utils_path = project_root / "RAGnificent" / "utils"
 
 # Clear any existing paths that might interfere with our direct imports
-sys.path = [p for p in sys.path if 'site-packages' in p or 'lib' in p.lower()]
+sys.path = [p for p in sys.path if "site-packages" in p or "lib" in p.lower()]
 
 # Add the RAGnificent/utils directory to the path so we can import directly
 sys.path.insert(0, str(utils_path.parent))
@@ -80,7 +80,9 @@ class TestSitemapUtils(unittest.TestCase):
     def test_parse_sitemap_index(self, mock_make_request):
         # Setup mock responses for different URLs
         sitemap_responses = {
-            "https://example.com/sitemap_index.xml": ("application/xml", """<?xml version="1.0" encoding="UTF-8"?>
+            "https://example.com/sitemap_index.xml": (
+                "application/xml",
+                """<?xml version="1.0" encoding="UTF-8"?>
             <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                 <sitemap>
                     <loc>https://example.com/sitemap1.xml</loc>
@@ -91,21 +93,28 @@ class TestSitemapUtils(unittest.TestCase):
                     <lastmod>2023-05-16</lastmod>
                 </sitemap>
             </sitemapindex>
-            """),
-            "https://example.com/sitemap1.xml": ("application/xml", """<?xml version="1.0" encoding="UTF-8"?>
+            """,
+            ),
+            "https://example.com/sitemap1.xml": (
+                "application/xml",
+                """<?xml version="1.0" encoding="UTF-8"?>
             <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                 <url>
                     <loc>https://example.com/page1</loc>
                 </url>
             </urlset>
-            """),
-            "https://example.com/sitemap2.xml": ("application/xml", """<?xml version="1.0" encoding="UTF-8"?>
+            """,
+            ),
+            "https://example.com/sitemap2.xml": (
+                "application/xml",
+                """<?xml version="1.0" encoding="UTF-8"?>
             <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
                 <url>
                     <loc>https://example.com/page2</loc>
                 </url>
             </urlset>
-            """),
+            """,
+            ),
         }
 
         # Configure the mock to return appropriate response objects based on the URL
@@ -133,29 +142,32 @@ class TestSitemapUtils(unittest.TestCase):
         """Test the essential functionality of parsing sitemap URLs from robots.txt content."""
         # Since we've encountered issues with the full _find_sitemaps_in_robots method test,
         # let's test the most critical part: the line parsing logic
-        
+
         # Create sample robots.txt content
         robots_txt_content = "User-agent: *\nDisallow: /private/\nSitemap: https://example.com/custom_sitemap.xml"
-        
+
         # Split the content into lines and verify we can extract the sitemap URL
         lines = robots_txt_content.splitlines()
-        
+
         # Verify our test data has correct structure
         self.assertEqual(len(lines), 3, "Test data should have 3 lines")
-        self.assertTrue(lines[2].lower().startswith("sitemap:"), "Third line should start with 'Sitemap:'")
-        
+        self.assertTrue(
+            lines[2].lower().startswith("sitemap:"),
+            "Third line should start with 'Sitemap:'",
+        )
+
         # Extract the sitemap URL using the same logic as the SitemapParser
         extracted_url = lines[2][8:].strip()
-        self.assertEqual(extracted_url, "https://example.com/custom_sitemap.xml", 
-                         "Should extract the correct sitemap URL")
-        
+        self.assertEqual(
+            extracted_url,
+            "https://example.com/custom_sitemap.xml",
+            "Should extract the correct sitemap URL",
+        )
+
         # Skip patching the actual SitemapParser method since we've verified the core logic
         # This test ensures the parsing approach works when the input is correctly formatted
         # Additional logging
-        print(f"Robots.txt content: {robots_txt_content!r}")
-        print(f"Lines: {lines}")
-        print(f"Extracted URL: {extracted_url}")
-        
+
         # Since we've verified the individual steps work correctly and other sitemap tests pass,
         # we can be confident the functionality works
 

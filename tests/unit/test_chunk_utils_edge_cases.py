@@ -125,16 +125,20 @@ Very deep header.
         # Create a very large markdown document using list comprehensions for better code quality
         # For each section, create a header, 20 paragraphs, and an empty line
         large_doc = [
-            line for i in range(50) for line in (
+            line
+            for i in range(50)
+            for line in (
                 # Section header
-                [f"## Section {i}"] + 
+                [f"## Section {i}"]
+                +
                 # 20 paragraphs in each section
-                [f"This is paragraph {j} in section {i}. " * 10 for j in range(20)] + 
+                [f"This is paragraph {j} in section {i}. " * 10 for j in range(20)]
+                +
                 # Empty line between sections
                 [""]
             )
         ]
-        
+
         large_content = "\n".join(large_doc)
 
         # Should handle without memory issues
@@ -168,11 +172,17 @@ def special_func(x):
         # Verify that the function handles None URL correctly by still creating valid chunks
         chunks = create_semantic_chunks("Some content", None)
         self.assertTrue(len(chunks) > 0, "Should create chunks even with None URL")
-        
+
         # Check that the domain in metadata is set to empty bytes when URL is None
         for chunk in chunks:
-            self.assertIn('domain', chunk.metadata, "Chunk metadata should contain domain key")
-            self.assertEqual(b'', chunk.metadata['domain'], "Domain should be empty bytes when URL is None")
+            self.assertIn(
+                "domain", chunk.metadata, "Chunk metadata should contain domain key"
+            )
+            self.assertEqual(
+                b"",
+                chunk.metadata["domain"],
+                "Domain should be empty bytes when URL is None",
+            )
 
     def test_chunk_overlap_larger_than_chunk_size(self):
         """Test handling of invalid chunking parameters."""
@@ -216,8 +226,9 @@ def special_func(x):
         output_files = [(output_dir / f"{chunk.id}.json") for chunk in chunks]
         missing_files = [f for f in output_files if not f.exists()]
         self.assertEqual(
-            len(missing_files), 0,
-            f"All JSON output files should be created, missing: {missing_files}"
+            len(missing_files),
+            0,
+            f"All JSON output files should be created, missing: {missing_files}",
         )
 
     def test_identical_chunks_get_unique_ids(self):

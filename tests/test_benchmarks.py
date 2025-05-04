@@ -11,9 +11,10 @@ scraper_path = project_root / "RAGnificent" / "core"
 cache_path = project_root / "RAGnificent" / "core"
 sys.path.insert(0, str(scraper_path.parent))
 
+from core.cache import RequestCache
+
 # Direct imports from the module files
 from core.scraper import MarkdownScraper
-from core.cache import RequestCache
 
 
 @pytest.mark.benchmark(group="scrape_website")

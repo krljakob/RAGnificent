@@ -4,11 +4,11 @@ Test error handling in the scraper module.
 
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
-import sys
 
 # Use direct import path rather than relying on package structure
 # This allows tests to run even with inconsistent Python package installation
@@ -99,19 +99,24 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of file I/O errors."""
         # The current implementation appears to handle I/O errors differently than expected
         # We'll skip this test for now
-        self.skipTest("Current implementation handles I/O errors differently than expected")
-        
+        self.skipTest(
+            "Current implementation handles I/O errors differently than expected"
+        )
+
         # Previous test code:
         # Create an invalid directory path
         invalid_path = "/nonexistent/directory/file.md"
 
         # Mock a successful request
-        with patch.object(
-            self.scraper, "convert_to_markdown", return_value="# Test\nContent"
-        ), patch.object(
-            self.scraper,
-            "scrape_website",
-            return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+        with (
+            patch.object(
+                self.scraper, "convert_to_markdown", return_value="# Test\nContent"
+            ),
+            patch.object(
+                self.scraper,
+                "scrape_website",
+                return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+            ),
         ):
             # Attempt to save to an invalid path
             # In Python 3, IOError is an alias for OSError
@@ -132,8 +137,10 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of errors during chunking."""
         # The current implementation doesn't handle chunking errors as expected
         # We'll skip this test for now
-        self.skipTest("Current implementation doesn't handle chunking errors gracefully")
-        
+        self.skipTest(
+            "Current implementation doesn't handle chunking errors gracefully"
+        )
+
         # Previous test code:
         # Mock an error during chunking
         mock_create_chunks.side_effect = Exception("Chunking error")
@@ -142,12 +149,15 @@ class TestScraperErrorHandling(unittest.TestCase):
         os.makedirs(self.output_dir, exist_ok=True)
 
         # Mock a successful request and conversion
-        with patch.object(
-            self.scraper, "convert_to_markdown", return_value="# Test\nContent"
-        ), patch.object(
-            self.scraper,
-            "scrape_website",
-            return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+        with (
+            patch.object(
+                self.scraper, "convert_to_markdown", return_value="# Test\nContent"
+            ),
+            patch.object(
+                self.scraper,
+                "scrape_website",
+                return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+            ),
         ):
             # Attempt to process with chunking enabled
             try:
@@ -187,11 +197,15 @@ class TestScraperErrorHandling(unittest.TestCase):
             ):
                 # Should still return content even if caching fails
                 content = self.scraper.scrape_website(url)
-                self.assertIsNotNone(content, "Should return content even if caching fails")
+                self.assertIsNotNone(
+                    content, "Should return content even if caching fails"
+                )
         except OSError:
             # The current implementation doesn't handle cache errors properly
             # We'll skip this test with a note about it
-            self.skipTest("Current implementation does not handle cache errors properly")
+            self.skipTest(
+                "Current implementation does not handle cache errors properly"
+            )
 
     @responses.activate
     def test_parallel_processing_error_handling(self):
@@ -292,9 +306,12 @@ class TestScraperErrorHandling(unittest.TestCase):
         # Create and set multiple large content items at once
         test_urls = [f"http://example.com/page{i}" for i in range(5)]
         test_contents = [f"Large content {i}" * 1000 for i in range(5)]
-        
+
         # Use list comprehension to set all cache items
-        [small_cache.set(url, content) for url, content in zip(test_urls, test_contents)]
+        [
+            small_cache.set(url, content)
+            for url, content in zip(test_urls, test_contents, strict=False)
+        ]
 
         # The current implementation may not enforce the exact byte limit
         # but should enforce the max_memory_items limit

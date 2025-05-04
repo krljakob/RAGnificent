@@ -14,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import logging
 import re
+
+# Import directly using a system-level import approach (no relative imports)
+import sys
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -24,10 +27,6 @@ from xml.etree.ElementTree import ParseError
 
 import requests
 from bs4 import BeautifulSoup
-
-# Import directly using a system-level import approach (no relative imports)
-import sys
-from pathlib import Path
 
 # Ensure core module is available in the path
 core_path = Path(__file__).parent.parent / "core"

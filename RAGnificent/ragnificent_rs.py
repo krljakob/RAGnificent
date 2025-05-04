@@ -9,12 +9,12 @@ To build the Rust extension:
 
 import json
 import logging
+import sys
 import xml.etree.ElementTree as ET
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional
 from xml.dom import minidom
-import sys
-from pathlib import Path
 
 # Use relative imports for internal modules
 # Import fix applied

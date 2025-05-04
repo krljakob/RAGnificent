@@ -6,17 +6,16 @@ Includes robust error handling, connection management, and search capabilities.
 """
 
 import logging
-import time
-from typing import Any, Dict, List, Optional, Tuple
 import sys
+import time
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 # Use relative imports for internal modules
 # Import fix applied
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
-
 from core.config import get_config
 from rag.embedding import embed_text, get_embedding_model
 

@@ -1,7 +1,8 @@
 import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
-from pathlib import Path
 
 # Add the module paths directly
 project_root = Path(__file__).parent.parent.parent
@@ -27,13 +28,13 @@ class TestEmbeddingService:
         texts = ["test sentence", "another test"]
         # Convert to chunks format expected by the current implementation
         chunks = [{"content": text} for text in texts]
-        
+
         # Use the actual embed_chunks method
         embedded_chunks = embedding_service.embed_chunks(chunks)
-        
+
         # Extract embeddings from the returned chunks
         embeddings = [chunk["embedding"] for chunk in embedded_chunks]
-        
+
         assert len(embeddings) == 2
         assert all(isinstance(emb, np.ndarray) for emb in embeddings)
         assert embeddings[0].shape[0] > 0  # Should have some dimensions
@@ -42,8 +43,10 @@ class TestEmbeddingService:
         # This test depends on vector storage functionality that
         # may be implemented elsewhere in the codebase.
         # For now, we'll skip this test
-        pytest.skip("The current EmbeddingService implementation doesn't support store_embeddings or search_similar directly")
-        
+        pytest.skip(
+            "The current EmbeddingService implementation doesn't support store_embeddings or search_similar directly"
+        )
+
         # Original test was:
         # texts = ["apple fruit", "banana fruit", "car vehicle"]
         # metadata = [{"type": "fruit"}, {"type": "fruit"}, {"type": "vehicle"}]

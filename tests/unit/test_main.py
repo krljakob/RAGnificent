@@ -1,7 +1,7 @@
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import sys
 
 # Use direct import path rather than relying on package structure
 # This allows tests to run even with inconsistent Python package installation

@@ -9,12 +9,12 @@ import importlib.util
 import json
 import logging
 import re
+import sys
 import time
 import tracemalloc
 from pathlib import Path
 from typing import List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
-import sys
 
 # Use relative imports for internal modules
 # Import fix applied
@@ -34,11 +34,12 @@ if str(core_path) not in sys.path:
 if str(utils_path) not in sys.path:
     sys.path.append(str(utils_path))
 
-# Now import directly from modules
-from cache import RequestCache
-from throttle import RequestThrottler
 from chunk_utils import ContentChunker, create_semantic_chunks
 from sitemap_utils import SitemapParser
+from throttle import RequestThrottler
+
+# Now import directly from modules
+from cache import RequestCache
 
 # Configure logging with more detailed formatting
 logging.basicConfig(

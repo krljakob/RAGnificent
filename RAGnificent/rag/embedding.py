@@ -9,19 +9,18 @@ import hashlib
 import logging
 import os
 import pickle
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
-import sys
 
 # Use relative imports for internal modules
 # Import fix applied
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
-from dotenv import load_dotenv
-
 from core.config import EmbeddingModelType, get_config
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +166,9 @@ class SentenceTransformerEmbedding:
             logger.error(
                 "SentenceTransformers package not installed. Please install with: pip install sentence-transformers"
             )
-            raise EmbeddingModelError("SentenceTransformers package not installed") from e
+            raise EmbeddingModelError(
+                "SentenceTransformers package not installed"
+            ) from e
 
         except Exception as e:
             logger.error(f"Error loading SentenceTransformer model: {e}")
@@ -230,9 +231,7 @@ class SentenceTransformerEmbedding:
 
             # Cache new embeddings
             for i, embedding in enumerate(new_embeddings):
-                save_embedding_to_cache(
-                    self.model_name, texts_to_embed[i], embedding
-                )
+                save_embedding_to_cache(self.model_name, texts_to_embed[i], embedding)
 
             # Merge cached and new embeddings
             result = [None] * len(text)
@@ -285,16 +284,20 @@ class OpenAIEmbedding:
 
         except Exception as e:
             logger.error(f"Error initializing OpenAI embedding: {e}")
-            raise EmbeddingModelError(f"Failed to initialize OpenAI embedding: {e}") from e
+            raise EmbeddingModelError(
+                f"Failed to initialize OpenAI embedding: {e}"
+            ) from e
 
-    def _get_cached_embeddings(self, texts: List[str], is_single_text: bool) -> Tuple[List[np.ndarray], List[str], List[int]]:
+    def _get_cached_embeddings(
+        self, texts: List[str], is_single_text: bool
+    ) -> Tuple[List[np.ndarray], List[str], List[int]]:
         """
         Check cache for embeddings and return cached ones plus texts that need embedding.
-        
+
         Args:
             texts: List of text strings to check in cache
             is_single_text: Whether this originated from a single text string
-            
+
         Returns:
             Tuple of (cached_embeddings, texts_to_embed, original_indices)
         """
@@ -315,19 +318,19 @@ class OpenAIEmbedding:
                 original_indices.append(i)
 
         return cached_embeddings, texts_to_embed, original_indices
-    
+
     def _call_openai_api(self, texts: List[str]) -> List[np.ndarray]:
         """
         Call OpenAI API with retry logic to get embeddings.
-        
+
         Args:
             texts: List of text strings to embed
-            
+
         Returns:
             List of embedding vectors
         """
         import openai
-        
+
         # Retry logic for API calls
         retry_count = 0
         while retry_count <= self.max_retries:
@@ -345,11 +348,17 @@ class OpenAIEmbedding:
                     f"Retrying OpenAI embedding request ({retry_count}/{self.max_retries}): {e}"
                 )
                 time.sleep(2**retry_count)  # Exponential backoff
-    
-    def _cache_embeddings(self, texts: List[str], embeddings: List[np.ndarray], original_text: Union[str, List[str]]) -> None:
+        return None
+
+    def _cache_embeddings(
+        self,
+        texts: List[str],
+        embeddings: List[np.ndarray],
+        original_text: Union[str, List[str]],
+    ) -> None:
         """
         Save embeddings to cache.
-        
+
         Args:
             texts: The texts that were embedded
             embeddings: The embedding vectors
@@ -360,34 +369,39 @@ class OpenAIEmbedding:
                 original_text if isinstance(original_text, list) else [original_text]
             ):
                 save_embedding_to_cache(self.model_name, t, embeddings[i])
-    
-    def _merge_embeddings(self, new_embeddings: List[np.ndarray], cached_embeddings: List[np.ndarray], 
-                          original_indices: List[int], total_length: int) -> List[np.ndarray]:
+
+    def _merge_embeddings(
+        self,
+        new_embeddings: List[np.ndarray],
+        cached_embeddings: List[np.ndarray],
+        original_indices: List[int],
+        total_length: int,
+    ) -> List[np.ndarray]:
         """
         Merge cached and new embeddings into the correct order.
-        
+
         Args:
             new_embeddings: List of newly generated embeddings
             cached_embeddings: List of embeddings retrieved from cache
             original_indices: Original indices of texts that needed embedding
             total_length: Total number of texts in the original input
-            
+
         Returns:
             List of embeddings in the original order
         """
         result = [None] * total_length
-        
+
         # Place new embeddings in their original positions
-        for original_idx, embed in zip(original_indices, new_embeddings):
+        for original_idx, embed in zip(original_indices, new_embeddings, strict=False):
             result[original_idx] = embed
-            
+
         # Fill in gaps with cached embeddings
         cached_idx = 0
         for i in range(total_length):
             if result[i] is None:
                 result[i] = cached_embeddings[cached_idx]
                 cached_idx += 1
-                
+
         return result
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
@@ -401,14 +415,15 @@ class OpenAIEmbedding:
             Embedding vector(s)
         """
         try:
-            import openai
 
             # Prepare input for consistent processing
             is_single_text = isinstance(text, str)
             texts = [text] if is_single_text else text
 
             # Check cache and prepare texts for embedding
-            cached_embeddings, texts_to_embed, original_indices = self._get_cached_embeddings(texts, is_single_text)
+            cached_embeddings, texts_to_embed, original_indices = (
+                self._get_cached_embeddings(texts, is_single_text)
+            )
 
             if not texts_to_embed:
                 if not is_single_text:
@@ -426,7 +441,9 @@ class OpenAIEmbedding:
 
             # For list input, merge cached and new embeddings
             if original_indices:
-                return self._merge_embeddings(new_embeddings, cached_embeddings, original_indices, len(texts))
+                return self._merge_embeddings(
+                    new_embeddings, cached_embeddings, original_indices, len(texts)
+                )
 
             return new_embeddings
 
@@ -461,7 +478,9 @@ class TFIDFEmbedding:
 
         except Exception as e:
             logger.error(f"Error initializing TF-IDF embedding: {e}")
-            raise EmbeddingModelError(f"Failed to initialize TF-IDF embedding: {e}") from e
+            raise EmbeddingModelError(
+                f"Failed to initialize TF-IDF embedding: {e}"
+            ) from e
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
         """
@@ -498,7 +517,9 @@ class TFIDFEmbedding:
             return embeddings[0] if isinstance(text, str) else embeddings
         except Exception as e:
             logger.error(f"Error generating embeddings with TF-IDF: {e}")
-            raise EmbeddingModelError(f"Failed to generate TF-IDF embeddings: {e}") from e
+            raise EmbeddingModelError(
+                f"Failed to generate TF-IDF embeddings: {e}"
+            ) from e
 
 
 class SimpleCountEmbedding:

@@ -56,11 +56,11 @@ def test_error_handling():
     with pytest.raises(Exception):
         # Using an invalid HTML that should cause the parser to fail
         ragnificent_rs.convert_html_to_markdown("<unclosed", "invalid-url")
-    
+
     with pytest.raises(Exception):
         # Using negative values for chunk parameters should cause errors
         ragnificent_rs.chunk_markdown("test", -1, -1)
-    
+
     with pytest.raises(Exception):
         # Invalid URL should cause rendering to fail
         ragnificent_rs.render_js_page("not-a-valid-url", 1000)

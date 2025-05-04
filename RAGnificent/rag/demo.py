@@ -26,12 +26,11 @@ import os
 import sys
 from pathlib import Path
 
+from rag.chat import RAGChat
+from rag.pipeline import RAGPipeline
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.prompt import Prompt
-
-from rag.chat import RAGChat
-from rag.pipeline import RAGPipeline
 
 # Configure logging
 logging.basicConfig(
@@ -174,7 +173,9 @@ def run_search_mode(args):
                 score = result.get("score", 0)
 
                 # Truncate content for display
-                display_content = f"{content[:300]}..." if len(content) > 300 else content
+                display_content = (
+                    f"{content[:300]}..." if len(content) > 300 else content
+                )
 
                 console.print(
                     f"\n[bold cyan]{i}. Score: {score:.2f} - [link={source_url}]{source_url}[/link][/bold cyan]"

@@ -2,13 +2,12 @@
 Test edge cases in the sitemap_utils module.
 """
 
+import sys
 import tempfile
 import unittest
 import warnings
-from unittest.mock import patch, MagicMock
-import sys
 from pathlib import Path
-from dataclasses import dataclass
+from unittest.mock import patch
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -19,21 +18,20 @@ import responses
 
 # Use direct imports instead of relative or absolute package imports
 # This ensures the test can find the modules regardless of how pytest is run
-from utils import sitemap_utils
-from utils.sitemap_utils import SitemapParser
-
 # Instead of creating a mock SitemapURL class, we'll import the real one from the module
-from utils.sitemap_utils import SitemapURL
+from utils.sitemap_utils import SitemapParser, SitemapURL
 
 # We'll use the actual SitemapParser class from our utils module
 # This way we ensure consistent behavior with the real implementation
 # The original mock class is removed
+
 
 # Define helper functions for tests - using the actual SitemapParser class
 def get_sitemap_urls(url, max_urls=None, throttler=None):
     """Implementation of get_sitemap_urls using the actual SitemapParser class."""
     parser = SitemapParser()
     return parser.parse_sitemap(url)
+
 
 def discover_site_urls(base_url, max_urls=None, throttler=None, search_robots_txt=True):
     """Implementation of discover_site_urls using the actual SitemapParser class."""
@@ -159,21 +157,27 @@ class TestSitemapEdgeCases(unittest.TestCase):
 
         # Should find 3 URLs that match the domain (https://, http://, and protocol-relative)
         matches = [url for url in urls if "example.com" in url.loc]
-        self.assertEqual(len(matches), 3, "Should handle mixed URL formats including protocol-relative URLs")
+        self.assertEqual(
+            len(matches),
+            3,
+            "Should handle mixed URL formats including protocol-relative URLs",
+        )
 
-    @unittest.skip("The actual SitemapParser implementation doesn't have a filter_urls method")
+    @unittest.skip(
+        "The actual SitemapParser implementation doesn't have a filter_urls method"
+    )
     def test_filter_urls_with_patterns(self):
         """Test URL filtering with include and exclude patterns."""
         # This test is being skipped because the actual SitemapParser implementation
         # doesn't have a filter_urls method with the signature expected in this test.
-        # 
+        #
         # If URL filtering is needed, it would need to be implemented separately using
         # Python's built-in filtering capabilities on the SitemapURL objects returned
         # by the parser, for example:
         #
         # urls = parser.parse_sitemap("https://example.com")
         # filtered_urls = [url for url in urls if "blog" in url.loc]
-        # 
+        #
         # We're skipping this test rather than rewriting it to maintain consistency
         # with the actual implementation.
 
@@ -191,9 +195,7 @@ class TestSitemapEdgeCases(unittest.TestCase):
     def test_compatibility_functions(self):
         """Test compatibility between old and new implementations."""
         # Patch the parse_sitemap method to return predictable results
-        with patch(
-            "utils.sitemap_utils.SitemapParser.parse_sitemap"
-        ) as mock_parse:
+        with patch("utils.sitemap_utils.SitemapParser.parse_sitemap") as mock_parse:
             # Set up mock return values with the correct loc attribute
             mock_urls = [
                 SitemapURL(loc="https://example.com/page1"),
@@ -211,31 +213,31 @@ class TestSitemapEdgeCases(unittest.TestCase):
             self.assertIsInstance(
                 old_result, list, "Legacy function should return a list"
             )
-            self.assertIsInstance(
-                new_result, list, "New function should return a list"
-            )
-            
+            self.assertIsInstance(new_result, list, "New function should return a list")
+
             # Verify that the mock was called for both function calls
             # The parser.parse_sitemap method should be called twice
-            self.assertEqual(mock_parse.call_count, 2, "Both functions should call parse_sitemap")
-            
+            self.assertEqual(
+                mock_parse.call_count, 2, "Both functions should call parse_sitemap"
+            )
+
             # Check results content
             if old_result and isinstance(old_result[0], SitemapURL):
                 # If the results are SitemapURL objects, compare their loc attributes
                 old_result_locs = [url.loc for url in old_result]
                 new_result_locs = [url.loc for url in new_result]
-                
+
                 self.assertEqual(
                     sorted(old_result_locs),
                     sorted(new_result_locs),
-                    "Both implementations should return the same URLs"
+                    "Both implementations should return the same URLs",
                 )
             else:
                 # Direct comparison if they're already strings or something else
                 self.assertEqual(
                     sorted(str(x) for x in old_result),
                     sorted(str(x) for x in new_result),
-                    "Both implementations should return the same results"
+                    "Both implementations should return the same results",
                 )
 
 
