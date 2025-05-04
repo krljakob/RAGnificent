@@ -1,12 +1,20 @@
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+import sys
+
+# Use direct import path rather than relying on package structure
+# This allows tests to run even with inconsistent Python package installation
+# Import fix applied
+project_root = Path(__file__).parent.parent.parent
+ragnificent_path = project_root / "RAGnificent"
+sys.path.insert(0, str(project_root))
 
 import pytest
 import requests
 
-from RAGnificent.core.cache import RequestCache
-from RAGnificent.core.scraper import MarkdownScraper
+from core.cache import RequestCache
+from core.scraper import MarkdownScraper
 
 
 @pytest.fixture
@@ -87,7 +95,7 @@ def test_format_conversion(mock_get, scraper):
     # Test the JSON output format
     try:
         # Try to use the Rust implementation first
-        from RAGnificent.ragnificent_rs import OutputFormat, convert_html
+        from ragnificent_rs import OutputFormat, convert_html
 
         # Convert to JSON
         json_content = convert_html(
@@ -115,7 +123,7 @@ def test_format_conversion(mock_get, scraper):
 
     except ImportError:
         # Fall back to Python implementation (import a helper)
-        from RAGnificent.ragnificent_rs import (
+        from ragnificent_rs import (
             document_to_xml,
             parse_markdown_to_document,
         )

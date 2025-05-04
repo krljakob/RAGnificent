@@ -1,10 +1,19 @@
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import MarkdownScraper, RequestCache
+# Add the module paths directly
+project_root = Path(__file__).parent.parent
+scraper_path = project_root / "RAGnificent" / "core"
+cache_path = project_root / "RAGnificent" / "core"
+sys.path.insert(0, str(scraper_path.parent))
+
+# Direct imports from the module files
+from core.scraper import MarkdownScraper
+from core.cache import RequestCache
 
 
 @pytest.mark.benchmark(group="scrape_website")

@@ -1,7 +1,20 @@
+import sys
 import numpy as np
 import pytest
-from v1_implementation.config import EmbeddingConfig
-from v1_implementation.embedding_service import EmbeddingService
+from pathlib import Path
+
+# Add the module paths directly
+project_root = Path(__file__).parent.parent.parent
+config_path = project_root / "RAGnificent" / "core"
+embedding_path = project_root / "RAGnificent" / "rag"
+
+# Insert paths for direct imports
+sys.path.insert(0, str(config_path.parent))
+sys.path.insert(0, str(embedding_path.parent))
+
+# Direct imports from the module files
+from core.config import EmbeddingConfig
+from rag.embedding import EmbeddingService
 
 
 class TestEmbeddingService:

@@ -8,12 +8,20 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+import sys
+
+# Use direct import path rather than relying on package structure
+# This allows tests to run even with inconsistent Python package installation
+# Import fix applied
+project_root = Path(__file__).parent.parent.parent
+ragnificent_path = project_root / "RAGnificent"
+sys.path.insert(0, str(project_root))
 
 import requests
 import responses
 
-from RAGnificent.core.cache import RequestCache
-from RAGnificent.core.scraper import MarkdownScraper
+from core.cache import RequestCache
+from core.scraper import MarkdownScraper
 
 
 class TestScraperErrorHandling(unittest.TestCase):
@@ -262,10 +270,12 @@ class TestScraperErrorHandling(unittest.TestCase):
         )
 
         # Add some items to fill the cache
-        for i in range(5):
-            # Create content larger than the memory limit
-            content = f"Large content {i}" * 1000
-            small_cache.set(f"http://example.com/page{i}", content)
+        # Create and set multiple large content items at once
+        test_urls = [f"http://example.com/page{i}" for i in range(5)]
+        test_contents = [f"Large content {i}" * 1000 for i in range(5)]
+        
+        # Use list comprehension to set all cache items
+        [small_cache.set(url, content) for url, content in zip(test_urls, test_contents)]
 
         # Verify the memory usage is below the limit
         self.assertLessEqual(
