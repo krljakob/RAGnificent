@@ -17,89 +17,79 @@ Options:
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.prompt import Prompt
 
-from RAGnificent.rag.pipeline import RAGPipeline
 from RAGnificent.rag.chat import RAGChat
+from RAGnificent.rag.pipeline import RAGPipeline
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
     datefmt="[%X]",
-    handlers=[RichHandler(rich_tracebacks=True)]
+    handlers=[RichHandler(rich_tracebacks=True)],
 )
 
 logger = logging.getLogger("ragnificent.demo")
 console = Console()
 
+
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="RAGnificent Integrated Demo",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--url",
         default="https://www.rust-lang.org/learn",
-        help="Website to scrape for documentation"
+        help="Website to scrape for documentation",
     )
     parser.add_argument(
         "--steps",
         default="all",
-        help="Steps to run (comma-separated, e.g. '1,2,3,4' or 'all')"
+        help="Steps to run (comma-separated, e.g. '1,2,3,4' or 'all')",
     )
     parser.add_argument(
-        "--limit",
-        type=int,
-        default=10,
-        help="Limit the number of documents to process"
+        "--limit", type=int, default=10, help="Limit the number of documents to process"
     )
     parser.add_argument(
         "--mode",
         choices=["scrape", "chat", "search"],
         default="scrape",
-        help="Pipeline mode (scrape, chat, search)"
+        help="Pipeline mode (scrape, chat, search)",
     )
     parser.add_argument(
         "--collection",
         default="ragnificent_demo",
-        help="Vector database collection name"
+        help="Vector database collection name",
     )
-    
+
     return parser.parse_args()
+
 
 def run_pipeline_mode(args):
     """Run the complete pipeline."""
     console.print("[bold green]Running Integrated RAG Pipeline[/bold green]")
-    
+
     # Initialize the pipeline
-    pipeline = RAGPipeline(
-        collection_name=args.collection
-    )
-    
+    pipeline = RAGPipeline(collection_name=args.collection)
+
     # Determine which steps to run
-    steps_to_run = {
-        "extract": True,
-        "chunk": True,
-        "embed": True,
-        "store": True
-    }
-    
+    steps_to_run = {"extract": True, "chunk": True, "embed": True, "store": True}
+
     if args.steps != "all":
         # Reset all steps to False
         for step in steps_to_run:
             steps_to_run[step] = False
-            
+
         # Enable only requested steps
         step_nums = [int(s) for s in args.steps.split(",")]
         if 1 in step_nums:
@@ -110,7 +100,7 @@ def run_pipeline_mode(args):
             steps_to_run["embed"] = True
         if 4 in step_nums:
             steps_to_run["store"] = True
-    
+
     # Run the pipeline
     success = pipeline.run_pipeline(
         url=args.url,
@@ -118,36 +108,35 @@ def run_pipeline_mode(args):
         run_extract=steps_to_run["extract"],
         run_chunk=steps_to_run["chunk"],
         run_embed=steps_to_run["embed"],
-        run_store=steps_to_run["store"]
+        run_store=steps_to_run["store"],
     )
-    
+
     if success:
         console.print("[bold green]Pipeline completed successfully![/bold green]")
     else:
         console.print("[bold red]Pipeline failed![/bold red]")
 
+
 def run_chat_mode(args):
     """Run the chat interface."""
     console.print("[bold green]RAGnificent Chat Mode[/bold green]")
     console.print("[italic]Type 'exit' or 'quit' to end the session[/italic]")
-    
+
     # Initialize the chat
-    chat = RAGChat(
-        collection_name=args.collection
-    )
-    
+    chat = RAGChat(collection_name=args.collection)
+
     while True:
         query = Prompt.ask("\n[bold blue]You")
         if query.lower() in ["exit", "quit"]:
             break
-            
+
         # Process the query
         with console.status("[bold yellow]Searching knowledge base..."):
             result = chat.chat(query)
-        
+
         # Display response
         console.print(f"\n[bold green]RAGnificent[/bold green]: {result['response']}")
-        
+
         # Show sources if available
         if result["context"]:
             console.print("\n[bold cyan]Sources:[/bold cyan]")
@@ -156,25 +145,24 @@ def run_chat_mode(args):
                 score = ctx.get("score", 0)
                 console.print(f"  {i}. [link={url}]{url}[/link] (Score: {score:.2f})")
 
+
 def run_search_mode(args):
     """Run the search interface."""
     console.print("[bold green]RAGnificent Search Mode[/bold green]")
     console.print("[italic]Type 'exit' or 'quit' to end the session[/italic]")
-    
+
     # Initialize the pipeline
-    pipeline = RAGPipeline(
-        collection_name=args.collection
-    )
-    
+    pipeline = RAGPipeline(collection_name=args.collection)
+
     while True:
         query = Prompt.ask("\n[bold blue]Search")
         if query.lower() in ["exit", "quit"]:
             break
-            
+
         # Process the query
         with console.status("[bold yellow]Searching knowledge base..."):
             results = pipeline.search_documents(query, limit=5)
-        
+
         # Display results
         if results:
             console.print(f"\n[bold green]Found {len(results)} results:[/bold green]")
@@ -183,23 +171,28 @@ def run_search_mode(args):
                 content = payload.get("content", "")
                 source_url = payload.get("source_url", "")
                 score = result.get("score", 0)
-                
+
                 # Truncate content for display
-                display_content = content[:300] + "..." if len(content) > 300 else content
-                
-                console.print(f"\n[bold cyan]{i}. Score: {score:.2f} - [link={source_url}]{source_url}[/link][/bold cyan]")
+                display_content = (
+                    content[:300] + "..." if len(content) > 300 else content
+                )
+
+                console.print(
+                    f"\n[bold cyan]{i}. Score: {score:.2f} - [link={source_url}]{source_url}[/link][/bold cyan]"
+                )
                 console.print(f"{display_content}")
         else:
             console.print("\n[bold yellow]No results found[/bold yellow]")
 
+
 def main():
     """Main entry point."""
     args = parse_args()
-    
+
     # Ensure data directory exists
     data_dir = Path.cwd() / "data"
     os.makedirs(data_dir, exist_ok=True)
-    
+
     # Run selected mode
     if args.mode == "scrape":
         run_pipeline_mode(args)
@@ -208,12 +201,13 @@ def main():
     elif args.mode == "search":
         run_search_mode(args)
 
+
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         console.print("\n[bold yellow]Operation cancelled by user[/bold yellow]")
         sys.exit(0)
-    except Exception as e:
+    except Exception:
         logger.exception("An error occurred")
         sys.exit(1)

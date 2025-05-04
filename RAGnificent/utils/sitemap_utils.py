@@ -97,7 +97,9 @@ class SitemapParser:
                 time.sleep(2**attempt)  # Exponential backoff
         return None
 
-    def _get_response_text(self, response: Optional[requests.Response]) -> Optional[str]:
+    def _get_response_text(
+        self, response: Optional[requests.Response]
+    ) -> Optional[str]:
         """Extract text from response or return None if response is None."""
         return response.text if response else None
 
@@ -167,7 +169,9 @@ class SitemapParser:
         ns_match = re.search(r'xmlns\s*=\s*["\']([^"\']+)["\']', content)
         return ns_match[1] if ns_match else None
 
-    def _handle_sitemap_index(self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Tuple[List[SitemapURL], List[str]]:
+    def _handle_sitemap_index(
+        self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]
+    ) -> Tuple[List[SitemapURL], List[str]]:
         """Process a sitemap index, extracting child sitemap URLs."""
         sitemap_index_urls = [
             sitemap.text.strip()
@@ -181,7 +185,9 @@ class SitemapParser:
         logger.info(f"Found sitemap index with {len(sitemap_index_urls)} sitemaps")
         return [], sitemap_index_urls
 
-    def _handle_sitemap(self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Tuple[List[SitemapURL], List[str]]:
+    def _handle_sitemap(
+        self, root: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]
+    ) -> Tuple[List[SitemapURL], List[str]]:
         """Process a regular sitemap, extracting URLs and their metadata."""
         sitemap_urls = []
 
@@ -192,7 +198,9 @@ class SitemapParser:
         logger.info(f"Parsed sitemap with {len(sitemap_urls)} URLs")
         return sitemap_urls, []
 
-    def _extract_url_data(self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[SitemapURL]:
+    def _extract_url_data(
+        self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]
+    ) -> Optional[SitemapURL]:
         """Extract data for a single URL from a sitemap."""
         loc_elem = url_elem.find("sm:loc" if namespace else "loc", ns_map)
         if loc_elem is None or not loc_elem.text:
@@ -210,13 +218,21 @@ class SitemapParser:
             priority=priority,
         )
 
-    def _get_element_text(self, parent: ET.Element, element_name: str, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[str]:
+    def _get_element_text(
+        self,
+        parent: ET.Element,
+        element_name: str,
+        namespace: Optional[str],
+        ns_map: Dict[str, str],
+    ) -> Optional[str]:
         """Get text from a child element if it exists."""
         prefixed_name = f"sm:{element_name}" if namespace else element_name
         elem = parent.find(prefixed_name, ns_map)
         return elem.text.strip() if elem is not None and elem.text else None
 
-    def _get_priority(self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]) -> Optional[float]:
+    def _get_priority(
+        self, url_elem: ET.Element, namespace: Optional[str], ns_map: Dict[str, str]
+    ) -> Optional[float]:
         """Extract and convert priority value."""
         priority_text = self._get_element_text(url_elem, "priority", namespace, ns_map)
         if not priority_text:
@@ -240,13 +256,13 @@ class SitemapParser:
         """
         try:
             urls = []
-            soup = BeautifulSoup(content, 'html.parser')
+            soup = BeautifulSoup(content, "html.parser")
 
             # Find all links in the HTML
-            for link in soup.find_all('a', href=True):
-                href = link['href']
+            for link in soup.find_all("a", href=True):
+                href = link["href"]
                 # Skip empty, javascript, or anchor links
-                if not href or href.startswith('javascript:') or href.startswith('#'):
+                if not href or href.startswith("javascript:") or href.startswith("#"):
                     continue
 
                 # Resolve relative URLs
@@ -285,9 +301,9 @@ class SitemapParser:
             return []
 
         # Check content type to determine how to handle the response
-        content_type = response.headers.get('Content-Type', '').lower()
+        content_type = response.headers.get("Content-Type", "").lower()
 
-        if 'xml' in content_type:
+        if "xml" in content_type:
             # Handle XML sitemap
             content = response.text
             urls, sitemap_indices = self._parse_sitemap_xml(content)
@@ -298,13 +314,15 @@ class SitemapParser:
 
             return urls
 
-        if 'html' in content_type:
+        if "html" in content_type:
             # Handle HTML sitemap
             logger.info(f"Detected HTML sitemap at {sitemap_url}")
             return self._parse_html_sitemap(response.text, sitemap_url)
 
         # Unknown content type
-        logger.warning(f"Unknown content type for sitemap at {sitemap_url}: {content_type}")
+        logger.warning(
+            f"Unknown content type for sitemap at {sitemap_url}: {content_type}"
+        )
         # Try to parse as XML anyway as a fallback
         try:
             content = response.text
@@ -319,7 +337,12 @@ class SitemapParser:
             logger.error(f"Failed to parse sitemap with unknown content type: {e}")
             return []
 
-    def parse_sitemap(self, base_url: str, filter_by_domain: bool = True, docs_path_filter: bool = False) -> List[SitemapURL]:
+    def parse_sitemap(
+        self,
+        base_url: str,
+        filter_by_domain: bool = True,
+        docs_path_filter: bool = False,
+    ) -> List[SitemapURL]:
         """
         Parse sitemaps for a website and extract all URLs.
 
@@ -369,15 +392,19 @@ class SitemapParser:
             self.discovered_urls = [
                 url for url in self.discovered_urls if domain in url.loc
             ]
-            logger.info(f"Filtered {original_count} URLs down to {len(self.discovered_urls)} from domain {domain}")
+            logger.info(
+                f"Filtered {original_count} URLs down to {len(self.discovered_urls)} from domain {domain}"
+            )
 
             # Apply docs path filter if requested
-            if docs_path_filter and '/docs' in base_url:
+            if docs_path_filter and "/docs" in base_url:
                 original_count = len(self.discovered_urls)
                 self.discovered_urls = [
-                    url for url in self.discovered_urls if '/docs' in url.loc
+                    url for url in self.discovered_urls if "/docs" in url.loc
                 ]
-                logger.info(f"Filtered for /docs paths: {original_count} URLs down to {len(self.discovered_urls)}")
+                logger.info(
+                    f"Filtered for /docs paths: {original_count} URLs down to {len(self.discovered_urls)}"
+                )
 
         logger.info(f"Total URLs discovered from sitemaps: {len(self.discovered_urls)}")
         return self.discovered_urls

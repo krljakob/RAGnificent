@@ -28,8 +28,7 @@ class TestScraperErrorHandling(unittest.TestCase):
 
         # Create scraper instance for testing
         self.scraper = MarkdownScraper(
-            requests_per_second=10.0,  # Fast for testing
-            cache_enabled=True
+            requests_per_second=10.0, cache_enabled=True  # Fast for testing
         )
 
         # Replace the request cache with one using our temp directory
@@ -48,7 +47,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         responses.add(
             responses.GET,
             url,
-            body=requests.exceptions.ConnectionError("Connection refused")
+            body=requests.exceptions.ConnectionError("Connection refused"),
         )
 
         # Attempt to scrape with max_retries=1 to speed up the test
@@ -63,11 +62,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         url = "https://example.com/not-found"
 
         # Mock a 404 error
-        responses.add(
-            responses.GET,
-            url,
-            status=404
-        )
+        responses.add(responses.GET, url, status=404)
 
         # Attempt to scrape with max_retries=1 to speed up the test
         self.scraper.max_retries = 1
@@ -82,9 +77,7 @@ class TestScraperErrorHandling(unittest.TestCase):
 
         # Mock a timeout error
         responses.add(
-            responses.GET,
-            url,
-            body=requests.exceptions.Timeout("Request timed out")
+            responses.GET, url, body=requests.exceptions.Timeout("Request timed out")
         )
 
         # Attempt to scrape with max_retries=1 to speed up the test
@@ -99,22 +92,27 @@ class TestScraperErrorHandling(unittest.TestCase):
         invalid_path = "/nonexistent/directory/file.md"
 
         # Mock a successful request
-        with patch.object(self.scraper, 'convert_to_markdown', return_value="# Test\nContent"):
-            with patch.object(self.scraper, 'scrape_website', return_value="<html><body><h1>Test</h1><p>Content</p></body></html>"):
-                # Attempt to save to an invalid path
-                with self.assertRaises(IOError):
-                    self.scraper._process_single_url(
-                        "https://example.com",
-                        0,
-                        1,
-                        Path(invalid_path),
-                        "markdown",
-                        False,
-                        None,
-                        "jsonl"
-                    )
+        with patch.object(
+            self.scraper, "convert_to_markdown", return_value="# Test\nContent"
+        ), patch.object(
+            self.scraper,
+            "scrape_website",
+            return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+        ):
+            # Attempt to save to an invalid path
+            with self.assertRaises(IOError):
+                self.scraper._process_single_url(
+                    "https://example.com",
+                    0,
+                    1,
+                    Path(invalid_path),
+                    "markdown",
+                    False,
+                    None,
+                    "jsonl",
+                )
 
-    @patch('RAGnificent.core.scraper.MarkdownScraper.create_chunks')
+    @patch("RAGnificent.core.scraper.MarkdownScraper.create_chunks")
     def test_chunking_error_handling(self, mock_create_chunks):
         """Test handling of errors during chunking."""
         # Mock an error during chunking
@@ -124,22 +122,27 @@ class TestScraperErrorHandling(unittest.TestCase):
         os.makedirs(self.output_dir, exist_ok=True)
 
         # Mock a successful request and conversion
-        with patch.object(self.scraper, 'convert_to_markdown', return_value="# Test\nContent"):
-            with patch.object(self.scraper, 'scrape_website', return_value="<html><body><h1>Test</h1><p>Content</p></body></html>"):
-                # Attempt to process with chunking enabled
-                try:
-                    self.scraper._process_single_url(
-                        "https://example.com",
-                        0,
-                        1,
-                        Path(self.output_dir),
-                        "markdown",
-                        True,  # Save chunks
-                        self.chunk_dir,
-                        "jsonl"
-                    )
-                except Exception:
-                    self.fail("Chunking error should be handled gracefully")
+        with patch.object(
+            self.scraper, "convert_to_markdown", return_value="# Test\nContent"
+        ), patch.object(
+            self.scraper,
+            "scrape_website",
+            return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
+        ):
+            # Attempt to process with chunking enabled
+            try:
+                self.scraper._process_single_url(
+                    "https://example.com",
+                    0,
+                    1,
+                    Path(self.output_dir),
+                    "markdown",
+                    True,  # Save chunks
+                    self.chunk_dir,
+                    "jsonl",
+                )
+            except Exception:
+                self.fail("Chunking error should be handled gracefully")
 
     @responses.activate
     def test_cache_error_handling(self):
@@ -152,11 +155,13 @@ class TestScraperErrorHandling(unittest.TestCase):
             url,
             body="<html><body><h1>Test</h1><p>Content</p></body></html>",
             status=200,
-            content_type="text/html"
+            content_type="text/html",
         )
 
         # Mock a cache error during storage
-        with patch.object(self.scraper.request_cache, 'set', side_effect=IOError("Cache error")):
+        with patch.object(
+            self.scraper.request_cache, "set", side_effect=IOError("Cache error")
+        ):
             # Should still return content even if caching fails
             content = self.scraper.scrape_website(url)
             self.assertIsNotNone(content, "Should return content even if caching fails")
@@ -178,15 +183,11 @@ class TestScraperErrorHandling(unittest.TestCase):
             "https://example.com/good",
             body="<html><body><h1>Good Page</h1><p>Content</p></body></html>",
             status=200,
-            content_type="text/html"
+            content_type="text/html",
         )
 
         # Error for the bad URL
-        responses.add(
-            responses.GET,
-            "https://example.com/bad",
-            status=500
-        )
+        responses.add(responses.GET, "https://example.com/bad", status=500)
 
         # Process with parallel=True to test parallel error handling
         self.scraper.max_retries = 1  # Speed up test
@@ -195,7 +196,7 @@ class TestScraperErrorHandling(unittest.TestCase):
             output_dir=self.output_dir,
             parallel=True,
             max_workers=2,
-            worker_timeout=1  # Short timeout for testing
+            worker_timeout=1,  # Short timeout for testing
         )
 
         # Should have one successful URL
@@ -218,12 +219,13 @@ class TestScraperErrorHandling(unittest.TestCase):
             "https://example.com/fast",
             body="<html><body><h1>Fast Page</h1><p>Content</p></body></html>",
             status=200,
-            content_type="text/html"
+            content_type="text/html",
         )
 
         # Mock a very slow response that will trigger timeout
         def slow_response(request):
             import time
+
             time.sleep(2)  # This will exceed our worker_timeout
             return (200, {}, "<html><body><h1>Slow Page</h1></body></html>")
 
@@ -231,17 +233,20 @@ class TestScraperErrorHandling(unittest.TestCase):
             responses.GET,
             "https://example.com/slow",
             callback=slow_response,
-            content_type="text/html"
+            content_type="text/html",
         )
 
         # Tests with a very short worker_timeout to simulate timeouts
-        with patch('concurrent.futures.Future.result', side_effect=TimeoutError("Worker timeout")):
+        with patch(
+            "concurrent.futures.Future.result",
+            side_effect=TimeoutError("Worker timeout"),
+        ):
             result = self.scraper.scrape_by_links_file(
                 links_file=links_file,
                 output_dir=self.output_dir,
                 parallel=True,
                 max_workers=2,
-                worker_timeout=1  # Very short timeout
+                worker_timeout=1,  # Very short timeout
             )
 
             # Should handle worker timeouts gracefully
@@ -253,7 +258,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         small_cache = RequestCache(
             cache_dir=self.cache_dir,
             max_memory_items=2,  # Only 2 items allowed
-            max_memory_size_mb=0.01  # Only 10KB allowed
+            max_memory_size_mb=0.01,  # Only 10KB allowed
         )
 
         # Add some items to fill the cache
@@ -266,14 +271,14 @@ class TestScraperErrorHandling(unittest.TestCase):
         self.assertLessEqual(
             small_cache.current_memory_usage,
             0.01 * 1024 * 1024,  # 10KB
-            "Memory cache should enforce size limits"
+            "Memory cache should enforce size limits",
         )
 
         # Verify the item count is at most 2
         self.assertLessEqual(
             len(small_cache.memory_cache),
             2,
-            "Memory cache should enforce item count limits"
+            "Memory cache should enforce item count limits",
         )
 
 

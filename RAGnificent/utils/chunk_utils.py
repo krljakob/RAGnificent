@@ -101,7 +101,11 @@ class ContentChunker:
                         continue
 
                     # Always include the heading at the start of each chunk for context
-                    if i > 0 and heading and not " ".join(chunk_words).startswith(heading):
+                    if (
+                        i > 0
+                        and heading
+                        and not " ".join(chunk_words).startswith(heading)
+                    ):
                         chunk_content = f"{heading}\n\n" + " ".join(chunk_words)
                     else:
                         chunk_content = " ".join(chunk_words)
@@ -148,7 +152,7 @@ class ContentChunker:
         current_section = None
 
         for line in lines:
-            if header_match := re.match(r'^(#+)\s+(.*)', line):
+            if header_match := re.match(r"^(#+)\s+(.*)", line):
                 # This is a header line
                 level = len(header_match[1])
                 heading_text = header_match[2].strip()
@@ -165,10 +169,7 @@ class ContentChunker:
                 path = " > ".join([h["text"] for h in header_stack] + [heading_text])
 
                 # Create new header entry
-                header_entry = {
-                    "level": level,
-                    "text": heading_text
-                }
+                header_entry = {"level": level, "text": heading_text}
 
                 # Push to stack
                 header_stack.append(header_entry)
@@ -178,7 +179,7 @@ class ContentChunker:
                     "heading": line,
                     "content": line + "\n",
                     "level": level,
-                    "path": path
+                    "path": path,
                 }
             elif current_section:
                 # Add line to current section content
@@ -189,7 +190,7 @@ class ContentChunker:
                     "heading": "Document Start",
                     "content": line + "\n",
                     "level": 0,
-                    "path": "Document Start"
+                    "path": "Document Start",
                 }
 
         # Add the final section if it exists

@@ -253,15 +253,21 @@ class TestSitemapEdgeCases(unittest.TestCase):
 
         # Test include patterns
         filtered_urls = parser.filter_urls(include_patterns=["blog"])
-        self.assertEqual(len(filtered_urls), 2, "Should include only URLs matching pattern")
+        self.assertEqual(
+            len(filtered_urls), 2, "Should include only URLs matching pattern"
+        )
 
         # Test exclude patterns
         filtered_urls = parser.filter_urls(exclude_patterns=["blog"])
         self.assertEqual(len(filtered_urls), 2, "Should exclude URLs matching pattern")
 
         # Test both include and exclude
-        filtered_urls = parser.filter_urls(include_patterns=["blog", "products"], exclude_patterns=["post2"])
-        self.assertEqual(len(filtered_urls), 2, "Should handle both include and exclude patterns")
+        filtered_urls = parser.filter_urls(
+            include_patterns=["blog", "products"], exclude_patterns=["post2"]
+        )
+        self.assertEqual(
+            len(filtered_urls), 2, "Should handle both include and exclude patterns"
+        )
 
     @responses.activate
     def test_html_sitemap_handling(self):
@@ -320,29 +326,39 @@ class TestSitemapEdgeCases(unittest.TestCase):
     def test_compatibility_functions(self):
         """Test compatibility between old and new implementations."""
         # Patch both implementations to return predictable results
-        with patch('RAGnificent.utils.sitemap_utils.SitemapParser.parse_sitemap') as mock_parse:
-            with patch('RAGnificent.utils.sitemap_utils.SitemapParser.filter_urls') as mock_filter:
-                # Set up mock return values
-                mock_urls = [
-                    SitemapURL(loc="https://example.com/page1"),
-                    SitemapURL(loc="https://example.com/page2")
-                ]
-                mock_parse.return_value = mock_urls
-                mock_filter.return_value = mock_urls
+        with patch(
+            "RAGnificent.utils.sitemap_utils.SitemapParser.parse_sitemap"
+        ) as mock_parse, patch(
+            "RAGnificent.utils.sitemap_utils.SitemapParser.filter_urls"
+        ) as mock_filter:
+            # Set up mock return values
+            mock_urls = [
+                SitemapURL(loc="https://example.com/page1"),
+                SitemapURL(loc="https://example.com/page2"),
+            ]
+            mock_parse.return_value = mock_urls
+            mock_filter.return_value = mock_urls
 
-                # Test the legacy function
-                old_result = get_sitemap_urls("https://example.com")
+            # Test the legacy function
+            old_result = get_sitemap_urls("https://example.com")
 
-                # Test the new function
-                new_result = discover_site_urls("https://example.com")
+            # Test the new function
+            new_result = discover_site_urls("https://example.com")
 
-                # Both should return a list of strings
-                self.assertIsInstance(old_result, list, "Legacy function should return a list")
-                self.assertIsInstance(new_result, list, "New function should return a list")
+            # Both should return a list of strings
+            self.assertIsInstance(
+                old_result, list, "Legacy function should return a list"
+            )
+            self.assertIsInstance(
+                new_result, list, "New function should return a list"
+            )
 
-                # The results should match
-                self.assertEqual(sorted(old_result), sorted(new_result),
-                                 "Legacy and new implementations should return the same results")
+            # The results should match
+            self.assertEqual(
+                sorted(old_result),
+                sorted(new_result),
+                "Legacy and new implementations should return the same results",
+            )
 
 
 if __name__ == "__main__":

@@ -14,8 +14,13 @@ logger = logging.getLogger("request_cache")
 class RequestCache:
     """Simple cache for HTTP requests to avoid repeated network calls."""
 
-    def __init__(self, cache_dir: str = ".request_cache", max_age: int = 3600,
-                 max_memory_items: int = 100, max_memory_size_mb: int = 50):
+    def __init__(
+        self,
+        cache_dir: str = ".request_cache",
+        max_age: int = 3600,
+        max_memory_items: int = 100,
+        max_memory_size_mb: int = 50,
+    ):
         """
         Initialize the request cache.
 
@@ -30,9 +35,9 @@ class RequestCache:
         self.max_age = max_age
         self.max_memory_items = max_memory_items
         self.max_memory_size_mb = max_memory_size_mb
-        self.memory_cache: Dict[
-            str, Tuple[str, float]
-        ] = {}  # url -> (content, timestamp)
+        self.memory_cache: Dict[str, Tuple[str, float]] = (
+            {}
+        )  # url -> (content, timestamp)
         self.current_memory_usage = 0  # Approximate memory usage in bytes
 
     def _get_cache_key(self, url: str) -> str:
@@ -97,14 +102,16 @@ class RequestCache:
             content: The content to cache
         """
         # Calculate the size of the new content
-        content_size = len(content.encode('utf-8'))
+        content_size = len(content.encode("utf-8"))
 
         # Check if the URL is already in the memory cache
         if url in self.memory_cache:
             old_content, _ = self.memory_cache[url]
-            old_size = len(old_content.encode('utf-8'))
+            old_size = len(old_content.encode("utf-8"))
             # Adjust memory usage
-            self.current_memory_usage = self.current_memory_usage - old_size + content_size
+            self.current_memory_usage = (
+                self.current_memory_usage - old_size + content_size
+            )
         else:
             # Add the new content size to the current usage
             self.current_memory_usage += content_size
@@ -147,7 +154,7 @@ class RequestCache:
         # Evict the oldest items
         for i in range(min(count, len(items))):
             url, (content, _) = items[i]
-            content_size = len(content.encode('utf-8'))
+            content_size = len(content.encode("utf-8"))
             self.current_memory_usage -= content_size
             del self.memory_cache[url]
 
@@ -165,7 +172,7 @@ class RequestCache:
         items_evicted = 0
 
         for url, (content, _) in items:
-            content_size = len(content.encode('utf-8'))
+            content_size = len(content.encode("utf-8"))
             del self.memory_cache[url]
             bytes_evicted += content_size
             items_evicted += 1
@@ -174,7 +181,9 @@ class RequestCache:
                 break
 
         self.current_memory_usage -= bytes_evicted
-        logger.debug(f"Evicted {items_evicted} items ({bytes_evicted} bytes) from memory cache")
+        logger.debug(
+            f"Evicted {items_evicted} items ({bytes_evicted} bytes) from memory cache"
+        )
 
     def clear(self, max_age: Optional[int] = None) -> int:
         """
@@ -199,7 +208,7 @@ class RequestCache:
         for k in expired_keys:
             # Subtract the content size from memory usage before removing
             content, _ = self.memory_cache[k]
-            self.current_memory_usage -= len(content.encode('utf-8'))
+            self.current_memory_usage -= len(content.encode("utf-8"))
             del self.memory_cache[k]
 
         # Clear disk cache
