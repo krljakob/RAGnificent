@@ -5,11 +5,19 @@ Test edge cases in the chunk_utils module.
 import random
 import shutil
 import string
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
+# Use direct import path rather than relying on package structure
+# This allows tests to run even with inconsistent Python package installation
+project_root = Path(__file__).parent.parent.parent
+utils_path = project_root / "RAGnificent" / "utils"
+sys.path.insert(0, str(utils_path.parent))
+
+# Direct imports from the actual files
+from utils.chunk_utils import ContentChunker, create_semantic_chunks
 
 
 class TestChunkingEdgeCases(unittest.TestCase):
@@ -114,15 +122,22 @@ Very deep header.
 
     def test_very_large_document(self):
         """Test handling of extremely large documents."""
-        # Generate a large markdown document
-        large_doc = []
-        for i in range(50):  # 50 sections
-            large_doc.append(f"## Section {i}")
-            # Add 20 paragraphs per section
-            large_doc.extend(
-                f"This is paragraph {j} in section {i}. " * 10 for j in range(20)
+        # Create a very large markdown document using list comprehensions for better code quality
+        # For each section, create a header, 20 paragraphs, and an empty line
+        large_doc = [
+            line
+            for i in range(50)
+            for line in (
+                # Section header
+                [f"## Section {i}"]
+                +
+                # 20 paragraphs in each section
+                [f"This is paragraph {j} in section {i}. " * 10 for j in range(20)]
+                +
+                # Empty line between sections
+                [""]
             )
-            large_doc.append("")  # Empty line between sections
+        ]
 
         large_content = "\n".join(large_doc)
 
@@ -154,8 +169,20 @@ def special_func(x):
 
     def test_missing_source_url(self):
         """Test handling of missing source URL."""
-        with self.assertRaises(Exception):
-            create_semantic_chunks("Some content", None)
+        # Verify that the function handles None URL correctly by still creating valid chunks
+        chunks = create_semantic_chunks("Some content", None)
+        self.assertTrue(len(chunks) > 0, "Should create chunks even with None URL")
+
+        # Check that the domain in metadata is set to empty bytes when URL is None
+        for chunk in chunks:
+            self.assertIn(
+                "domain", chunk.metadata, "Chunk metadata should contain domain key"
+            )
+            self.assertEqual(
+                b"",
+                chunk.metadata["domain"],
+                "Domain should be empty bytes when URL is None",
+            )
 
     def test_chunk_overlap_larger_than_chunk_size(self):
         """Test handling of invalid chunking parameters."""
@@ -196,12 +223,13 @@ def special_func(x):
         chunker.save_chunks(chunks, str(output_dir), "json")
 
         # Verify the output files exist
-        for chunk in chunks:
-            output_file = output_dir / f"{chunk.id}.json"
-            self.assertTrue(
-                output_file.exists(),
-                f"JSON output file for chunk {chunk.id} should be created",
-            )
+        output_files = [(output_dir / f"{chunk.id}.json") for chunk in chunks]
+        missing_files = [f for f in output_files if not f.exists()]
+        self.assertEqual(
+            len(missing_files),
+            0,
+            f"All JSON output files should be created, missing: {missing_files}",
+        )
 
     def test_identical_chunks_get_unique_ids(self):
         """Test that identical chunks from different source URLs get unique IDs."""

@@ -69,7 +69,6 @@ def run_pipeline_mode(args):
     # Initialize the pipeline
     pipeline = Pipeline(collection_name=args.collection)
 
-
     # Run the complete pipeline
     result = pipeline.run_pipeline(
         url=args.url,

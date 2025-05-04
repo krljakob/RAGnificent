@@ -1,10 +1,20 @@
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from main import MarkdownScraper, RequestCache
+# Add the module paths directly
+project_root = Path(__file__).parent.parent
+scraper_path = project_root / "RAGnificent" / "core"
+cache_path = project_root / "RAGnificent" / "core"
+sys.path.insert(0, str(scraper_path.parent))
+
+from core.cache import RequestCache
+
+# Direct imports from the module files
+from core.scraper import MarkdownScraper
 
 
 @pytest.mark.benchmark(group="scrape_website")
@@ -51,7 +61,7 @@ def test_save_chunks_benchmark(benchmark, tmp_path):
 def test_benchmark_scrape_with_cache_enabled(benchmark):
     """Benchmark scraping with cache enabled."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with patch("main.requests.Session.get") as mock_get:
+        with patch("core.scraper.requests.Session.get") as mock_get:
             # Setup mock response for first call
             mock_response = MagicMock()
             mock_response.status_code = 200
@@ -78,7 +88,7 @@ def test_benchmark_scrape_with_cache_enabled(benchmark):
 @pytest.mark.benchmark(group="caching")
 def test_benchmark_scrape_with_cache_disabled(benchmark):
     """Benchmark scraping with cache disabled."""
-    with patch("main.requests.Session.get") as mock_get:
+    with patch("core.scraper.requests.Session.get") as mock_get:
         # Setup mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
