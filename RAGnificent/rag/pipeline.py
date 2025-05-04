@@ -809,8 +809,7 @@ Always cite your sources by referencing the document numbers.
         from urllib.parse import urlparse
 
         parsed_url = urlparse(url)
-        path = parsed_url.path.strip("/")
-        if path:
+        if path := parsed_url.path.strip("/"):
             return path.split("/")[-1].replace("-", " ").replace("_", " ").title()
         return parsed_url.netloc
 

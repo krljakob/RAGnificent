@@ -107,7 +107,7 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
 
             except Exception as e:
                 logger.error(f"Failed to connect to Qdrant: {e}")
-                raise QdrantConnectionError(f"Failed to connect to Qdrant: {e}")
+                raise QdrantConnectionError(f"Failed to connect to Qdrant: {e}") from e
 
         # If we got here, all retries failed
         logger.error(
@@ -117,11 +117,11 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
             f"Failed to connect to Qdrant after {max_retries} retries: {last_exception}"
         )
 
-    except ImportError:
+    except ImportError as exc:
         logger.error(
             "Qdrant client not installed. Install with: pip install qdrant-client"
         )
-        raise QdrantConnectionError("Qdrant client not installed")
+        raise QdrantConnectionError("Qdrant client not installed") from exc
 
 
 def initialize_collection(
@@ -194,7 +194,9 @@ def initialize_collection(
 
     except Exception as e:
         logger.error(f"Failed to initialize Qdrant collection: {e}")
-        raise QdrantOperationError(f"Failed to initialize Qdrant collection: {e}")
+        raise QdrantOperationError(
+            f"Failed to initialize Qdrant collection: {e}"
+        ) from e
 
 
 class VectorStore:

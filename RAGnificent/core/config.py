@@ -453,6 +453,4 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
         logger.info(f"Loading configuration from: {path}")
         load_dotenv(path, override=True)
 
-    # Create new config instance with updated env vars
-    _CONFIG_INSTANCE = AppConfig()
-    return _CONFIG_INSTANCE
+    return AppConfig()

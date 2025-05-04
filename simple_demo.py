@@ -114,9 +114,6 @@ def run_search_mode(args):
                 content = result.get("content", "")
                 f"{content[:200]}..." if len(content) > 200 else content
 
-        else:
-            pass
-
 
 def run_chat_mode(args):
     """Run the chat interface."""

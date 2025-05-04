@@ -142,9 +142,11 @@ def list_points(collection_name: Optional[str] = None, limit: int = 10):
                     else:
                         print(content)
 
-                # Print other payload fields
-                other_fields = [k for k in point.payload.keys() if k not in ('metadata', 'content')]
-                if other_fields:
+                if other_fields := [
+                    k
+                    for k in point.payload.keys()
+                    if k not in ('metadata', 'content')
+                ]:
                     print("\nOther Fields:")
                     for field in other_fields:
                         print(f"{field}: {point.payload[field]}")
@@ -338,9 +340,7 @@ def main():
         elif choice == "2":
             interactive_search(collection_name)
         elif choice == "3":
-            output_file = input(f"Output file name [qdrant_export.json]: ")
-            if not output_file:
-                output_file = "qdrant_export.json"
+            output_file = input("Output file name [qdrant_export.json]: ") or "qdrant_export.json"
             export_collection(collection_name, output_file)
         elif choice == "4":
             print("Exiting. Remember, the in-memory database data will be lost!")

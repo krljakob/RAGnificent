@@ -101,17 +101,14 @@ def run_pipeline_mode(args):
         if 4 in step_nums:
             steps_to_run["store"] = True
 
-    # Run the pipeline
-    success = pipeline.run_pipeline(
+    if success := pipeline.run_pipeline(
         url=args.url,
         limit=args.limit,
         run_extract=steps_to_run["extract"],
         run_chunk=steps_to_run["chunk"],
         run_embed=steps_to_run["embed"],
         run_store=steps_to_run["store"],
-    )
-
-    if success:
+    ):
         console.print("[bold green]Pipeline completed successfully![/bold green]")
     else:
         console.print("[bold red]Pipeline failed![/bold red]")
@@ -173,9 +170,7 @@ def run_search_mode(args):
                 score = result.get("score", 0)
 
                 # Truncate content for display
-                display_content = (
-                    content[:300] + "..." if len(content) > 300 else content
-                )
+                display_content = f"{content[:300]}..." if len(content) > 300 else content
 
                 console.print(
                     f"\n[bold cyan]{i}. Score: {score:.2f} - [link={source_url}]{source_url}[/link][/bold cyan]"

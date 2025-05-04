@@ -158,15 +158,17 @@ class SentenceTransformerEmbedding:
             self.model = SentenceTransformer(self.model_name, device=self.device)
             logger.info("Successfully loaded SentenceTransformer model")
 
-        except ImportError:
+        except ImportError as e:
             logger.error(
                 "SentenceTransformers package not installed. Please install with: pip install sentence-transformers"
             )
-            raise EmbeddingModelError("SentenceTransformers package not installed")
+            raise EmbeddingModelError("SentenceTransformers package not installed") from e
 
         except Exception as e:
             logger.error(f"Error loading SentenceTransformer model: {e}")
-            raise EmbeddingModelError(f"Failed to load SentenceTransformer model: {e}")
+            raise EmbeddingModelError(
+                f"Failed to load SentenceTransformer model: {e}"
+            ) from e
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
         """
@@ -231,7 +233,7 @@ class SentenceTransformerEmbedding:
             result = [None] * len(text)
             for i, embed in zip(text_indices, new_embeddings, strict=False):
                 result[i] = embed
-            for i, embed in enumerate(embeddings):
+            for embed in embeddings:
                 idx = result.index(None)
                 result[idx] = embed
 
@@ -239,7 +241,7 @@ class SentenceTransformerEmbedding:
 
         except Exception as e:
             logger.error(f"Error generating embeddings with SentenceTransformer: {e}")
-            raise EmbeddingModelError(f"Failed to generate embeddings: {e}")
+            raise EmbeddingModelError(f"Failed to generate embeddings: {e}") from e
 
 
 class OpenAIEmbedding:
@@ -270,15 +272,15 @@ class OpenAIEmbedding:
             openai.api_key = self.api_key
             logger.info(f"Initialized OpenAI embedding with model: {self.model_name}")
 
-        except ImportError:
+        except ImportError as e:
             logger.error(
                 "OpenAI package not installed. Please install with: pip install openai"
             )
-            raise EmbeddingModelError("OpenAI package not installed")
+            raise EmbeddingModelError("OpenAI package not installed") from e
 
         except Exception as e:
             logger.error(f"Error initializing OpenAI embedding: {e}")
-            raise EmbeddingModelError(f"Failed to initialize OpenAI embedding: {e}")
+            raise EmbeddingModelError(f"Failed to initialize OpenAI embedding: {e}") from e
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
         """
@@ -362,7 +364,7 @@ class OpenAIEmbedding:
                 result = [None] * len(text)
                 for original_idx, embed in zip(text_indices, embeddings_result, strict=False):
                     result[original_idx] = embed
-                for i, embed in enumerate(embeddings):
+                for embed in embeddings:
                     idx = result.index(None)
                     result[idx] = embed
                 return result
@@ -371,7 +373,7 @@ class OpenAIEmbedding:
 
         except Exception as e:
             logger.error(f"Error generating embeddings with OpenAI: {e}")
-            raise EmbeddingAPIError(f"Failed to generate OpenAI embeddings: {e}")
+            raise EmbeddingAPIError(f"Failed to generate OpenAI embeddings: {e}") from e
 
 
 class TFIDFEmbedding:
@@ -392,15 +394,15 @@ class TFIDFEmbedding:
             self.is_fitted = False
             logger.info("Initialized TF-IDF embedding model")
 
-        except ImportError:
+        except ImportError as e:
             logger.error(
                 "Scikit-learn package not installed. Please install with: pip install scikit-learn"
             )
-            raise EmbeddingModelError("Scikit-learn package not installed")
+            raise EmbeddingModelError("Scikit-learn package not installed") from e
 
         except Exception as e:
             logger.error(f"Error initializing TF-IDF embedding: {e}")
-            raise EmbeddingModelError(f"Failed to initialize TF-IDF embedding: {e}")
+            raise EmbeddingModelError(f"Failed to initialize TF-IDF embedding: {e}") from e
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
         """
@@ -434,13 +436,10 @@ class TFIDFEmbedding:
                 embeddings.append(vec)
 
             # Return single embedding or list
-            if isinstance(text, str):
-                return embeddings[0]
-            return embeddings
-
+            return embeddings[0] if isinstance(text, str) else embeddings
         except Exception as e:
             logger.error(f"Error generating embeddings with TF-IDF: {e}")
-            raise EmbeddingModelError(f"Failed to generate TF-IDF embeddings: {e}")
+            raise EmbeddingModelError(f"Failed to generate TF-IDF embeddings: {e}") from e
 
 
 class SimpleCountEmbedding:
@@ -500,15 +499,12 @@ class SimpleCountEmbedding:
                 embeddings.append(vec)
 
             # Return single embedding or list
-            if isinstance(text, str):
-                return embeddings[0]
-            return embeddings
-
+            return embeddings[0] if isinstance(text, str) else embeddings
         except Exception as e:
             logger.error(f"Error generating embeddings with simple count: {e}")
             raise EmbeddingModelError(
                 f"Failed to generate simple count embeddings: {e}"
-            )
+            ) from e
 
 
 def get_embedding_model(

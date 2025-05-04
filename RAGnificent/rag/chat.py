@@ -85,7 +85,7 @@ class RAGChat:
         # Generate response using agent
         if context:
             response = query_with_context(
-                query, context, system_prompt=chat_context if chat_context else None
+                query, context, system_prompt=chat_context or None
             )
         else:
             # No context found
