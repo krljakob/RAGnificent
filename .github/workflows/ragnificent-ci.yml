@@ -1,0 +1,225 @@
+name: RAGnificent CI
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  rust-checks:
+    name: Rust Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+          
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      
+      - name: Check compilation
+        run: cargo check --verbose --all-targets --all-features
+
+  rust-tests:
+    name: Rust Tests
+    needs: rust-checks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Run tests
+        run: cargo test --verbose --all-features
+        
+      - name: Run benchmarks
+        run: cargo bench --no-run
+
+  python-checks:
+    name: Python Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Set up uv
+        run: |
+          pip install uv
+          uv --version
+      
+      - name: Setup Python environment
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e .[dev]
+      
+      - name: Lint with ruff
+        run: |
+          source .venv/bin/activate
+          ruff check RAGnificent/ tests/
+      
+      - name: Type check with mypy
+        run: |
+          source .venv/bin/activate
+          mypy RAGnificent/
+
+  python-tests:
+    name: Python Tests (${{ matrix.os }})
+    needs: python-checks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Set up uv and virtual environment
+        run: |
+          pip install uv
+          uv venv
+        shell: bash
+      
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          source .venv/bin/activate
+          uv pip install -e .[dev,test]
+          uv pip install maturin
+        shell: bash
+      
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .venv/Scripts/Activate.ps1
+          uv pip install -e .[dev,test]
+          uv pip install maturin
+        shell: pwsh
+      
+      - name: Build Rust extension (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          source .venv/bin/activate
+          maturin build --release
+          maturin develop --release
+        shell: bash
+      
+      - name: Build Rust extension (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .venv/Scripts/Activate.ps1
+          maturin build --release
+          maturin develop --release
+        shell: pwsh
+      
+      - name: Run tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/ --maxfail=0 --disable-warnings -v
+        shell: bash
+      
+      - name: Run tests (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          .venv/Scripts/Activate.ps1
+          python -m pytest tests/ --maxfail=0 --disable-warnings -v
+        shell: pwsh
+
+  integration-tests:
+    name: Integration Tests
+    needs: [rust-tests, python-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Set up uv and virtual environment
+        run: |
+          pip install uv
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e .[dev,test,js]
+          uv pip install maturin
+        shell: bash
+      
+      - name: Build Rust extension
+        run: |
+          source .venv/bin/activate
+          maturin build --release
+          maturin develop --release
+        shell: bash
+      
+      - name: Run integration tests
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/integration/ -v
+        shell: bash

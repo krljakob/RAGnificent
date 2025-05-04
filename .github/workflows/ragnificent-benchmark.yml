@@ -1,0 +1,104 @@
+name: RAGnificent Benchmarks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1' # Run weekly on Mondays at 3 AM UTC
+
+jobs:
+  rust-benchmarks:
+    name: Rust Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for accurate benchmark comparison
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Run Rust benchmarks
+        run: cargo bench --bench RAGnificent_bench -- --output-format bencher | tee bench_output.txt
+      
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'cargo'
+          output-file-path: bench_output.txt
+          auto-push: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-threshold: '150%'
+          gh-pages-branch: 'gh-pages'
+          benchmark-data-dir-path: 'benchmarks/data'
+
+  python-benchmarks:
+    name: Python Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      
+      - name: Set up uv
+        run: |
+          pip install uv
+          uv --version
+      
+      - name: Setup Python environment
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e .[dev,test]
+          uv pip install maturin pytest-benchmark
+      
+      - name: Build Rust extension
+        run: |
+          source .venv/bin/activate
+          maturin build --release
+          maturin develop --release
+      
+      - name: Run Python benchmarks
+        run: |
+          source .venv/bin/activate
+          python -m pytest tests/test_benchmarks.py -v --benchmark-json=pytest_bench_output.json
+      
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'pytest'
+          output-file-path: pytest_bench_output.json
+          auto-push: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comment-on-alert: true
+          fail-on-alert: false
+          alert-threshold: '150%'
+          gh-pages-branch: 'gh-pages'
+          benchmark-data-dir-path: 'benchmarks/data/python'

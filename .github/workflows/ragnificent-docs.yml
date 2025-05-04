@@ -1,0 +1,394 @@
+name: RAGnificent Documentation
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'RAGnificent/**/*.py'
+      - 'src/**/*.rs'
+  workflow_dispatch:
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+      
+      - name: Install uv
+        run: pip install uv
+      
+      - name: Create virtual environment and install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e .[dev]
+          uv pip install mkdocs mkdocs-material mkdocstrings mkdocstrings-python mkdocstrings-rust
+          uv pip install maturin
+      
+      - name: Build Rust extension
+        run: |
+          source .venv/bin/activate
+          maturin build --release
+          maturin develop --release
+      
+      - name: Generate API docs
+        run: |
+          source .venv/bin/activate
+          mkdir -p docs/api
+          
+          # Python API documentation generation
+          cat > generate_docs.py << 'EOF'
+          import os
+          import sys
+          from pathlib import Path
+          
+          def generate_module_docs(module_path, api_dir, parent_module="RAGnificent"):
+              """Generate documentation for a Python module."""
+              module_name = module_path.name
+              
+              # Skip __pycache__ and other special directories
+              if module_name.startswith("__") or module_name.startswith("."):
+                  return
+              
+              # Create module dir if it's a package
+              if module_path.is_dir():
+                  module_doc_path = api_dir / module_name
+                  module_doc_path.mkdir(exist_ok=True, parents=True)
+                  
+                  # Create index file for module
+                  with open(module_doc_path / "index.md", "w") as f:
+                      f.write(f"# {module_name.capitalize()}\n\n")
+                      f.write(f"::: {parent_module}.{module_name}\n\n")
+                  
+                  # Process submodules
+                  for item in module_path.iterdir():
+                      if item.is_dir() and not item.name.startswith("__"):
+                          generate_module_docs(item, module_doc_path, f"{parent_module}.{module_name}")
+                      elif item.suffix == ".py" and not item.name.startswith("__"):
+                          module_file_name = item.stem
+                          with open(module_doc_path / f"{module_file_name}.md", "w") as f:
+                              f.write(f"# {module_file_name.capitalize()}\n\n")
+                              f.write(f"::: {parent_module}.{module_name}.{module_file_name}\n")
+                              f.write("    options:\n")
+                              f.write("      show_source: true\n")
+                              f.write("      show_if_no_docstring: true\n")
+              
+              # Create documentation for Python file
+              elif module_path.suffix == ".py":
+                  module_file_name = module_path.stem
+                  with open(api_dir / f"{module_file_name}.md", "w") as f:
+                      f.write(f"# {module_file_name.capitalize()}\n\n")
+                      f.write(f"::: {parent_module}.{module_file_name}\n")
+                      f.write("    options:\n")
+                      f.write("      show_source: true\n")
+                      f.write("      show_if_no_docstring: true\n")
+          
+          def generate_rust_docs(rust_dir, api_dir):
+              """Generate documentation for Rust source files."""
+              rust_api_dir = api_dir / "rust"
+              rust_api_dir.mkdir(exist_ok=True, parents=True)
+              
+              # Create index file for Rust API
+              with open(rust_api_dir / "index.md", "w") as f:
+                  f.write("# Rust API\n\n")
+                  f.write("This section documents the Rust components of RAGnificent.\n\n")
+              
+              # Create docs for each Rust file
+              for item in rust_dir.glob("*.rs"):
+                  if item.name != "lib.rs" and item.name != "tests.rs":
+                      module_name = item.stem
+                      with open(rust_api_dir / f"{module_name}.md", "w") as f:
+                          f.write(f"# {module_name.capitalize()}\n\n")
+                          f.write(f"```rust\n")
+                          f.write(item.read_text())
+                          f.write(f"\n```\n")
+          
+          def main():
+              project_root = Path(__file__).parent
+              api_dir = project_root / "docs" / "api"
+              api_dir.mkdir(exist_ok=True, parents=True)
+              
+              # Generate Python API docs
+              ragnificent_dir = project_root / "RAGnificent"
+              if ragnificent_dir.exists():
+                  generate_module_docs(ragnificent_dir, api_dir)
+              
+              # Generate Rust API docs
+              rust_dir = project_root / "src"
+              if rust_dir.exists():
+                  generate_rust_docs(rust_dir, api_dir)
+          
+          if __name__ == "__main__":
+              main()
+          EOF
+          
+          python generate_docs.py
+      
+      - name: Configure mkdocs
+        run: |
+          cat > mkdocs.yml << EOF
+          site_name: RAGnificent
+          site_description: HTML to Markdown converter with support for multiple output formats
+          site_author: RAGnificent Team
+          
+          repo_url: https://github.com/krljakob/RAGnificent
+          edit_uri: edit/main/docs/
+          
+          theme:
+            name: material
+            palette:
+              primary: indigo
+              accent: indigo
+            features:
+              - navigation.instant
+              - navigation.tracking
+              - navigation.expand
+              - navigation.indexes
+              - navigation.sections
+              - content.code.copy
+              - search.suggest
+              - search.highlight
+          
+          markdown_extensions:
+            - pymdownx.highlight:
+                anchor_linenums: true
+            - pymdownx.superfences
+            - pymdownx.inlinehilite
+            - pymdownx.tabbed:
+                alternate_style: true
+            - pymdownx.critic
+            - admonition
+            - pymdownx.details
+            - pymdownx.tasklist:
+                custom_checkbox: true
+            - toc:
+                permalink: true
+          
+          plugins:
+            - search
+            - mkdocstrings:
+                handlers:
+                  python:
+                    paths: [RAGnificent]
+                    options:
+                      docstring_style: google
+                      show_source: true
+                      show_if_no_docstring: true
+                      heading_level: 3
+                  rust:
+                    selection:
+                      filters:
+                        - "!^_"
+          
+          nav:
+            - Home: index.md
+            - Installation: installation.md
+            - User Guide: 
+                - Getting Started: user-guide/getting-started.md
+                - Basic Usage: user-guide/basic-usage.md
+                - Advanced Features: user-guide/advanced-features.md
+            - API Reference:
+                - Core: api/core/index.md
+                - RAG: api/rag/index.md
+                - Utils: api/utils/index.md
+                - Rust API: api/rust/index.md
+            - Development:
+                - Contributing: development/contributing.md
+                - Performance: development/performance.md
+                - Testing: development/testing.md
+            - Changelog: changelog.md
+          EOF
+      
+      - name: Create basic documentation structure
+        run: |
+          source .venv/bin/activate
+          
+          # Create index page
+          mkdir -p docs
+          cat > docs/index.md << 'EOF'
+          # RAGnificent
+          
+          *HTML to Markdown converter with support for multiple output formats*
+          
+          RAGnificent is a high-performance HTML to Markdown converter built with a hybrid Rust/Python architecture
+          for optimal speed and flexibility. It focuses on creating clean, semantic Markdown content that preserves
+          the meaning and structure of the original HTML.
+          
+          ## Features
+          
+          - High-performance HTML parsing and conversion using Rust
+          - Clean, semantic Markdown output
+          - Support for JavaScript rendering
+          - Flexible chunking algorithms for RAG applications
+          - Embedding integration for vector search
+          - Python API with full type annotations
+          
+          ## Quick Start
+          
+          ```python
+          from RAGnificent import convert_html_to_markdown
+          
+          html = "<h1>Hello World</h1><p>This is a test</p>"
+          markdown = convert_html_to_markdown(html)
+          print(markdown)
+          ```
+          
+          ## Installation
+          
+          Install using uv (recommended):
+          
+          ```bash
+          uv pip install RAGnificent
+          ```
+          
+          Or with pip:
+          
+          ```bash
+          pip install RAGnificent
+          ```
+          EOF
+          
+          # Create basic structure for other documentation pages
+          mkdir -p docs/user-guide
+          mkdir -p docs/development
+          
+          # Create installation page
+          cat > docs/installation.md << 'EOF'
+          # Installation
+          
+          RAGnificent requires Python 3.12+ and has optional Rust components that are pre-compiled for most common platforms.
+          
+          ## Using uv (Recommended)
+          
+          The fastest way to install RAGnificent is with [uv](https://github.com/astral-sh/uv):
+          
+          ```bash
+          uv pip install RAGnificent
+          ```
+          
+          ## Using pip
+          
+          Alternatively, you can use pip:
+          
+          ```bash
+          pip install RAGnificent
+          ```
+          
+          ## From Source
+          
+          For development or to get the latest unreleased changes:
+          
+          ```bash
+          git clone https://github.com/krljakob/RAGnificent.git
+          cd RAGnificent
+          
+          # Create and activate a virtual environment with uv
+          uv venv
+          source .venv/bin/activate  # On Windows: .venv\Scripts\Activate.ps1
+          
+          # Install in development mode with all optional dependencies
+          uv pip install -e ".[dev,test,js]"
+          
+          # Build the Rust extension
+          maturin develop --release
+          ```
+          
+          ## Optional Dependencies
+          
+          RAGnificent has several optional dependency groups:
+          
+          - `dev`: Development tools (linting, formatting)
+          - `test`: Testing dependencies
+          - `js`: JavaScript rendering support
+          
+          Install them with:
+          
+          ```bash
+          uv pip install "RAGnificent[dev,test,js]"
+          ```
+          EOF
+          
+          # Create basic usage guide
+          cat > docs/user-guide/basic-usage.md << 'EOF'
+          # Basic Usage
+          
+          RAGnificent provides several ways to convert HTML to Markdown depending on your needs.
+          
+          ## Simple Conversion
+          
+          For straightforward HTML to Markdown conversion:
+          
+          ```python
+          from RAGnificent import convert_html_to_markdown
+          
+          html = """
+          <h1>Hello World</h1>
+          <p>This is a <strong>test</strong> with some <em>formatting</em>.</p>
+          <ul>
+              <li>Item 1</li>
+              <li>Item 2</li>
+          </ul>
+          """
+          
+          markdown = convert_html_to_markdown(html)
+          print(markdown)
+          ```
+          
+          ## Processing a URL
+          
+          To scrape and convert a web page:
+          
+          ```python
+          from RAGnificent.core.scraper import HTMLScraper
+          
+          scraper = HTMLScraper()
+          result = scraper.scrape_url("https://example.com")
+          
+          print(result.markdown)
+          print(f"Metadata: {result.metadata}")
+          ```
+          
+          ## Customizing Conversion
+          
+          You can customize the conversion process:
+          
+          ```python
+          from RAGnificent import convert_html_to_markdown
+          
+          html = "<div>Some content <script>var x = 1;</script> and more content</div>"
+          
+          # Remove script tags
+          markdown = convert_html_to_markdown(html, remove_scripts=True)
+          
+          # Preserve image data
+          html_with_img = '<img src="example.jpg" alt="Example">'
+          markdown_with_img = convert_html_to_markdown(html_with_img, preserve_images=True)
+          ```
+          EOF
+      
+      - name: Build docs site
+        run: |
+          source .venv/bin/activate
+          mkdocs build
+      
+      - name: Deploy docs to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true

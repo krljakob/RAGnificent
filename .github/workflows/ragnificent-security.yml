@@ -1,0 +1,80 @@
+name: RAGnificent Security Audit
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+  pull_request:
+    branches: ["main"]
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+  schedule:
+    - cron: '0 6 * * 1' # Run weekly on Mondays at 6 AM UTC
+  workflow_dispatch:
+
+jobs:
+  rust-security-audit:
+    name: Rust Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      
+      - name: Run cargo-audit
+        run: cargo audit
+        continue-on-error: true # Don't fail the workflow, but report issues
+      
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          arguments: --all-features
+
+  python-security-audit:
+    name: Python Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Set up uv
+        run: pip install uv
+      
+      - name: Install safety
+        run: uv pip install safety
+      
+      - name: Check dependencies with safety
+        run: |
+          uv pip freeze > requirements-frozen.txt
+          safety check -r requirements-frozen.txt --full-report
+        continue-on-error: true # Don't fail the workflow, but report issues
+      
+      - name: Install bandit
+        run: uv pip install bandit
+      
+      - name: Run bandit (Python security linter)
+        run: bandit -r RAGnificent/ -f json -o bandit-results.json
+        continue-on-error: true
+      
+      - name: Upload bandit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: bandit-results
+          path: bandit-results.json

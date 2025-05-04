@@ -1,0 +1,351 @@
+name: RAGnificent Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - production
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+  build-wheels:
+    name: Build Wheels on ${{ matrix.os }}
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          pip install maturin build wheel twine
+      
+      - name: Build wheels with maturin
+        run: |
+          maturin build --release --strip --features real_rendering
+
+      - name: Build sdist
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          pip install build
+          python -m build --sdist
+      
+      - name: Upload Wheel
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            target/wheels/*.whl
+            dist/*.tar.gz
+      
+      - name: Upload to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: target/wheels/
+          asset_name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}.zip
+          asset_content_type: application/zip
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [create-release, build-wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: dist
+      
+      - name: Prepare distribution files
+        run: |
+          mkdir -p dist_upload
+          find dist -name "*.whl" -o -name "*.tar.gz" | xargs -I {} cp {} dist_upload/
+      
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: dist_upload/
+          skip-existing: true
+
+  build-docs:
+    name: Build and Deploy Docs
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e .[dev]
+          uv pip install mkdocs mkdocs-material mkdocstrings mkdocstrings-python
+      
+      - name: Build docs
+        run: |
+          source .venv/bin/activate
+          mkdir -p docs
+          # Automatically generate API docs from code
+          python -c "
+          import os
+          from pathlib import Path
+          
+          def generate_api_md(module_path, output_dir):
+              module_name = module_path.name
+              api_md = f'# {module_name.capitalize()} API\n\n'
+              
+              for py_file in module_path.glob('*.py'):
+                  if py_file.name.startswith('__'):
+                      continue
+                      
+                  rel_path = py_file.relative_to(Path('RAGnificent'))
+                  module_path = str(rel_path.with_suffix('')).replace('/', '.')
+                  api_md += f'## {py_file.stem}\n\n'
+                  api_md += f'::: RAGnificent.{module_path}\n\n'
+              
+              with open(output_dir / f'{module_name}.md', 'w') as f:
+                  f.write(api_md)
+          
+          # Create API documentation structure
+          api_dir = Path('docs/api')
+          api_dir.mkdir(exist_ok=True, parents=True)
+          
+          # Generate API docs for each module
+          for module in Path('RAGnificent').iterdir():
+              if module.is_dir() and not module.name.startswith('__'):
+                  generate_api_md(module, api_dir)
+          
+          # Create index.md if it doesn't exist
+          index_path = Path('docs/index.md')
+          if not index_path.exists():
+              with open(index_path, 'w') as f:
+                  f.write('# RAGnificent Documentation\n\nWelcome to the RAGnificent documentation!\n')
+          "
+          
+          # Create mkdocs.yml if it doesn't exist
+          if [ ! -f "mkdocs.yml" ]; then
+            cat > mkdocs.yml << EOF
+          site_name: RAGnificent
+          site_description: HTML to Markdown converter with support for multiple output formats
+          site_author: RAGnificent Team
+          
+          theme:
+            name: material
+            palette:
+              primary: indigo
+              accent: indigo
+            features:
+              - navigation.instant
+              - navigation.tracking
+              - navigation.expand
+              - navigation.indexes
+              - content.code.copy
+          
+          markdown_extensions:
+            - pymdownx.highlight
+            - pymdownx.superfences
+            - pymdownx.inlinehilite
+            - pymdownx.tabbed
+            - pymdownx.critic
+            - admonition
+          
+          plugins:
+            - search
+            - mkdocstrings:
+                handlers:
+                  python:
+                    selection:
+                      docstring_style: google
+                    rendering:
+                      show_source: true
+          
+          nav:
+            - Home: index.md
+            - Installation: installation.md
+            - User Guide: user-guide.md
+            - API Reference:
+                - Core: api/core.md
+                - RAG: api/rag.md
+                - Utils: api/utils.md
+            - Contributing: contributing.md
+          EOF
+          fi
+          
+          # Create basic pages if they don't exist
+          mkdir -p docs
+          
+          if [ ! -f "docs/installation.md" ]; then
+            cat > docs/installation.md << EOF
+          # Installation
+          
+          RAGnificent can be installed using pip:
+          
+          \`\`\`bash
+          pip install RAGnificent
+          \`\`\`
+          
+          Or with uv:
+          
+          \`\`\`bash
+          uv pip install RAGnificent
+          \`\`\`
+          
+          ## From Source
+          
+          To install from source:
+          
+          \`\`\`bash
+          git clone https://github.com/ursisterbtw/RAGnificent.git
+          cd RAGnificent
+          uv venv
+          source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+          uv pip install -e .
+          \`\`\`
+          EOF
+          fi
+          
+          if [ ! -f "docs/user-guide.md" ]; then
+            cat > docs/user-guide.md << EOF
+          # User Guide
+          
+          ## Basic Usage
+          
+          \`\`\`python
+          from RAGnificent import convert_html_to_markdown
+          
+          html = "<h1>Hello World</h1><p>This is a test</p>"
+          markdown = convert_html_to_markdown(html)
+          print(markdown)
+          \`\`\`
+          
+          ## Advanced Usage
+          
+          For more complex scenarios, you can use the advanced API:
+          
+          \`\`\`python
+          from RAGnificent.core.scraper import HTMLScraper
+          
+          scraper = HTMLScraper()
+          result = scraper.scrape_url("https://example.com")
+          print(result.markdown)
+          \`\`\`
+          EOF
+          fi
+          
+          if [ ! -f "docs/contributing.md" ]; then
+            cat > docs/contributing.md << EOF
+          # Contributing
+          
+          We welcome contributions to RAGnificent!
+          
+          ## Development Setup
+          
+          1. Clone the repository
+          2. Create a virtual environment with uv
+          3. Install development dependencies
+          4. Build the Rust extension
+          
+          \`\`\`bash
+          git clone https://github.com/ursisterbtw/RAGnificent.git
+          cd RAGnificent
+          uv venv
+          source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate
+          uv pip install -e .[dev,test]
+          maturin develop --release
+          \`\`\`
+          
+          ## Running Tests
+          
+          To run the tests:
+          
+          \`\`\`bash
+          pytest
+          \`\`\`
+          
+          ## Code Style
+          
+          We use:
+          - Black for Python formatting
+          - Ruff for linting
+          - Mypy for type checking
+          - Rustfmt for Rust formatting
+          - Clippy for Rust linting
+          EOF
+          fi
+          
+          # Build the documentation site
+          mkdocs build
+      
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
