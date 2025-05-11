@@ -517,7 +517,13 @@ class RequestCache:
         max_memory_mb = self.max_memory_size_mb
         
         # Calculate disk usage
-        disk_usage = sum(f.stat().st_size for f in self.cache_dir.glob("**/*") if f.is_file())
+        disk_usage = sum(
+            f.stat().st_size
+            for f in self.cache_dir.glob("**/*")
+            if f.is_file()
+            and not str(f).startswith(str(self.metadata_dir))
+            and f.suffix != ".meta"
+        )
         disk_usage_mb = disk_usage / (1024 * 1024)
         
         memory_items = len(self.memory_cache)
