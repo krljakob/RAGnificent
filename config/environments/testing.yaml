@@ -1,0 +1,73 @@
+
+data_dir: "./data/test"
+models_dir: "./models/test"
+cache_dir: "./cache/test"
+
+logging:
+  level: "DEBUG"
+  console: true
+  file: "./logs/ragnificent-test.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+scraper:
+  rate_limit: 10.0  # High rate limit for testing (no actual network requests)
+  cache_enabled: false  # Disable cache for testing
+  timeout: 5
+  max_workers: 2  # Minimal workers for testing
+  domain_rate_limits: {}  # No domain-specific limits in testing
+  adaptive_throttling: false  # Disable adaptive throttling for predictable tests
+  use_rust_implementation: true
+
+chunking:
+  strategy: "semantic"
+  chunk_size: 500  # Smaller chunks for faster testing
+  chunk_overlap: 100
+  separator: "\n"
+  keep_separator: true
+
+embedding:
+  model_type: "sentence_transformer"
+  model_name: "BAAI/bge-small-en-v1.5"  # Smaller model for testing
+  batch_size: 8  # Smaller batch size for testing
+  device: "cpu"
+  use_cache: false  # Disable cache for testing
+  normalize: true
+
+qdrant:
+  host: ":memory:"  # In-memory for testing
+  port: 6333
+  collection: "ragnificent_test"
+  vector_size: 384
+  timeout: 5
+  prefer_grpc: true
+
+openai:
+  embedding_model: "text-embedding-3-small"
+  completion_model: "gpt-3.5-turbo"
+  max_tokens: 500  # Smaller token limit for testing
+  temperature: 0.7
+  request_timeout: 10  # Shorter timeout for testing
+  max_retries: 1  # Fewer retries for testing
+
+search:
+  max_results: 3  # Fewer results for testing
+  score_threshold: 0.6
+  use_hybrid_search: false
+  rate_limit_per_minute: 1000  # High rate limit for testing
+  enable_caching: false  # Disable cache for testing
+  cache_ttl: 60  # Short TTL for testing
+
+resources:
+  max_memory_percent: 90.0  # Higher limit for testing
+  max_connections: 10
+  max_thread_workers: 5
+  cleanup_interval: 300  # Less frequent cleanup for testing
+  enable_monitoring: false  # Disable monitoring for testing
+
+features:
+  enable_advanced_chunking: true
+  enable_parallel_processing: false  # Disable for deterministic testing
+  enable_memory_optimization: false  # Disable for testing
+  enable_caching: false  # Disable for testing
+  enable_benchmarking: true
+  enable_security_features: true

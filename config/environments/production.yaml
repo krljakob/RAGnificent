@@ -1,0 +1,76 @@
+
+data_dir: "/var/lib/ragnificent/data"
+models_dir: "/var/lib/ragnificent/models"
+cache_dir: "/var/lib/ragnificent/cache"
+
+logging:
+  level: "INFO"
+  console: false
+  file: "/var/log/ragnificent/ragnificent.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+scraper:
+  rate_limit: 0.5  # Conservative rate limit for production
+  cache_enabled: true
+  cache_max_age: 604800  # 7 days
+  timeout: 10
+  max_workers: 20  # More workers for production
+  domain_rate_limits:
+    "example.com": 1.0
+    "*.python.org": 2.0
+  adaptive_throttling: true
+  use_rust_implementation: true
+
+chunking:
+  strategy: "semantic"
+  chunk_size: 1000
+  chunk_overlap: 200
+  separator: "\n"
+  keep_separator: true
+
+embedding:
+  model_type: "sentence_transformer"
+  model_name: "BAAI/bge-base-en-v1.5"  # Larger model for production
+  batch_size: 32
+  device: "cuda"  # Use GPU in production if available
+  use_cache: true
+  normalize: true
+
+qdrant:
+  host: "qdrant.service.internal"  # Use dedicated service in production
+  port: 6333
+  collection: "ragnificent_prod"
+  vector_size: 384
+  timeout: 10
+  prefer_grpc: true
+
+openai:
+  embedding_model: "text-embedding-3-large"  # Use larger model in production
+  completion_model: "gpt-4o"  # Use more capable model in production
+  max_tokens: 1000
+  temperature: 0.7
+  request_timeout: 30
+  max_retries: 3
+
+search:
+  max_results: 5
+  score_threshold: 0.6
+  use_hybrid_search: true  # Enable hybrid search in production
+  rate_limit_per_minute: 120  # Higher rate limit for production
+  enable_caching: true
+  cache_ttl: 3600
+
+resources:
+  max_memory_percent: 75.0  # More conservative memory limit
+  max_connections: 200
+  max_thread_workers: 50
+  cleanup_interval: 30  # More frequent cleanup
+  enable_monitoring: true
+
+features:
+  enable_advanced_chunking: true
+  enable_parallel_processing: true
+  enable_memory_optimization: true
+  enable_caching: true
+  enable_benchmarking: false  # Disable benchmarking in production
+  enable_security_features: true
