@@ -22,6 +22,17 @@ from RAGnificent.core.config import (
 class TestConfigFileSupport(unittest.TestCase):
     """Test the enhanced configuration file support."""
 
+    def test_app_config_initialization_with_dict_override(self):
+        """Ensure that AppConfig applies overrides from config_dict"""
+        override = {
+            "chunking_strategy": ChunkingStrategy.SENTENCE.value,
+            "embedding_model_type": EmbeddingModelType.OPENAI.value,
+        }
+        config = AppConfig(config_dict=override)
+        # Overrides should map back to enum values
+        self.assertEqual(config.chunking_strategy, ChunkingStrategy.SENTENCE)
+        self.assertEqual(config.embedding_model_type, EmbeddingModelType.OPENAI)
+
     def setUp(self):
         """Set up test environment."""
         self.temp_dir = tempfile.TemporaryDirectory()
