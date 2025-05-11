@@ -14,7 +14,7 @@ class TestNestedHeaderChunking(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.chunker = ContentChunker(chunk_size=500, chunk_overlap=100)
-        
+
         self.nested_markdown = """# Main Topic
 
 This is an introduction to the main topic.
@@ -48,18 +48,19 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1.
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
 
         subtopic_1_1_chunks = [
-            chunk for chunk in chunks 
+            chunk
+            for chunk in chunks
             if "Nested Subtopic 1.1" in chunk.metadata["heading_path"]
         ]
 
         self.assertGreater(
-            len(subtopic_1_1_chunks), 0, 
-            "Should have chunks for Nested Subtopic 1.1"
+            len(subtopic_1_1_chunks), 0, "Should have chunks for Nested Subtopic 1.1"
         )
 
         if len(subtopic_1_1_chunks) > 1:
             continuation_chunks = [
-                chunk for chunk in subtopic_1_1_chunks 
+                chunk
+                for chunk in subtopic_1_1_chunks
                 if chunk.metadata.get("is_continuation", False)
             ]
 
@@ -89,7 +90,7 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1.
                 self.assertNotIn("Subtopic 1", header_texts)
 
                 self.assertEqual(chunk.metadata["nested_level"], 2)
-    
+
     def test_path_elements_structure(self):
         """Test that path_elements correctly represents the header hierarchy."""
         chunks = self.chunker.create_chunks_from_markdown(

@@ -13,7 +13,7 @@ import sys
 import time
 import tracemalloc
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 # Use relative imports for internal modules
@@ -93,7 +93,7 @@ class MarkdownScraper:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
         )
-        
+
         # Initialize enhanced throttler with domain-specific limits and adaptive throttling
         self.throttler = RequestThrottler(
             requests_per_second=requests_per_second,
@@ -104,7 +104,7 @@ class MarkdownScraper:
             retry_delay=2.0,
             enable_stats=True,
         )
-        
+
         self.timeout = timeout
         self.max_retries = max_retries
         self.chunker = ContentChunker(chunk_size, chunk_overlap)
@@ -160,21 +160,24 @@ class MarkdownScraper:
             requests.exceptions.RequestException: If the request fails after retries
             ValueError: If the URL is invalid
         """
-        from core.validators import validate_url, sanitize_url
         from core.security import redact_sensitive_data
-        
+        from core.validators import sanitize_url, validate_url
+
         if not validate_url(url):
             error_msg = f"Invalid URL format: {redact_sensitive_data(url)}"
             logger.error(error_msg)
             raise ValueError(error_msg)
-            
+
         sanitized_url = sanitize_url(url)
         if sanitized_url != url:
-            logger.warning(f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}")
+            logger.warning(
+                f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}"
+            )
             url = sanitized_url
-        
+
         try:
             import psutil  # type: ignore
+
             psutil_available = True
         except ImportError:
             psutil_available = False
@@ -192,10 +195,10 @@ class MarkdownScraper:
         try:
             # Attempt to fetch content with retries
             html_content = self._fetch_with_retries(url)
-            
+
             # Cache the response if enabled
             self._cache_response(url, html_content)
-            
+
             return html_content
         except Exception as e:
             logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {str(e)}")
@@ -581,10 +584,7 @@ class MarkdownScraper:
             # Then convert to the requested format
             try:
                 # Try to use functions from ragnificent_rs for conversion
-                from ragnificent_rs import (
-                    document_to_xml,
-                    parse_markdown_to_document,
-                )
+                from ragnificent_rs import document_to_xml, parse_markdown_to_document
 
                 document = parse_markdown_to_document(markdown_content, url)
 
@@ -657,13 +657,14 @@ class MarkdownScraper:
 
         # Extract URL strings from SitemapURL objects
         urls = [url_info.loc for url_info in filtered_urls]
-        
+
         # Process URLs either in parallel or sequentially
         successfully_scraped = []
         failed_urls = []
 
         if parallel:
             try:
+
                 def process_url(args):
                     url, idx = args
                     try:
@@ -680,25 +681,27 @@ class MarkdownScraper:
                         return (True, url, None)
                     except Exception as e:
                         return (False, url, str(e))
-                
+
                 # Use the enhanced throttler's parallel execution capabilities
-                if hasattr(self.throttler, 'execute_parallel'):
+                if hasattr(self.throttler, "execute_parallel"):
                     logger.info(
                         f"Processing {len(urls)} URLs in parallel with enhanced throttling"
                     )
-                    
+
                     # Create a wrapper function that doesn't require the URL parameter
                     def throttled_process(url):
                         idx = urls.index(url) if url in urls else 0
                         return process_url((url, idx))
-                    
+
                     results = self.throttler.execute_parallel(throttled_process, urls)
                 else:
                     # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
                     logger.info(
                         f"Processing {len(urls)} URLs in parallel with {max_workers} workers"
                     )
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=max_workers
+                    ) as executor:
                         if worker_timeout is not None:
                             # Use submit and as_completed with timeout
                             futures = [
@@ -706,8 +709,10 @@ class MarkdownScraper:
                                 for i, url in enumerate(urls)
                             ]
                             results = []
-                            
-                            for future in concurrent.futures.as_completed(futures, timeout=None):
+
+                            for future in concurrent.futures.as_completed(
+                                futures, timeout=None
+                            ):
                                 try:
                                     result = future.result(timeout=worker_timeout)
                                     results.append(result)
@@ -720,14 +725,21 @@ class MarkdownScraper:
                                             f"Worker timed out after {worker_timeout}s while processing {url}"
                                         )
                                         results.append(
-                                            (False, url, f"Timed out after {worker_timeout}s")
+                                            (
+                                                False,
+                                                url,
+                                                f"Timed out after {worker_timeout}s",
+                                            )
                                         )
                         else:
                             # Use map without timeout
                             results = list(
-                                executor.map(process_url, [(url, i) for i, url in enumerate(urls)])
+                                executor.map(
+                                    process_url,
+                                    [(url, i) for i, url in enumerate(urls)],
+                                )
                             )
-                
+
                 # Process results
                 for success, url, error in results:
                     if success:
@@ -735,12 +747,12 @@ class MarkdownScraper:
                     else:
                         failed_urls.append((url, error))
                         logger.error(f"Error processing URL {url}: {error}")
-                
+
             except Exception as e:
                 logger.error(f"Error in parallel processing: {e}")
                 logger.warning("Falling back to sequential processing")
                 parallel = False
-        
+
         # Sequential processing (if parallel is False or an error occurred)
         if not parallel:
             for i, url in enumerate(urls):
@@ -765,14 +777,16 @@ class MarkdownScraper:
         logger.info(
             f"Successfully scraped {len(successfully_scraped)}/{len(urls)} URLs"
         )
-        
+
         if failed_urls:
             logger.warning(f"Failed to scrape {len(failed_urls)} URLs:")
-            for url, error in failed_urls[:5]:  # Show only first 5 failures to avoid log flooding
+            for url, error in failed_urls[
+                :5
+            ]:  # Show only first 5 failures to avoid log flooding
                 logger.warning(f"  - {url}: {error}")
             if len(failed_urls) > 5:
                 logger.warning(f"  - ... and {len(failed_urls) - 5} more")
-                
+
         return successfully_scraped
 
     def _discover_urls_from_sitemap(
@@ -990,6 +1004,7 @@ class MarkdownScraper:
 
         if parallel:
             try:
+
                 def process_url(args):
                     url, idx = args
                     try:
@@ -1006,25 +1021,27 @@ class MarkdownScraper:
                         return (True, url, None)
                     except Exception as e:
                         return (False, url, str(e))
-                
+
                 # Use the enhanced throttler's parallel execution capabilities if available
-                if hasattr(self.throttler, 'execute_parallel'):
+                if hasattr(self.throttler, "execute_parallel"):
                     logger.info(
                         f"Processing {len(links)} URLs in parallel with enhanced throttling"
                     )
-                    
+
                     # Create a wrapper function that doesn't require the URL parameter
                     def throttled_process(url):
                         idx = links.index(url) if url in links else 0
                         return process_url((url, idx))
-                    
+
                     results = self.throttler.execute_parallel(throttled_process, links)
                 else:
                     # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
                     logger.info(
                         f"Processing {len(links)} URLs in parallel with {max_workers} workers"
                     )
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    with concurrent.futures.ThreadPoolExecutor(
+                        max_workers=max_workers
+                    ) as executor:
                         if worker_timeout is not None:
                             # Use submit and as_completed with timeout
                             futures = [
@@ -1032,8 +1049,10 @@ class MarkdownScraper:
                                 for i, url in enumerate(links)
                             ]
                             results = []
-                            
-                            for future in concurrent.futures.as_completed(futures, timeout=None):
+
+                            for future in concurrent.futures.as_completed(
+                                futures, timeout=None
+                            ):
                                 try:
                                     result = future.result(timeout=worker_timeout)
                                     results.append(result)
@@ -1046,14 +1065,21 @@ class MarkdownScraper:
                                             f"Worker timed out after {worker_timeout}s while processing {url}"
                                         )
                                         results.append(
-                                            (False, url, f"Timed out after {worker_timeout}s")
+                                            (
+                                                False,
+                                                url,
+                                                f"Timed out after {worker_timeout}s",
+                                            )
                                         )
                         else:
                             # Use map without timeout
                             results = list(
-                                executor.map(process_url, [(url, i) for i, url in enumerate(links)])
+                                executor.map(
+                                    process_url,
+                                    [(url, i) for i, url in enumerate(links)],
+                                )
                             )
-                
+
                 # Process results
                 for success, url, error in results:
                     if success:
@@ -1061,12 +1087,12 @@ class MarkdownScraper:
                     else:
                         failed_urls.append((url, error))
                         logger.error(f"Error processing URL {url}: {error}")
-                
+
             except Exception as e:
                 logger.error(f"Error in parallel processing: {e}")
                 logger.warning("Falling back to sequential processing")
                 parallel = False
-        
+
         # Sequential processing (if parallel is False or an error occurred)
         if not parallel:
             for i, url in enumerate(links):
@@ -1094,7 +1120,9 @@ class MarkdownScraper:
 
         if failed_urls:
             logger.warning(f"Failed to scrape {len(failed_urls)} URLs:")
-            for url, error in failed_urls[:5]:  # Show only first 5 failures to avoid log flooding
+            for url, error in failed_urls[
+                :5
+            ]:  # Show only first 5 failures to avoid log flooding
                 logger.warning(f"  - {url}: {error}")
             if len(failed_urls) > 5:
                 logger.warning(f"  - ... and {len(failed_urls) - 5} more")

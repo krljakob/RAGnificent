@@ -9,11 +9,11 @@ Supports loading configuration from YAML, JSON, and .env files.
 import json
 import logging
 import os
-import yaml
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union
 
+import yaml
 from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -364,7 +364,7 @@ class AppConfig:
     def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
         """
         Initialize configuration with optional dictionary override.
-        
+
         Args:
             config_dict: Optional dictionary with configuration values
         """
@@ -378,7 +378,7 @@ class AppConfig:
         self.data_dir = DATA_DIR
         self.models_dir = MODELS_DIR
         self.cache_dir = CACHE_DIR
-        
+
         # Override with provided config if any
         if config_dict:
             self.update_from_dict(config_dict)
@@ -386,27 +386,27 @@ class AppConfig:
         # Configure logging based on settings
         self.configure_logging()
 
-You can collapse most of the repetition by introducing small “maps” and loops instead of hand‐writing every branch.
-
-1. Replace `update_from_dict`’s long `if …` chain with a simple field→class map:
-```python
-# at module top
-_UPDATE_MAP: dict[str, type] = {
-    "qdrant":     QdrantConfig,
-    "embedding":  EmbeddingConfig,
-    "openai":     OpenAIConfig,
-    "chunking":   ChunkingConfig,
-    "scraper":    ScraperConfig,
-    "search":     SearchConfig,
-    "logging":    LoggingConfig,
-    "data_dir":   Path,
-    "models_dir": Path,
-    "cache_dir":  Path,
-}
-
-class AppConfig:
-    …
     def update_from_dict(self, config: dict[str, Any]) -> None:
+        """
+        Update configuration from dictionary.
+
+        Args:
+            config: Dictionary with configuration values
+        """
+        _UPDATE_MAP: dict[str, type] = {
+            "qdrant": QdrantConfig,
+            "embedding": EmbeddingConfig,
+            "openai": OpenAIConfig,
+            "chunking": ChunkingConfig,
+            "scraper": ScraperConfig,
+            "search": SearchConfig,
+            "logging": LoggingConfig,
+            "data_dir": Path,
+            "models_dir": Path,
+            "cache_dir": Path,
+        }
+
+        # Use the map for sub-config updates
         for key, cls in _UPDATE_MAP.items():
             if key in config:
                 val = config[key]
@@ -416,41 +416,16 @@ class AppConfig:
                     else cls(val)
                 )
                 setattr(self, key, obj)
-        """
-        Update configuration from dictionary.
-        
-        Args:
-            config_dict: Dictionary with configuration values
-        """
-        if "qdrant" in config_dict:
-            self.qdrant = QdrantConfig.model_validate(config_dict["qdrant"])
-        
-        if "embedding" in config_dict:
-            self.embedding = EmbeddingConfig.model_validate(config_dict["embedding"])
-        
-        if "openai" in config_dict:
-            self.openai = OpenAIConfig.model_validate(config_dict["openai"])
-        
-        if "chunking" in config_dict:
-            self.chunking = ChunkingConfig.model_validate(config_dict["chunking"])
-        
-        if "scraper" in config_dict:
-            self.scraper = ScraperConfig.model_validate(config_dict["scraper"])
-        
-        if "search" in config_dict:
-            self.search = SearchConfig.model_validate(config_dict["search"])
-        
-        if "logging" in config_dict:
-            self.logging = LoggingConfig.model_validate(config_dict["logging"])
-        
-        if "data_dir" in config_dict:
-            self.data_dir = Path(config_dict["data_dir"])
-        
-        if "models_dir" in config_dict:
-            self.models_dir = Path(config_dict["models_dir"])
-        
-        if "cache_dir" in config_dict:
-            self.cache_dir = Path(config_dict["cache_dir"])
+
+        # Handle primitive fields separately
+        if "data_dir" in config:
+            self.data_dir = Path(config["data_dir"])
+
+        if "models_dir" in config:
+            self.models_dir = Path(config["models_dir"])
+
+        if "cache_dir" in config:
+            self.cache_dir = Path(config["cache_dir"])
 
     def configure_logging(self):
         """Configure logging based on settings"""
@@ -486,15 +461,15 @@ class AppConfig:
             "models_dir": str(self.models_dir),
             "cache_dir": str(self.cache_dir),
         }
-        
+
     def save_to_file(self, file_path: Union[str, Path], format: str = "auto") -> None:
         """
         Save configuration to a file.
-        
+
         Args:
             file_path: Path to save the configuration file
             format: Format to save as ('json', 'yaml', or 'auto' to detect from extension)
-            
+
         Raises:
             ValueError: If format is invalid or cannot be determined
         """
@@ -519,14 +494,13 @@ class AppConfig:
         def convert_to_serializable(obj):
             if isinstance(obj, dict):
                 return {k: convert_to_serializable(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
+            if isinstance(obj, list):
                 return [convert_to_serializable(item) for item in obj]
-            elif isinstance(obj, Path):
+            if isinstance(obj, Path):
                 return str(obj)
-            elif isinstance(obj, Enum):
+            if isinstance(obj, Enum):
                 return obj.value
-            else:
-                return obj
+            return obj
 
         config_dict = convert_to_serializable(config_dict)
 
@@ -591,37 +565,36 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
         load_dotenv(path, override=True)
         return AppConfig()
 
-    elif suffix == ".json":
+    if suffix == ".json":
         with open(path, "r") as f:
             config_dict = json.load(f)
         return AppConfig(config_dict=config_dict)
 
-    elif suffix in {".yaml", ".yml"}:
+    if suffix in {".yaml", ".yml"}:
         with open(path, "r") as f:
             config_dict = yaml.safe_load(f)
         return AppConfig(config_dict=config_dict)
 
-    else:
-        raise ValueError(
-            f"Unsupported config file format: {suffix}. "
-            "Supported formats: .env, .json, .yaml, .yml"
-        )
+    raise ValueError(
+        f"Unsupported config file format: {suffix}. "
+        "Supported formats: .env, .json, .yaml, .yml"
+    )
 
 
 def load_configs_from_directory(config_dir: Union[str, Path]) -> AppConfig:
     """
     Load and merge multiple configuration files from a directory.
-    
+
     Files are loaded in alphabetical order, with later files overriding
     earlier ones. This allows for layered configurations (e.g., default.yaml,
     production.yaml, local.yaml).
-    
+
     Args:
         config_dir: Directory containing configuration files
-        
+
     Returns:
         Merged AppConfig instance
-        
+
     Raises:
         FileNotFoundError: If directory doesn't exist
         ValueError: If no valid configuration files are found
@@ -629,22 +602,22 @@ def load_configs_from_directory(config_dir: Union[str, Path]) -> AppConfig:
     dir_path = Path(config_dir)
     if not dir_path.exists() or not dir_path.is_dir():
         raise FileNotFoundError(f"Config directory not found: {dir_path}")
-    
+
     config_files = []
     for ext in (".json", ".yaml", ".yml", ".env"):
         config_files.extend(dir_path.glob(f"*{ext}"))
-    
+
     if not config_files:
         raise ValueError(f"No configuration files found in {dir_path}")
-    
+
     config_files.sort()
-    
+
     config = load_config(config_files[0])
     logger.info(f"Loaded base configuration from {config_files[0]}")
-    
+
     for file_path in config_files[1:]:
         logger.info(f"Merging configuration from {file_path}")
-        
+
         suffix = file_path.suffix.lower()
         if suffix == ".env":
             # For .env files, just load the environment variables
@@ -656,7 +629,7 @@ def load_configs_from_directory(config_dir: Union[str, Path]) -> AppConfig:
             else:  # .yaml or .yml
                 with open(file_path, "r") as f:
                     config_dict = yaml.safe_load(f)
-            
+
             config.update_from_dict(config_dict)
-    
+
     return config

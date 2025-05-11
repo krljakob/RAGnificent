@@ -21,7 +21,7 @@ import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import ParseError
 
@@ -91,29 +91,33 @@ class SitemapParser:
         Returns:
             The Response object or None if the request failed
         """
-        from core.validators import validate_url, sanitize_url
         from core.security import redact_sensitive_data, sanitize_headers
-        
+        from core.validators import sanitize_url, validate_url
+
         if not validate_url(url):
             logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")
             return None
-            
+
         sanitized_url = sanitize_url(url)
         if sanitized_url != url:
-            logger.warning(f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}")
+            logger.warning(
+                f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}"
+            )
             url = sanitized_url
-        
+
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
-                
+
                 if logger.isEnabledFor(logging.DEBUG):
                     safe_headers = sanitize_headers(dict(response.headers))
-                    logger.debug(f"Request to {redact_sensitive_data(url)} succeeded with status {response.status_code}")
+                    logger.debug(
+                        f"Request to {redact_sensitive_data(url)} succeeded with status {response.status_code}"
+                    )
                     logger.debug(f"Response headers: {safe_headers}")
-                    
+
                 return response
             except (
                 requests.exceptions.RequestException,

@@ -74,7 +74,7 @@ def view_collection_info(collection_name: Optional[str] = None):
         client = get_qdrant_client()
 
         # Get collection info
-        collection_info = client.get_collection(collection_name=collection_name)
+        client.get_collection(collection_name=collection_name)
 
     except QdrantConnectionError as e:
         logger.error(f"Connection error: {e}")
@@ -110,12 +110,11 @@ def list_points(collection_name: Optional[str] = None, limit: int = 10):
             with_vectors=False,  # Set to True if you want to see the actual vectors
         )[0]
 
-
         for point in points:
             # Print metadata and content
             if hasattr(point, "payload") and point.payload:
                 if "content" in point.payload:
-                    content = point.payload["content"]
+                    point.payload["content"]
                 if other_fields := [
                     k for k in point.payload if k not in ("metadata", "content")
                 ]:
@@ -166,11 +165,14 @@ def search_similar(query: str, collection_name: Optional[str] = None, limit: int
             with_payload=True,
         )
 
-
         for result in search_results:
             # Print metadata and content
-            if hasattr(result, "payload") and result.payload and "content" in result.payload:
-                content = result.payload["content"]
+            if (
+                hasattr(result, "payload")
+                and result.payload
+                and "content" in result.payload
+            ):
+                result.payload["content"]
         return search_results
 
     except QdrantConnectionError as e:
@@ -239,7 +241,6 @@ def export_collection(
         # Write to file
         with open(output_file, "w") as f:
             json.dump(export_data, f, indent=2)
-
 
     except QdrantConnectionError as e:
         logger.error(f"Connection error: {e}")

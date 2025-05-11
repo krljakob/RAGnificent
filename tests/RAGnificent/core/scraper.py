@@ -547,10 +547,7 @@ class MarkdownScraper:
             # Then convert to the requested format
             try:
                 # Try to use functions from ragnificent_rs for conversion
-                from ragnificent_rs import (
-                    document_to_xml,
-                    parse_markdown_to_document,
-                )
+                from ragnificent_rs import document_to_xml, parse_markdown_to_document
 
                 document = parse_markdown_to_document(markdown_content, url)
 

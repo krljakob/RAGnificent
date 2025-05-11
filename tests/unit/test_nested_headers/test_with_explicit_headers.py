@@ -14,26 +14,28 @@ class TestNestedHeaderChunking(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.chunker = ContentChunker(chunk_size=500, chunk_overlap=100)
-        
+
         self.nested_markdown = "# Main Topic\n\nThis is an introduction to the main topic.\n\n## Subtopic 1\n\nThis is content under subtopic 1.\n\n### Nested Subtopic 1.1\n\nThis is deeply nested content with a lot of text that should be split into multiple chunks.\nThis paragraph is intentionally long to ensure that the chunking algorithm splits it.\nWe want to test that the nested header structure is preserved when chunking occurs.\nThe parent headers should be included in the metadata and in the content of continuation chunks.\nThis ensures that when the chunks are used in a RAG system, the context is preserved.\n\n## Subtopic 2\n\nThis is content under subtopic 2, which is at the same level as subtopic 1 but comes after the nested content.\n\n### Nested Subtopic 2.1\n\nMore nested content here that will also need to be split into multiple chunks.\nAgain, this paragraph is intentionally verbose to trigger the chunking algorithm.\nWe want to verify that the parent headers are correctly tracked and included.\nThe hierarchy should show that this is under Subtopic 2, not Subtopic 1."
 
     def test_section_parsing(self):
         """Test that markdown sections are correctly parsed."""
         sections = self.chunker._parse_markdown_sections(self.nested_markdown)
-        
-        print(f"\nTotal sections found: {len(sections)}")
-        for i, section in enumerate(sections):
-            print(f"\nSection {i+1}:")
-            print(f"  Heading: {section['heading']}")
-            print(f"  Level: {section['level']}")
-            print(f"  Path: {section['path']}")
-        
+
+        for _i, _section in enumerate(sections):
+            pass
+
         self.assertGreaterEqual(len(sections), 5, "Should find at least 5 sections")
-        
-        header_levels = [section['level'] for section in sections if section['level'] > 0]
-        self.assertEqual(header_levels, [1, 2, 3, 2, 3], "Header levels should match expected hierarchy")
-        
-        paths = [section['path'] for section in sections if section['level'] > 0]
+
+        header_levels = [
+            section["level"] for section in sections if section["level"] > 0
+        ]
+        self.assertEqual(
+            header_levels,
+            [1, 2, 3, 2, 3],
+            "Header levels should match expected hierarchy",
+        )
+
+        paths = [section["path"] for section in sections if section["level"] > 0]
         self.assertIn("Main Topic", paths[0])
         self.assertIn("Main Topic > Subtopic 1", paths[1])
         self.assertIn("Main Topic > Subtopic 1 > Nested Subtopic 1.1", paths[2])
@@ -45,23 +47,20 @@ class TestNestedHeaderChunking(unittest.TestCase):
         chunks = self.chunker.create_chunks_from_markdown(
             self.nested_markdown, "https://example.com/test"
         )
-        
-        print(f"\nTotal chunks created: {len(chunks)}")
-        for i, chunk in enumerate(chunks):
-            print(f"\nChunk {i+1}:")
-            print(f"  Heading Path: {chunk.metadata.get('heading_path', 'N/A')}")
-            print(f"  Nested Level: {chunk.metadata.get('nested_level', 'N/A')}")
-        
+
+        for _i, _chunk in enumerate(chunks):
+            pass
+
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
-        
+
         subtopic_1_1_chunks = [
-            chunk for chunk in chunks 
+            chunk
+            for chunk in chunks
             if "Nested Subtopic 1.1" in chunk.metadata.get("heading_path", "")
         ]
-        
+
         self.assertGreater(
-            len(subtopic_1_1_chunks), 0, 
-            "Should have chunks for Nested Subtopic 1.1"
+            len(subtopic_1_1_chunks), 0, "Should have chunks for Nested Subtopic 1.1"
         )
 
 

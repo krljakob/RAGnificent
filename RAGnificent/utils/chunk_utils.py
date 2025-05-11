@@ -106,7 +106,9 @@ class ContentChunker:
                         continue
 
                     if i > 0:
-                        context_headers = [parent["markdown"] for parent in parent_headers]
+                        context_headers = [
+                            parent["markdown"] for parent in parent_headers
+                        ]
                         # Add the current section header
                         if heading and not " ".join(chunk_words).startswith(heading):
                             context_headers.append(heading)
@@ -316,12 +318,12 @@ def chunk_text(
 ) -> List[str]:
     """
     Split text into overlapping chunks of specified size.
-    
+
     Args:
         content: Text content to split
         chunk_size: Maximum size of each chunk in characters
         chunk_overlap: Overlap between chunks in characters
-        
+
     Returns:
         List of text chunks
     """
@@ -351,19 +353,19 @@ def recursive_chunk_text(
 ) -> List[str]:
     """
     Split text into chunks using a recursive approach that tries to maintain semantic boundaries.
-    
+
     Args:
         content: Text content to split
         chunk_size: Maximum size of each chunk in characters
         chunk_overlap: Overlap between chunks in characters
-        
+
     Returns:
         List of text chunks
     """
     if not content or len(content) <= chunk_size:
         return [content] if content else []
 
-    paragraphs = re.split(r'\n\s*\n', content)
+    paragraphs = re.split(r"\n\s*\n", content)
 
     # If we have multiple paragraphs, try to group them into chunks
     if len(paragraphs) > 1:
@@ -374,7 +376,11 @@ def recursive_chunk_text(
             if len(current_chunk) + len(para) + 2 > chunk_size and current_chunk:
                 chunks.append(current_chunk)
                 # Start new chunk with overlap from previous chunk
-                overlap_text = current_chunk[-chunk_overlap:] if chunk_overlap < len(current_chunk) else current_chunk
+                overlap_text = (
+                    current_chunk[-chunk_overlap:]
+                    if chunk_overlap < len(current_chunk)
+                    else current_chunk
+                )
                 current_chunk = overlap_text + "\n\n" + para
             elif current_chunk:
                 current_chunk += "\n\n" + para

@@ -6,20 +6,15 @@ to identify bottlenecks and validate optimizations.
 """
 
 import logging
-import os
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import pytest
 
 from RAGnificent.core.cache import RequestCache
-from RAGnificent.core.config import get_config
 from RAGnificent.core.scraper import MarkdownScraper
 from RAGnificent.core.throttle import RequestThrottler
-from RAGnificent.rag.embedding import get_embedding_service
 from RAGnificent.rag.pipeline import Pipeline
-from RAGnificent.rag.vector_store import get_vector_store
 from RAGnificent.utils.chunk_utils import ContentChunker
 
 logging.basicConfig(level=logging.INFO)
@@ -56,14 +51,18 @@ class MemoryMonitor:
 
     def __enter__(self):
         import psutil
+
         self.start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # MB
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         import psutil
+
         self.end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # MB
         self.memory_delta = self.end_memory - self.start_memory
-        logger.info(f"MEMORY - {self.name}: {self.memory_delta:.2f} MB delta, {self.end_memory:.2f} MB total")
+        logger.info(
+            f"MEMORY - {self.name}: {self.memory_delta:.2f} MB delta, {self.end_memory:.2f} MB total"
+        )
 
 
 @pytest.fixture
@@ -195,6 +194,7 @@ def test_chunks():
 @pytest.fixture
 def mock_embedding_service():
     """Mock embedding service for benchmarking."""
+
     class MockEmbeddingService:
         def embed_chunks(self, chunks):
             time.sleep(0.01 * len(chunks))
@@ -208,6 +208,7 @@ def mock_embedding_service():
 @pytest.fixture
 def mock_vector_store():
     """Mock vector store for benchmarking."""
+
     class MockVectorStore:
         def __init__(self):
             self.documents = []
@@ -219,7 +220,7 @@ def mock_vector_store():
 
         def search(self, query_vector, limit=5, threshold=0.7):
             time.sleep(0.02)
-            return self.documents[:min(limit, len(self.documents))]
+            return self.documents[: min(limit, len(self.documents))]
 
         def count_documents(self):
             return len(self.documents)
@@ -280,6 +281,7 @@ def test_cache_performance():
         logger.info(f"Cache stats: {stats}")
 
     import shutil
+
     shutil.rmtree(cache_dir, ignore_errors=True)
     shutil.rmtree(
         cache_dir.with_name(f"{cache_dir.name}_compressed"), ignore_errors=True
@@ -320,7 +322,7 @@ def test_throttler_performance():
 
     with PerformanceTimer("Execute (5 requests)"):
         for i in range(5):
-            result = throttler.execute(mock_request, f"https://example.com/page{i}")
+            throttler.execute(mock_request, f"https://example.com/page{i}")
 
     with PerformanceTimer("Execute parallel (20 requests)"):
         urls = [f"https://example.com/page{i}" for i in range(20)]
@@ -334,12 +336,26 @@ def test_throttler_performance():
 
 def test_chunker_performance():
     """Benchmark the performance of the ContentChunker."""
-    small_content = "# Heading 1\nThis is a paragraph.\n## Heading 2\nAnother paragraph."
-    medium_content = "\n".join([f"# Heading {i}\nParagraph {i}.\n## Subheading {i}.1\nMore text.\n### Subheading {i}.1.1\nEven more text." for i in range(1, 11)])
-    large_content = "\n".join([f"# Heading {i}\nParagraph {i}.\n## Subheading {i}.1\nMore text.\n### Subheading {i}.1.1\nEven more text." for i in range(1, 101)])
+    small_content = (
+        "# Heading 1\nThis is a paragraph.\n## Heading 2\nAnother paragraph."
+    )
+    medium_content = "\n".join(
+        [
+            f"# Heading {i}\nParagraph {i}.\n## Subheading {i}.1\nMore text.\n### Subheading {i}.1.1\nEven more text."
+            for i in range(1, 11)
+        ]
+    )
+    large_content = "\n".join(
+        [
+            f"# Heading {i}\nParagraph {i}.\n## Subheading {i}.1\nMore text.\n### Subheading {i}.1.1\nEven more text."
+            for i in range(1, 101)
+        ]
+    )
 
     for chunk_size, chunk_overlap in [(200, 50), (500, 100), (1000, 200)]:
-        with PerformanceTimer(f"Chunker initialization (size={chunk_size}, overlap={chunk_overlap})"):
+        with PerformanceTimer(
+            f"Chunker initialization (size={chunk_size}, overlap={chunk_overlap})"
+        ):
             chunker = ContentChunker(chunk_size, chunk_overlap)
 
         with PerformanceTimer(f"Chunking small content (size={chunk_size})"):
@@ -355,8 +371,12 @@ def test_chunker_performance():
             logger.info(f"Created {len(large_chunks)} chunks from large content")
 
     from RAGnificent.core.config import ChunkingStrategy
-    
-    for strategy in [ChunkingStrategy.SEMANTIC, ChunkingStrategy.SLIDING_WINDOW, ChunkingStrategy.RECURSIVE]:
+
+    for strategy in [
+        ChunkingStrategy.SEMANTIC,
+        ChunkingStrategy.SLIDING_WINDOW,
+        ChunkingStrategy.RECURSIVE,
+    ]:
         with PerformanceTimer(f"Chunking with {strategy.name} strategy"):
             chunker = ContentChunker(500, 100)
             if strategy == ChunkingStrategy.SEMANTIC:
@@ -365,11 +385,13 @@ def test_chunker_performance():
                 chunks = chunker.create_sliding_window_chunks(medium_content)
             elif strategy == ChunkingStrategy.RECURSIVE:
                 chunks = chunker.create_recursive_chunks(medium_content)
-            
+
             logger.info(f"Created {len(chunks)} chunks with {strategy.name} strategy")
 
 
-def test_pipeline_performance(test_documents, test_chunks, mock_embedding_service, mock_vector_store):
+def test_pipeline_performance(
+    test_documents, test_chunks, mock_embedding_service, mock_vector_store
+):
     """Benchmark the performance of the RAG Pipeline."""
     with PerformanceTimer("Pipeline initialization"):
         pipeline = Pipeline(
@@ -384,26 +406,25 @@ def test_pipeline_performance(test_documents, test_chunks, mock_embedding_servic
         pipeline.embedding_service = mock_embedding_service
         pipeline.vector_store = mock_vector_store
 
-    with PerformanceTimer("Pipeline chunking"):
-        with MemoryMonitor("Pipeline chunking"):
-            chunks = pipeline.chunk_documents(test_documents)
-            logger.info(f"Created {len(chunks)} chunks from {len(test_documents)} documents")
+    with PerformanceTimer("Pipeline chunking"), MemoryMonitor("Pipeline chunking"):
+        chunks = pipeline.chunk_documents(test_documents)
+        logger.info(
+            f"Created {len(chunks)} chunks from {len(test_documents)} documents"
+        )
 
     with PerformanceTimer("Pipeline embedding"):
         with MemoryMonitor("Pipeline embedding"):
             embedded_chunks = pipeline.embed_chunks(test_chunks)
             logger.info(f"Generated embeddings for {len(embedded_chunks)} chunks")
 
-    with PerformanceTimer("Pipeline storage"):
-        with MemoryMonitor("Pipeline storage"):
-            success = pipeline.store_chunks(embedded_chunks)
-            assert success
-            logger.info(f"Stored {len(embedded_chunks)} chunks in vector store")
+    with PerformanceTimer("Pipeline storage"), MemoryMonitor("Pipeline storage"):
+        success = pipeline.store_chunks(embedded_chunks)
+        assert success
+        logger.info(f"Stored {len(embedded_chunks)} chunks in vector store")
 
-    with PerformanceTimer("Pipeline search"):
-        with MemoryMonitor("Pipeline search"):
-            results = pipeline.search_documents("Python programming", limit=5)
-            logger.info(f"Found {len(results)} results for search query")
+    with PerformanceTimer("Pipeline search"), MemoryMonitor("Pipeline search"):
+        results = pipeline.search_documents("Python programming", limit=5)
+        logger.info(f"Found {len(results)} results for search query")
 
     with PerformanceTimer("Complete pipeline with backpressure"):
         with MemoryMonitor("Complete pipeline"):
@@ -423,7 +444,7 @@ def test_pipeline_performance(test_documents, test_chunks, mock_embedding_servic
 def test_parallel_scraping_performance(test_urls):
     """Benchmark the performance of parallel scraping."""
     with PerformanceTimer("Scraper initialization (default)"):
-        scraper = MarkdownScraper()
+        MarkdownScraper()
 
     with PerformanceTimer("Scraper with enhanced parallel processing"):
         enhanced_scraper = MarkdownScraper(
@@ -451,9 +472,14 @@ def test_parallel_scraping_performance(test_urls):
         enhanced_scraper._discover_urls_from_sitemap = lambda url: test_urls
 
         original_process = enhanced_scraper._process_single_url
-        enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {"url": url, "content": f"Content for {url}"}
+        enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {
+            "url": url,
+            "content": f"Content for {url}",
+        }
 
-        results = enhanced_scraper.scrape_by_sitemap("https://example.com/sitemap.xml", limit=5)
+        results = enhanced_scraper.scrape_by_sitemap(
+            "https://example.com/sitemap.xml", limit=5
+        )
         logger.info(f"Scraped {len(results)} URLs in parallel from sitemap")
 
         enhanced_scraper._discover_urls_from_sitemap = original_discover
@@ -465,7 +491,10 @@ def test_parallel_scraping_performance(test_urls):
             for url in test_urls:
                 f.write(f"{url}\n")
 
-        enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {"url": url, "content": f"Content for {url}"}
+        enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {
+            "url": url,
+            "content": f"Content for {url}",
+        }
 
         results = enhanced_scraper.scrape_by_links_file(str(links_file), limit=5)
         logger.info(f"Scraped {len(results)} URLs in parallel from links file")
@@ -477,5 +506,7 @@ if __name__ == "__main__":
     test_cache_performance()
     test_throttler_performance()
     test_chunker_performance()
-    test_pipeline_performance(test_documents, test_chunks, mock_embedding_service, mock_vector_store)
+    test_pipeline_performance(
+        test_documents, test_chunks, mock_embedding_service, mock_vector_store
+    )
     test_parallel_scraping_performance(test_urls)

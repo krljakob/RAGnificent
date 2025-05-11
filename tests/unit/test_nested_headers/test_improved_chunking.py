@@ -5,7 +5,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from RAGnificent.utils.chunk_utils import ContentChunker, Chunk
+from RAGnificent.utils.chunk_utils import ContentChunker
 
 
 class TestImprovedNestedHeaderChunking(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestImprovedNestedHeaderChunking(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         self.chunker = ContentChunker(chunk_size=500, chunk_overlap=100)
-        
+
         self.nested_markdown = r"""# Main Topic
 
 This is an introduction to the main topic.
@@ -41,20 +41,22 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
     def test_section_parsing(self):
         """Test that markdown sections are correctly parsed."""
         sections = self.chunker._parse_markdown_sections(self.nested_markdown)
-        
-        print(f"\nTotal sections found: {len(sections)}")
-        for i, section in enumerate(sections):
-            print(f"\nSection {i+1}:")
-            print(f"  Heading: {section['heading']}")
-            print(f"  Level: {section['level']}")
-            print(f"  Path: {section['path']}")
-        
+
+        for _i, _section in enumerate(sections):
+            pass
+
         self.assertGreaterEqual(len(sections), 5, "Should find at least 5 sections")
-        
-        header_levels = [section['level'] for section in sections if section['level'] > 0]
-        self.assertEqual(header_levels, [1, 2, 3, 2, 3], "Header levels should match expected hierarchy")
-        
-        paths = [section['path'] for section in sections if section['level'] > 0]
+
+        header_levels = [
+            section["level"] for section in sections if section["level"] > 0
+        ]
+        self.assertEqual(
+            header_levels,
+            [1, 2, 3, 2, 3],
+            "Header levels should match expected hierarchy",
+        )
+
+        paths = [section["path"] for section in sections if section["level"] > 0]
         self.assertIn("Main Topic", paths[0])
         self.assertIn("Main Topic > Subtopic 1", paths[1])
         self.assertIn("Main Topic > Subtopic 1 > Nested Subtopic 1.1", paths[2])
@@ -67,27 +69,25 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
             self.nested_markdown, "https://example.com/test"
         )
 
-        print(f"\nTotal chunks created: {len(chunks)}")
-        for i, chunk in enumerate(chunks):
-            print(f"\nChunk {i+1}:")
-            print(f"  Heading Path: {chunk.metadata.get('heading_path', 'N/A')}")
-            print(f"  Nested Level: {chunk.metadata.get('nested_level', 'N/A')}")
+        for _i, chunk in enumerate(chunks):
+            pass
 
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
 
         subtopic_1_1_chunks = [
-            chunk for chunk in chunks 
+            chunk
+            for chunk in chunks
             if "Nested Subtopic 1.1" in chunk.metadata.get("heading_path", "")
         ]
 
         self.assertGreater(
-            len(subtopic_1_1_chunks), 0, 
-            "Should have chunks for Nested Subtopic 1.1"
+            len(subtopic_1_1_chunks), 0, "Should have chunks for Nested Subtopic 1.1"
         )
 
         if len(subtopic_1_1_chunks) > 1:
             continuation_chunks = [
-                chunk for chunk in subtopic_1_1_chunks 
+                chunk
+                for chunk in subtopic_1_1_chunks
                 if chunk.metadata.get("is_continuation", False)
             ]
 
@@ -117,7 +117,7 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
                 self.assertNotIn("Subtopic 1", header_texts)
 
                 self.assertEqual(chunk.metadata["nested_level"], 2)
-    
+
     def test_path_elements_structure(self):
         """Test that path_elements correctly represents the header hierarchy."""
         chunks = self.chunker.create_chunks_from_markdown(

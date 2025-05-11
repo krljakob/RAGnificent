@@ -1,9 +1,10 @@
-import sys
 import re
+import sys
 from pathlib import Path
 
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
+
 
 def debug_markdown_parsing():
     nested_markdown = """# Main Topic
@@ -29,51 +30,38 @@ Again, this paragraph is intentionally verbose to trigger the chunking algorithm
 We want to verify that the parent headers are correctly tracked and included.
 The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
 
-    print("=== Markdown String Analysis ===")
-    print(f"Type: {type(nested_markdown)}")
-    print(f"Length: {len(nested_markdown)}")
-    print(f"First 50 chars: {nested_markdown[:50]}")
+    lines = nested_markdown.split("\n")
 
-    print("\n=== Line by Line Analysis ===")
-    lines = nested_markdown.split('\n')
-    print(f"Total lines: {len(lines)}")
-
-    for i, line in enumerate(lines):
-        print(f"\nLine {i+1}: '{line}'")
+    for _i, line in enumerate(lines):
 
         is_header = False
-        header_level = 0
-        header_text = ""
 
         stripped_line = line.strip()
 
         if match1 := re.match(r"^(#+)\s+(.*)", stripped_line):
             is_header = True
-            header_level = len(match1[1])
-            header_text = match1[2].strip()
-            print(f"  MATCH 1: Level {header_level}, Text: '{header_text}'")
+            len(match1[1])
+            match1[2].strip()
 
         if match2 := re.match(r"^(#+)\s+(.*?)$", stripped_line):
             is_header = True
-            header_level = len(match2[1])
-            header_text = match2[2].strip()
-            print(f"  MATCH 2: Level {header_level}, Text: '{header_text}'")
+            len(match2[1])
+            match2[2].strip()
 
-        if stripped_line and stripped_line[0] == '#':
-            print("  MATCH 3: Line starts with #")
+        if stripped_line and stripped_line[0] == "#":
 
             count = 0
             for char in stripped_line:
-                if char == '#':
+                if char == "#":
                     count += 1
                 else:
                     break
-            print(f"  # Count: {count}")
 
         if is_header:
-            print(f"  HEADER DETECTED: Level {header_level}, Text: '{header_text}'")
+            pass
         else:
-            print("  NOT A HEADER")
+            pass
+
 
 if __name__ == "__main__":
     debug_markdown_parsing()

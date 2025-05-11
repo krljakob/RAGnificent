@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -101,27 +100,27 @@ class TestConfigFileSupport(unittest.TestCase):
     def test_save_to_file(self):
         """Test saving configuration to file."""
         config = AppConfig()
-        
+
         config.chunking.strategy = ChunkingStrategy.RECURSIVE
         config.chunking.chunk_size = 750
         config.embedding.model_type = EmbeddingModelType.OPENAI
-        
+
         yaml_path = self.config_dir / "saved_config.yaml"
         config.save_to_file(yaml_path)
-        
+
         json_path = self.config_dir / "saved_config.json"
         config.save_to_file(json_path, format="json")
-        
+
         self.assertTrue(yaml_path.exists())
         self.assertTrue(json_path.exists())
-        
+
         yaml_config = load_config(yaml_path)
         json_config = load_config(json_path)
-        
+
         self.assertEqual(yaml_config.chunking.strategy, ChunkingStrategy.RECURSIVE)
         self.assertEqual(yaml_config.chunking.chunk_size, 750)
         self.assertEqual(yaml_config.embedding.model_type, EmbeddingModelType.OPENAI)
-        
+
         self.assertEqual(json_config.chunking.strategy, ChunkingStrategy.RECURSIVE)
         self.assertEqual(json_config.chunking.chunk_size, 750)
         self.assertEqual(json_config.embedding.model_type, EmbeddingModelType.OPENAI)
@@ -140,7 +139,7 @@ class TestConfigFileSupport(unittest.TestCase):
             },
             "data_dir": "/base/data/path",
         }
-        
+
         override_config = {
             "chunking": {
                 "chunk_size": 500,
@@ -150,22 +149,24 @@ class TestConfigFileSupport(unittest.TestCase):
             },
             "models_dir": "/override/models/path",
         }
-        
+
         base_path = self.config_dir / "01_base.yaml"
         override_path = self.config_dir / "02_override.json"
-        
+
         with open(base_path, "w") as f:
             yaml.dump(base_config, f)
-            
+
         with open(override_path, "w") as f:
             json.dump(override_config, f)
-            
+
         config = load_configs_from_directory(self.config_dir)
-        
+
         self.assertEqual(config.chunking.strategy, ChunkingStrategy.SEMANTIC)
         self.assertEqual(config.chunking.chunk_size, 500)  # Overridden
         self.assertEqual(config.chunking.chunk_overlap, 200)  # From base
-        self.assertEqual(config.embedding.model_type, EmbeddingModelType.SENTENCE_TRANSFORMER)
+        self.assertEqual(
+            config.embedding.model_type, EmbeddingModelType.SENTENCE_TRANSFORMER
+        )
         self.assertEqual(config.embedding.model_name, "override-model")  # Overridden
         self.assertEqual(str(config.data_dir), "/base/data/path")
         self.assertEqual(str(config.models_dir), "/override/models/path")

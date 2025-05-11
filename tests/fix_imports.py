@@ -123,4 +123,3 @@ if __name__ == "__main__":
     test_fixed_count = find_and_fix_test_files()
 
     source_fixed_count = find_and_fix_source_files()
-

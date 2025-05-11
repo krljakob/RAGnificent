@@ -8,12 +8,11 @@ import gzip
 import hashlib
 import json
 import logging
-import os
 import re
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Pattern, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
 
 logger = logging.getLogger("request_cache")
 
@@ -21,7 +20,7 @@ logger = logging.getLogger("request_cache")
 class RequestCache:
     """
     Advanced cache for HTTP requests with TTL, compression, and monitoring.
-    
+
     Features:
     - Memory and disk caching with configurable limits
     - Per-URL TTL configuration
@@ -58,12 +57,12 @@ class RequestCache:
         self.max_memory_size_mb = max_memory_size_mb
         self.compression_threshold = compression_threshold
         self.enable_stats = enable_stats
-        
+
         self.memory_cache: Dict[str, Tuple[str, float, Optional[int], bool]] = {}
         self.current_memory_usage = 0  # Approximate memory usage in bytes
-        
+
         self.ttl_patterns: List[Tuple[Pattern, int]] = []
-        
+
         self.stats = {
             "hits": 0,
             "misses": 0,
@@ -74,10 +73,10 @@ class RequestCache:
             "compression_savings": 0,
             "url_patterns": Counter(),
         }
-        
+
         self.metadata_dir = self.cache_dir / "metadata"
         self.metadata_dir.mkdir(exist_ok=True)
-        
+
         self._load_ttl_patterns()
 
     def _load_ttl_patterns(self) -> None:
@@ -87,14 +86,14 @@ class RequestCache:
             try:
                 with open(ttl_file, "r") as f:
                     patterns = json.load(f)
-                    
+
                 for pattern_str, ttl in patterns.items():
                     self.add_ttl_pattern(pattern_str, ttl)
-                    
+
                 logger.info(f"Loaded {len(patterns)} TTL patterns")
             except Exception as e:
                 logger.error(f"Failed to load TTL patterns: {e}")
-    
+
     def _save_ttl_patterns(self) -> None:
         """Save TTL patterns to metadata file."""
         ttl_file = self.metadata_dir / "ttl_patterns.json"
@@ -104,11 +103,11 @@ class RequestCache:
                 json.dump(patterns, f)
         except Exception as e:
             logger.error(f"Failed to save TTL patterns: {e}")
-    
+
     def add_ttl_pattern(self, pattern: str, ttl: int) -> None:
         """
         Add a URL pattern with a specific TTL.
-        
+
         Args:
             pattern: Regex pattern to match URLs
             ttl: TTL in seconds for matching URLs
@@ -120,14 +119,14 @@ class RequestCache:
             logger.info(f"Added TTL pattern: {pattern} -> {ttl}s")
         except re.error as e:
             logger.error(f"Invalid regex pattern '{pattern}': {e}")
-    
+
     def _get_ttl_for_url(self, url: str) -> Optional[int]:
         """Get the TTL for a URL based on patterns."""
         return next(
             (ttl for pattern, ttl in self.ttl_patterns if pattern.search(url)),
             None,
         )
-    
+
     def _get_cache_key(self, url: str) -> str:
         """Generate a cache key from a URL."""
         return hashlib.blake2b(url.encode(), digest_size=16).hexdigest()
@@ -136,16 +135,16 @@ class RequestCache:
         """Get the path to the cache file for a URL."""
         key = self._get_cache_key(url)
         return self.cache_dir / key
-        
+
     def _get_metadata_path(self, url: str) -> Path:
         """Get the path to the metadata file for a URL."""
         key = self._get_cache_key(url)
         return self.metadata_dir / f"{key}.meta"
-        
+
     def _compress_content(self, content: str) -> Tuple[bytes, bool]:
         """
         Compress content if it exceeds the threshold.
-        
+
         Returns:
             Tuple of (compressed_data, is_compressed)
         """
@@ -157,7 +156,7 @@ class RequestCache:
                 self.stats["compression_savings"] += savings
             return compressed, True
         return encoded, False
-        
+
     def _decompress_content(self, data: bytes, is_compressed: bool) -> str:
         """Decompress content if it was compressed."""
         if is_compressed:
@@ -192,7 +191,11 @@ class RequestCache:
                     self.stats["hits"] += 1
                     self.stats["memory_hits"] += 1
 
-                return self._decompress_content(content, True) if is_compressed else content
+                return (
+                    self._decompress_content(content, True)
+                    if is_compressed
+                    else content
+                )
             # Remove expired item from memory cache
             del self.memory_cache[url]
             logger.debug(f"Memory cache expired for {url}")
@@ -230,9 +233,19 @@ class RequestCache:
 
                     # Add to memory cache
                     if is_compressed:
-                        self.memory_cache[url] = (compressed_data, current_time, effective_ttl, True)
+                        self.memory_cache[url] = (
+                            compressed_data,
+                            current_time,
+                            effective_ttl,
+                            True,
+                        )
                     else:
-                        self.memory_cache[url] = (content, current_time, effective_ttl, False)
+                        self.memory_cache[url] = (
+                            content,
+                            current_time,
+                            effective_ttl,
+                            False,
+                        )
 
                     if self.enable_stats:
                         self.stats["hits"] += 1
@@ -242,6 +255,7 @@ class RequestCache:
                 except IOError as e:
                     logger.error(f"Failed to read cache file {cache_path}: {e}")
                     import traceback
+
                     logger.debug(f"Cache read error details: {traceback.format_exc()}")
 
             # Remove expired cache files
@@ -268,15 +282,15 @@ class RequestCache:
         """
         if self.enable_stats:
             self.stats["sets"] += 1
-        
+
         if ttl is None:
             ttl = self._get_ttl_for_url(url)
-        
+
         compressed_data, is_compressed = self._compress_content(content)
-        
+
         # Calculate the size of the new content (compressed or not)
         content_size = len(compressed_data)
-        
+
         # Check if the URL is already in the memory cache
         if url in self.memory_cache:
             old_content, _, _, old_compressed = self.memory_cache[url]
@@ -302,7 +316,7 @@ class RequestCache:
         # Update disk cache
         cache_path = self._get_cache_path(url)
         metadata_path = self._get_metadata_path(url)
-        
+
         try:
             if is_compressed:
                 with open(cache_path, "wb") as f:
@@ -310,7 +324,7 @@ class RequestCache:
             else:
                 with open(cache_path, "w", encoding="utf-8") as f:
                     f.write(content)
-                    
+
             with open(metadata_path, "w") as f:
                 metadata = {
                     "url": url,
@@ -320,7 +334,7 @@ class RequestCache:
                     "size": content_size,
                 }
                 json.dump(metadata, f)
-                
+
         except IOError as e:
             logger.warning(f"Failed to save response to cache: {e}")
 
@@ -356,7 +370,7 @@ class RequestCache:
 
         if self.enable_stats:
             self.stats["evictions"] += evicted
-            
+
         logger.debug(f"Evicted {evicted} items from memory cache")
 
     def _evict_bytes(self, bytes_to_evict: int) -> None:
@@ -380,15 +394,17 @@ class RequestCache:
                 break
 
         self.current_memory_usage -= bytes_evicted
-        
+
         if self.enable_stats:
             self.stats["evictions"] += items_evicted
-            
+
         logger.debug(
             f"Evicted {items_evicted} items ({bytes_evicted} bytes) from memory cache"
         )
 
-    def clear(self, max_age: Optional[int] = None, pattern: Optional[str] = None) -> int:
+    def clear(
+        self, max_age: Optional[int] = None, pattern: Optional[str] = None
+    ) -> int:
         """
         Clear expired cache entries or entries matching a pattern.
 
@@ -459,27 +475,27 @@ class RequestCache:
                     logger.warning(f"Failed to clear cache file {cache_file}: {e}")
 
         return count + len(expired_keys)
-        
+
     def invalidate(self, pattern: str) -> int:
         """
         Invalidate cache entries matching a pattern.
-        
+
         Args:
             pattern: Regex pattern to match URLs
-            
+
         Returns:
             Number of cache entries invalidated
         """
         return self.clear(pattern=pattern)
-        
+
     def preload(self, urls: List[str], content_getter: Callable[[str], str]) -> int:
         """
         Preload cache with content for specified URLs.
-        
+
         Args:
             urls: List of URLs to preload
             content_getter: Function that takes a URL and returns content
-            
+
         Returns:
             Number of URLs successfully preloaded
         """
@@ -491,27 +507,27 @@ class RequestCache:
                 count += 1
             except Exception as e:
                 logger.error(f"Failed to preload {url}: {e}")
-        
+
         return count
-        
+
     def get_stats(self) -> Dict[str, Any]:
         """
         Get cache statistics.
-        
+
         Returns:
             Dictionary of cache statistics
         """
         if not self.enable_stats:
             return {"stats_disabled": True}
-            
+
         # Calculate hit rate
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_rate = self.stats["hits"] / total_requests if total_requests > 0 else 0
-        
+
         # Calculate memory usage
         memory_usage_mb = self.current_memory_usage / (1024 * 1024)
         max_memory_mb = self.max_memory_size_mb
-        
+
         # Calculate disk usage
         disk_usage = sum(
             f.stat().st_size
@@ -521,13 +537,14 @@ class RequestCache:
             and f.suffix != ".meta"
         )
         disk_usage_mb = disk_usage / (1024 * 1024)
-        
+
         memory_items = len(self.memory_cache)
-        disk_items = sum(bool(_.is_file() and _.name != "metadata")
-                     for _ in self.cache_dir.glob("*"))
-        
+        disk_items = sum(
+            bool(_.is_file() and _.name != "metadata") for _ in self.cache_dir.glob("*")
+        )
+
         compression_savings_mb = self.stats["compression_savings"] / (1024 * 1024)
-        
+
         return {
             "hit_rate": hit_rate,
             "hits": self.stats["hits"],
@@ -537,7 +554,9 @@ class RequestCache:
             "sets": self.stats["sets"],
             "evictions": self.stats["evictions"],
             "memory_usage_mb": memory_usage_mb,
-            "memory_usage_percent": (memory_usage_mb / max_memory_mb) * 100 if max_memory_mb > 0 else 0,
+            "memory_usage_percent": (
+                (memory_usage_mb / max_memory_mb) * 100 if max_memory_mb > 0 else 0
+            ),
             "disk_usage_mb": disk_usage_mb,
             "memory_items": memory_items,
             "disk_items": disk_items,
