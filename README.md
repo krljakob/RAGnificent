@@ -373,7 +373,6 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
   - `utils/`: Utility modules
     - `chunk_utils.py`: Utilities for chunking text for RAG
     - `sitemap_utils.py`: Sitemap parsing and URL discovery
-    - `sitemap.py`: Simplified sitemap parsing (to be consolidated)
     - `version.py`: Version information
   - `ragnificent_rs.py`: Python interface to Rust components with fallbacks
 
@@ -451,7 +450,7 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 - [x] Implement memory management for caches
 - [x] Add support for JavaScript-rendered pages (requires feature flag)
 - [ ] Improve nested header handling in chunking algorithm
-- [ ] Consolidate sitemap implementations
+- [x] Consolidate sitemap implementations
 - [ ] Implement custom markdown templates
 - [ ] Include CSS selector support
 - [ ] Add configuration file support
