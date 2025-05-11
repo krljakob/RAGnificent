@@ -803,7 +803,7 @@ Always cite your sources by referencing the document numbers.
                 logger.error(
                     f"{step_name.capitalize()} step failed - no output created"
                 )
-                return self._extracted_from__execute_pipeline_step_27(result, step_name)
+                return self._handle_pipeline_step_failure(result, step_name)
             # Log success and update result
             if isinstance(output_data, list):
                 logger.info(
@@ -819,10 +819,9 @@ Always cite your sources by referencing the document numbers.
         except Exception as e:
             # Handle errors consistently
             logger.error(f"{step_name.capitalize()} step failed: {e}")
-            return self._extracted_from__execute_pipeline_step_27(result, step_name)
+            return self._handle_pipeline_step_failure(result, step_name)
 
-    # TODO Rename this here and in `_execute_pipeline_step`
-    def _extracted_from__execute_pipeline_step_27(self, result, step_name):
+    def _handle_pipeline_step_failure(self, result, step_name):
         result["steps"][step_name] = False
         result["success"] = False
         return False, None, result

@@ -325,18 +325,17 @@ class MarkdownScraper:
 
     def _convert_link(self, element: Tag, base_url: str) -> str:
         """Convert link elements to markdown."""
-        href = self._extracted_from__convert_image_3(element, "href", base_url)
+        href = self._extract_and_normalize_url(element, "href", base_url)
         return f"[{self._get_text_from_element(element)}]({href})"
 
     def _convert_image(self, element: Tag, base_url: str) -> str:
         """Convert image elements to markdown."""
-        src = self._extracted_from__convert_image_3(element, "src", base_url)
+        src = self._extract_and_normalize_url(element, "src", base_url)
         alt = element.get("alt", "image")
         return f"![{alt}]({src})"
 
-    # TODO Rename this here and in `_convert_link` and `_convert_image`
-    def _extracted_from__convert_image_3(self, element, arg1, base_url):
-        result = element.get(arg1, "")
+    def _extract_and_normalize_url(self, element, attr_name, base_url):
+        result = element.get(attr_name, "")
         if isinstance(result, list):
             result = result[0] if result else ""
         if (
