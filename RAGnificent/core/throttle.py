@@ -275,12 +275,15 @@ class RequestThrottler:
         """Get rate limit for a specific domain."""
         if domain in self.domain_limits:
             return self.domain_limits[domain]
-            
-        for pattern, limit in self.domain_limits.items():
-            if pattern.startswith('*.') and domain.endswith(pattern[1:]):
-                return limit
-                
-        return self.default_rate_limit
+
+        return next(
+            (
+                limit
+                for pattern, limit in self.domain_limits.items()
+                if pattern.startswith('*.') and domain.endswith(pattern[1:])
+            ),
+            self.default_rate_limit,
+        )
     
     def _adjust_rate_limit(self, domain: str) -> None:
         """Adaptively adjust rate limit based on response times and errors."""

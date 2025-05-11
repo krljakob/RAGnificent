@@ -76,10 +76,6 @@ def view_collection_info(collection_name: Optional[str] = None):
         # Get collection info
         collection_info = client.get_collection(collection_name=collection_name)
 
-        # Show schema if available
-        if hasattr(collection_info, "schema") and collection_info.schema:
-            pass
-
     except QdrantConnectionError as e:
         logger.error(f"Connection error: {e}")
     except Exception as e:
@@ -115,28 +111,15 @@ def list_points(collection_name: Optional[str] = None, limit: int = 10):
         )[0]
 
 
-        for _i, point in enumerate(points):
-
+        for point in points:
             # Print metadata and content
             if hasattr(point, "payload") and point.payload:
-                if "metadata" in point.payload:
-                    pass
-
                 if "content" in point.payload:
                     content = point.payload["content"]
-                    # Truncate long content for display
-                    if len(content) > 300:
-                        pass
-                    else:
-                        pass
-
                 if other_fields := [
                     k for k in point.payload if k not in ("metadata", "content")
                 ]:
-                    for _field in other_fields:
-                        pass
-
-
+                    pass
         return points
 
     except QdrantConnectionError as e:
@@ -184,22 +167,10 @@ def search_similar(query: str, collection_name: Optional[str] = None, limit: int
         )
 
 
-        for _i, result in enumerate(search_results):
-
+        for result in search_results:
             # Print metadata and content
-            if hasattr(result, "payload") and result.payload:
-                if "metadata" in result.payload:
-                    pass
-
-                if "content" in result.payload:
-                    content = result.payload["content"]
-                    # Truncate long content for display
-                    if len(content) > 300:
-                        pass
-                    else:
-                        pass
-
-
+            if hasattr(result, "payload") and result.payload and "content" in result.payload:
+                content = result.payload["content"]
         return search_results
 
     except QdrantConnectionError as e:
@@ -314,8 +285,6 @@ def main():
             export_collection(collection_name, output_file)
         elif choice == "4":
             break
-        else:
-            pass
 
 
 if __name__ == "__main__":

@@ -71,31 +71,28 @@ Integration testing verifies that components work together correctly.
             output_file="test_chunks.json",
             strategy=ChunkingStrategy.SEMANTIC
         )
-        
+
         self.assertGreater(len(chunks), 0, "Should create chunks from test document")
-        
+
         embedded_chunks = self.pipeline.embed_chunks(
             chunks,
             output_file="test_embedded_chunks.json"
         )
-        
+
         self.assertEqual(len(embedded_chunks), len(chunks), "Should embed all chunks")
         for chunk in embedded_chunks:
             self.assertIn("embedding", chunk, "Each chunk should have an embedding")
-        
-        success = self.pipeline.store_chunks(embedded_chunks)
-        
-        if success:
+
+        if success := self.pipeline.store_chunks(embedded_chunks):
             results = self.pipeline.search_documents("RAG systems")
-            
+
             self.assertGreater(len(results), 0, "Should find results for query")
-            
-            found_relevant_content = False
-            for result in results:
-                if "RAG systems" in result["content"] or "Retrieval Augmented Generation" in result["content"]:
-                    found_relevant_content = True
-                    break
-            
+
+            found_relevant_content = any(
+                "RAG systems" in result["content"]
+                or "Retrieval Augmented Generation" in result["content"]
+                for result in results
+            )
             self.assertTrue(found_relevant_content, "Should find chunk containing query terms")
 
     def test_pipeline_with_different_chunking_strategies(self):

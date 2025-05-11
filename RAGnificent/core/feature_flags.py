@@ -111,11 +111,7 @@ class FeatureFlagManager:
         Returns:
             True if the feature is enabled, False otherwise
         """
-        if isinstance(feature, FeatureFlag):
-            feature_name = feature.value
-        else:
-            feature_name = feature
-        
+        feature_name = feature.value if isinstance(feature, FeatureFlag) else feature
         return self.flags.get(feature_name, False)
     
     def enable(self, feature: Union[str, FeatureFlag]) -> None:
@@ -125,11 +121,7 @@ class FeatureFlagManager:
         Args:
             feature: Feature flag name or enum value
         """
-        if isinstance(feature, FeatureFlag):
-            feature_name = feature.value
-        else:
-            feature_name = feature
-        
+        feature_name = feature.value if isinstance(feature, FeatureFlag) else feature
         if feature_name in self.flags:
             self.flags[feature_name] = True
             logger.info(f"Feature enabled: {feature_name}")
@@ -141,11 +133,7 @@ class FeatureFlagManager:
         Args:
             feature: Feature flag name or enum value
         """
-        if isinstance(feature, FeatureFlag):
-            feature_name = feature.value
-        else:
-            feature_name = feature
-        
+        feature_name = feature.value if isinstance(feature, FeatureFlag) else feature
         if feature_name in self.flags:
             self.flags[feature_name] = False
             logger.info(f"Feature disabled: {feature_name}")
@@ -160,17 +148,13 @@ class FeatureFlagManager:
         Returns:
             New state of the feature (True if enabled, False if disabled)
         """
-        if isinstance(feature, FeatureFlag):
-            feature_name = feature.value
-        else:
-            feature_name = feature
-        
+        feature_name = feature.value if isinstance(feature, FeatureFlag) else feature
         if feature_name in self.flags:
             self.flags[feature_name] = not self.flags[feature_name]
             state = "enabled" if self.flags[feature_name] else "disabled"
             logger.info(f"Feature {feature_name} {state}")
             return self.flags[feature_name]
-        
+
         return False
     
     def get_all_flags(self) -> Dict[str, bool]:

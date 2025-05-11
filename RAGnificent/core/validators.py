@@ -59,24 +59,24 @@ def sanitize_url(url: str) -> str:
     """
     if not url:
         return ""
-        
+
     try:
         parsed = urllib.parse.urlparse(url)
-        
+
         netloc = parsed.netloc
         if "@" in netloc:
             netloc = netloc.split("@")[1]
-            
-        sanitized = urllib.parse.urlunparse((
-            parsed.scheme,
-            netloc,
-            parsed.path,
-            parsed.params,
-            parsed.query,
-            ""  # Remove fragment
-        ))
-        
-        return sanitized
+
+        return urllib.parse.urlunparse(
+            (
+                parsed.scheme,
+                netloc,
+                parsed.path,
+                parsed.params,
+                parsed.query,
+                "",  # Remove fragment
+            )
+        )
     except Exception as e:
         logger.warning(f"URL sanitization error for {url}: {e}")
         return ""

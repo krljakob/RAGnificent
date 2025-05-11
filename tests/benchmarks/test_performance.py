@@ -255,8 +255,7 @@ def test_cache_performance():
 
     with PerformanceTimer("Cache with compression"):
         compressed_cache = RequestCache(
-            cache_dir=str(cache_dir) + "_compressed",
-            compression_threshold=100,  # Set low to force compression
+            cache_dir=f"{str(cache_dir)}_compressed", compression_threshold=100
         )
         for i in range(50):
             url = f"https://example.com/compressed{i}"
@@ -272,7 +271,7 @@ def test_cache_performance():
             url = f"https://example.com/pattern{i}"
             content = f"Pattern content for page {i}"
             cache.set(url, content)
-        
+
         count = cache.invalidate(pattern="pattern[0-9]+")
         logger.info(f"Invalidated {count} cache entries with pattern")
 
@@ -282,7 +281,9 @@ def test_cache_performance():
 
     import shutil
     shutil.rmtree(cache_dir, ignore_errors=True)
-    shutil.rmtree(cache_dir.with_name(cache_dir.name + "_compressed"), ignore_errors=True)
+    shutil.rmtree(
+        cache_dir.with_name(f"{cache_dir.name}_compressed"), ignore_errors=True
+    )
 
 
 def test_throttler_performance():

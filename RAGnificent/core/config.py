@@ -499,10 +499,10 @@ class AppConfig:
             ValueError: If format is invalid or cannot be determined
         """
         path = Path(file_path)
-        
+
         if format == "auto":
             suffix = path.suffix.lower()
-            if suffix in (".yml", ".yaml"):
+            if suffix in {".yml", ".yaml"}:
                 format = "yaml"
             elif suffix == ".json":
                 format = "json"
@@ -511,11 +511,11 @@ class AppConfig:
                     f"Cannot determine format from file extension: {suffix}. "
                     "Please specify format explicitly."
                 )
-        
+
         os.makedirs(path.parent, exist_ok=True)
-        
+
         config_dict = self.to_dict()
-        
+
         def convert_to_serializable(obj):
             if isinstance(obj, dict):
                 return {k: convert_to_serializable(v) for k, v in obj.items()}
@@ -527,9 +527,9 @@ class AppConfig:
                 return obj.value
             else:
                 return obj
-        
+
         config_dict = convert_to_serializable(config_dict)
-        
+
         if format == "json":
             with open(path, "w") as f:
                 json.dump(config_dict, f, indent=2)
@@ -584,23 +584,23 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
         raise FileNotFoundError(f"Config file not found: {path}")
 
     logger.info(f"Loading configuration from: {path}")
-    
+
     suffix = path.suffix.lower()
-    
+
     if suffix == ".env":
         load_dotenv(path, override=True)
         return AppConfig()
-    
+
     elif suffix == ".json":
         with open(path, "r") as f:
             config_dict = json.load(f)
         return AppConfig(config_dict=config_dict)
-    
-    elif suffix in (".yaml", ".yml"):
+
+    elif suffix in {".yaml", ".yml"}:
         with open(path, "r") as f:
             config_dict = yaml.safe_load(f)
         return AppConfig(config_dict=config_dict)
-    
+
     else:
         raise ValueError(
             f"Unsupported config file format: {suffix}. "

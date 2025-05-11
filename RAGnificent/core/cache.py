@@ -123,10 +123,10 @@ class RequestCache:
     
     def _get_ttl_for_url(self, url: str) -> Optional[int]:
         """Get the TTL for a URL based on patterns."""
-        for pattern, ttl in self.ttl_patterns:
-            if pattern.search(url):
-                return ttl
-        return None
+        return next(
+            (ttl for pattern, ttl in self.ttl_patterns if pattern.search(url)),
+            None,
+        )
     
     def _get_cache_key(self, url: str) -> str:
         """Generate a cache key from a URL."""
@@ -178,24 +178,21 @@ class RequestCache:
             for pattern, _ in self.ttl_patterns:
                 if pattern.search(url):
                     self.stats["url_patterns"][pattern.pattern] += 1
-        
+
         url_ttl = self._get_ttl_for_url(url) or self.max_age
         current_time = time.time()
-        
+
         # First check memory cache
         if url in self.memory_cache:
             content, timestamp, ttl, is_compressed = self.memory_cache[url]
             effective_ttl = ttl or url_ttl
-            
+
             if current_time - timestamp <= effective_ttl:
                 if self.enable_stats:
                     self.stats["hits"] += 1
                     self.stats["memory_hits"] += 1
-                
-                if is_compressed:
-                    return self._decompress_content(content, True)
-                return content
-                
+
+                return self._decompress_content(content, True) if is_compressed else content
             # Remove expired item from memory cache
             del self.memory_cache[url]
             logger.debug(f"Memory cache expired for {url}")
@@ -203,12 +200,12 @@ class RequestCache:
         # Check disk cache
         cache_path = self._get_cache_path(url)
         metadata_path = self._get_metadata_path(url)
-        
+
         if cache_path.exists():
             # Check metadata for TTL if available
             cached_ttl = None
             is_compressed = False
-            
+
             if metadata_path.exists():
                 try:
                     with open(metadata_path, "r") as f:
@@ -217,9 +214,9 @@ class RequestCache:
                         is_compressed = metadata.get("compressed", False)
                 except Exception as e:
                     logger.warning(f"Failed to read cache metadata: {e}")
-            
+
             effective_ttl = cached_ttl or url_ttl
-            
+
             # Check if cache is expired
             if current_time - cache_path.stat().st_mtime <= effective_ttl:
                 try:
@@ -230,17 +227,17 @@ class RequestCache:
                     else:
                         with open(cache_path, "r", encoding="utf-8") as f:
                             content = f.read()
-                    
+
                     # Add to memory cache
                     if is_compressed:
                         self.memory_cache[url] = (compressed_data, current_time, effective_ttl, True)
                     else:
                         self.memory_cache[url] = (content, current_time, effective_ttl, False)
-                    
+
                     if self.enable_stats:
                         self.stats["hits"] += 1
                         self.stats["disk_hits"] += 1
-                    
+
                     return content
                 except IOError as e:
                     logger.error(f"Failed to read cache file {cache_path}: {e}")
@@ -257,7 +254,7 @@ class RequestCache:
 
         if self.enable_stats:
             self.stats["misses"] += 1
-            
+
         return None
 
     def set(self, url: str, content: str, ttl: Optional[int] = None) -> None:
@@ -404,7 +401,7 @@ class RequestCache:
         """
         if max_age is None:
             max_age = self.max_age
-            
+
         pattern_obj = None
         if pattern:
             try:
@@ -416,15 +413,15 @@ class RequestCache:
         # Clear memory cache
         current_time = time.time()
         expired_keys = []
-        
+
         for k, (content, timestamp, ttl, _) in self.memory_cache.items():
             if pattern_obj and not pattern_obj.search(k):
                 continue
-                
+
             effective_ttl = ttl or max_age
             if current_time - timestamp > effective_ttl:
                 expired_keys.append(k)
-                
+
         for k in expired_keys:
             # Subtract the content size from memory usage before removing
             content, _, _, _ = self.memory_cache[k]
@@ -436,22 +433,21 @@ class RequestCache:
         for cache_file in self.cache_dir.glob("*"):
             if cache_file.name == "metadata":
                 continue
-                
+
             # Check if this cache file matches the pattern
             if pattern_obj:
                 metadata_path = self.metadata_dir / f"{cache_file.name}.meta"
-                if metadata_path.exists():
-                    try:
-                        with open(metadata_path, "r") as f:
-                            metadata = json.load(f)
-                            url = metadata.get("url")
-                            if url and not pattern_obj.search(url):
-                                continue
-                    except Exception:
-                        continue
-                else:
+                if not metadata_path.exists():
                     continue
-            
+
+                try:
+                    with open(metadata_path, "r") as f:
+                        metadata = json.load(f)
+                        url = metadata.get("url")
+                        if url and not pattern_obj.search(url):
+                            continue
+                except Exception:
+                    continue
             if pattern_obj or current_time - cache_file.stat().st_mtime > max_age:
                 try:
                     cache_file.unlink()
@@ -527,7 +523,8 @@ class RequestCache:
         disk_usage_mb = disk_usage / (1024 * 1024)
         
         memory_items = len(self.memory_cache)
-        disk_items = sum(1 for _ in self.cache_dir.glob("*") if _.is_file() and _.name != "metadata")
+        disk_items = sum(bool(_.is_file() and _.name != "metadata")
+                     for _ in self.cache_dir.glob("*"))
         
         compression_savings_mb = self.stats["compression_savings"] / (1024 * 1024)
         

@@ -317,21 +317,27 @@ class ResourceManager:
     
     def _get_pool_stats(self, pool: Any) -> Dict[str, Any]:
         """Get statistics for a connection pool."""
-        stats = {}
-        
-        for attr in ["size", "qsize", "maxsize", "idle", "in_use", "connections"]:
-            if hasattr(pool, attr):
-                stats[attr] = getattr(pool, attr)
-        
+        stats = {
+            attr: getattr(pool, attr)
+            for attr in [
+                "size",
+                "qsize",
+                "maxsize",
+                "idle",
+                "in_use",
+                "connections",
+            ]
+            if hasattr(pool, attr)
+        }
         for method in ["get_stats", "stats", "get_info"]:
             if hasattr(pool, method) and callable(getattr(pool, method)):
                 try:
                     method_stats = getattr(pool, method)()
                     if isinstance(method_stats, dict):
-                        stats.update(method_stats)
+                        stats |= method_stats
                 except Exception:
                     pass
-        
+
         return stats
 
 
@@ -574,21 +580,21 @@ class MemoryMonitor:
             Current memory usage percentage
         """
         current_time = time.time()
-        
+
         if not force and current_time - self.last_check_time < self.check_interval:
             return self.last_memory_percent
-        
+
         memory_percent = psutil.virtual_memory().percent
         self.last_memory_percent = memory_percent
         self.last_check_time = current_time
-        
+
         if memory_percent >= self.critical_threshold:
             self._trigger_callbacks("critical")
         elif memory_percent >= self.warning_threshold:
             self._trigger_callbacks("warning")
-        elif memory_percent < self.warning_threshold:
+        else:
             self._trigger_callbacks("normal")
-        
+
         return memory_percent
     
     def _trigger_callbacks(self, level: str) -> None:
@@ -607,10 +613,10 @@ class MemoryMonitor:
             level: Threshold level ('normal', 'warning', or 'critical')
             callback: Function to call when threshold is reached
         """
-        if level not in ("normal", "warning", "critical"):
+        if level in {"normal", "warning", "critical"}:
+            self.callbacks[level] = callback
+        else:
             raise ValueError("Level must be 'normal', 'warning', or 'critical'")
-        
-        self.callbacks[level] = callback
     
     def should_apply_backpressure(self) -> bool:
         """

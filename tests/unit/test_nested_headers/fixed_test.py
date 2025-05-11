@@ -43,57 +43,56 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
         chunks = self.chunker.create_chunks_from_markdown(
             self.nested_markdown, "https://example.com/test"
         )
-        
+
         print(f"\nTotal chunks created: {len(chunks)}")
         for i, chunk in enumerate(chunks):
             print(f"\nChunk {i+1}:")
             print(f"  Heading Path: {chunk.metadata.get('heading_path', 'N/A')}")
             print(f"  Nested Level: {chunk.metadata.get('nested_level', 'N/A')}")
-        
+
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
-        
+
         subtopic_1_1_chunks = [
             chunk for chunk in chunks 
             if "Nested Subtopic 1.1" in chunk.metadata.get("heading_path", "")
         ]
-        
+
         self.assertGreater(
             len(subtopic_1_1_chunks), 0, 
             "Should have chunks for Nested Subtopic 1.1"
         )
-        
+
         if len(subtopic_1_1_chunks) > 1:
             continuation_chunks = [
                 chunk for chunk in subtopic_1_1_chunks 
                 if chunk.metadata.get("is_continuation", False)
             ]
-            
+
             for chunk in continuation_chunks:
                 self.assertIn("parent_headers", chunk.metadata)
                 parent_headers = chunk.metadata["parent_headers"]
-                
+
                 header_texts = [h["text"] for h in parent_headers]
                 self.assertIn("Main Topic", header_texts)
                 self.assertIn("Subtopic 1", header_texts)
-                
+
                 self.assertIn("# Main Topic", chunk.content)
                 self.assertIn("## Subtopic 1", chunk.content)
                 self.assertIn("### Nested Subtopic 1.1", chunk.content)
-        
-        subtopic_2_1_chunks = [
-            chunk for chunk in chunks 
+
+        if subtopic_2_1_chunks := [
+            chunk
+            for chunk in chunks
             if "Nested Subtopic 2.1" in chunk.metadata.get("heading_path", "")
-        ]
-        
-        if subtopic_2_1_chunks:
+        ]:
             for chunk in subtopic_2_1_chunks:
                 parent_headers = chunk.metadata["parent_headers"]
                 header_texts = [h["text"] for h in parent_headers]
-                
+
                 self.assertIn("Main Topic", header_texts)
                 self.assertIn("Subtopic 2", header_texts)
                 self.assertNotIn("Subtopic 1", header_texts)
-                
+
                 self.assertEqual(chunk.metadata["nested_level"], 2)
     
     def test_path_elements_structure(self):
@@ -101,17 +100,14 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
         chunks = self.chunker.create_chunks_from_markdown(
             self.nested_markdown, "https://example.com/test"
         )
-        
-        nested_chunks = [
-            chunk for chunk in chunks 
-            if chunk.metadata.get("nested_level", 0) > 1
-        ]
-        
-        if nested_chunks:
+
+        if nested_chunks := [
+            chunk for chunk in chunks if chunk.metadata.get("nested_level", 0) > 1
+        ]:
             chunk = nested_chunks[0]
-            
+
             self.assertIsInstance(chunk.metadata["path_elements"], list)
-            
+
             path_string = " > ".join(chunk.metadata["path_elements"])
             self.assertEqual(path_string, chunk.metadata["heading_path"])
 
