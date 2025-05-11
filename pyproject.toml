@@ -5,32 +5,32 @@ description = "HTML to Markdown converter with support for multiple output forma
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "requests>=2.31.0",
-    "beautifulsoup4>=4.12.2",
+    "requests>=2.32.3",
+    "beautifulsoup4>=4.13.4",
     "psutil>=5.9.5;platform_system!='Linux'",
-    "qdrant-client>=1.6.4",
-    "numpy>=1.26.0",
-    "sentence-transformers>=2.6.1",
-    "torch>=2.2.1",
-    "pydantic-settings>=2.0.0",
-    "transformers==4.50.0"
+    "qdrant-client>=1.14.2",
+    "numpy>=2.2.5",
+    "sentence-transformers>=4.1.0",
+    "torch>=2.7.0",
+    "pydantic-settings>=2.9.1",
+    "transformers==4.51.3"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.0",
-    "black>=23.7.0",
-    "ruff>=0.0.280",
-    "mypy>=1.5.1",
-    "isort>=5.12.0",
-    "sourcery>=1.11.0",
+    "pytest>=8.3.5",
+    "black>=25.1.0",
+    "ruff>=0.11.9",
+    "mypy>=1.15.0",
+    "isort>=6.0.1",
+    "sourcery>=1.36.0",
 ]
 test = [
-    "pytest>=7.4.0",
-    "pytest-benchmark>=4.0.0",
+    "pytest>=8.3.5",
+    "pytest-benchmark>=5.1.0",
 ]
 js = [
-    "playwright>=1.37.0",
+    "playwright>=1.52.0",
 ]
 
 [project.scripts]
