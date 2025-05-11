@@ -65,6 +65,8 @@ class ContentChunker:
             content = section["content"]
             heading_level = section["level"]
             heading_path = section["path"]
+            parent_headers = section.get("parent_headers", [])
+            path_elements = section.get("path_elements", [])
 
             # If the section is smaller than chunk_size, keep it as one chunk
             if len(content) <= self.chunk_size:
@@ -78,9 +80,12 @@ class ContentChunker:
                         "heading": heading,
                         "heading_level": heading_level,
                         "heading_path": heading_path,
+                        "path_elements": path_elements,
+                        "parent_headers": parent_headers,
                         "domain": domain,
                         "word_count": len(content.split()),
                         "char_count": len(content),
+                        "nested_level": len(parent_headers),
                     },
                     source_url=source_url,
                     created_at=datetime.now().isoformat(),
@@ -100,13 +105,20 @@ class ContentChunker:
                     if not chunk_words:
                         continue
 
-                    # Always include the heading at the start of each chunk for context
-                    if (
-                        i > 0
-                        and heading
-                        and not " ".join(chunk_words).startswith(heading)
-                    ):
-                        chunk_content = f"{heading}\n\n" + " ".join(chunk_words)
+                    if i > 0:
+                        context_headers = []
+                        for parent in parent_headers:
+                            context_headers.append(parent["markdown"])
+                        
+                        # Add the current section header
+                        if heading and not " ".join(chunk_words).startswith(heading):
+                            context_headers.append(heading)
+                        
+                        if context_headers:
+                            context_prefix = "\n".join(context_headers) + "\n\n"
+                            chunk_content = context_prefix + " ".join(chunk_words)
+                        else:
+                            chunk_content = " ".join(chunk_words)
                     else:
                         chunk_content = " ".join(chunk_words)
 
@@ -121,10 +133,14 @@ class ContentChunker:
                             "heading": heading,
                             "heading_level": heading_level,
                             "heading_path": heading_path,
+                            "path_elements": path_elements,
+                            "parent_headers": parent_headers,
                             "domain": domain,
                             "position": i // (words_per_chunk - overlap_words),
                             "word_count": len(chunk_words),
                             "char_count": len(chunk_content),
+                            "nested_level": len(parent_headers),
+                            "is_continuation": i > 0,
                         },
                         source_url=source_url,
                         created_at=datetime.now().isoformat(),
@@ -142,7 +158,7 @@ class ContentChunker:
             markdown_content: The markdown content to parse
 
         Returns:
-            A list of section dictionaries containing heading, content, level, and path
+            A list of section dictionaries containing heading, content, level, path, and parent_headers
         """
         sections = []
         lines = markdown_content.split("\n")
@@ -152,35 +168,50 @@ class ContentChunker:
         current_section = None
 
         for line in lines:
-            if header_match := re.match(r"^(#+)\s+(.*)", line):
-                # This is a header line
-                level = len(header_match[1])
-                heading_text = header_match[2].strip()
+            # Check if line is a header by looking for # at the beginning
+            stripped_line = line.strip()
+            if stripped_line and stripped_line[0] == '#':
+                if header_match := re.match(r"^(#+)\s+(.*?)$", stripped_line):
+                    # This is a header line
+                    level = len(header_match[1])
+                    heading_text = header_match[2].strip()
 
-                # If we have a current section, finalize it and add to sections list
-                if current_section:
-                    sections.append(current_section)
+                    # If we have a current section, finalize it and add to sections list
+                    if current_section:
+                        sections.append(current_section)
 
-                # Update header stack based on new header level
-                while header_stack and header_stack[-1]["level"] >= level:
-                    header_stack.pop()
+                    # Update header stack based on new header level
+                    while header_stack and header_stack[-1]["level"] >= level:
+                        header_stack.pop()
 
-                # Create path representation of current location in hierarchy
-                path = " > ".join([h["text"] for h in header_stack] + [heading_text])
+                    # Create path representation of current location in hierarchy
+                    path_elements = [h["text"] for h in header_stack] + [heading_text]
+                    path = " > ".join(path_elements)
 
-                # Create new header entry
-                header_entry = {"level": level, "text": heading_text}
+                    parent_headers = []
+                    for header in header_stack:
+                        parent_headers.append({
+                            "text": header["text"],
+                            "level": header["level"],
+                            "markdown": "#" * header["level"] + " " + header["text"]
+                        })
 
-                # Push to stack
-                header_stack.append(header_entry)
+                    # Create new header entry
+                    header_entry = {"level": level, "text": heading_text}
 
-                # Start new section
-                current_section = {
-                    "heading": line,
-                    "content": line + "\n",
-                    "level": level,
-                    "path": path,
-                }
+                    # Push to stack
+                    header_stack.append(header_entry)
+
+                    # Start new section
+                    current_section = {
+                        "heading": stripped_line,
+                        "content": stripped_line + "\n",
+                        "level": level,
+                        "path": path,
+                        "path_elements": path_elements,
+                        "parent_headers": parent_headers,
+                        "nested_level": len(parent_headers),
+                    }
             elif current_section:
                 # Add line to current section content
                 current_section["content"] += line + "\n"
@@ -191,6 +222,9 @@ class ContentChunker:
                     "content": line + "\n",
                     "level": 0,
                     "path": "Document Start",
+                    "path_elements": ["Document Start"],
+                    "parent_headers": [],
+                    "nested_level": 0,
                 }
 
         # Add the final section if it exists
