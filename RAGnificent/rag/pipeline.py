@@ -282,35 +282,80 @@ class Pipeline:
         Returns:
             List of document dictionaries
         """
+        from core.validators import validate_url, validate_file_path, validate_output_format, InputValidator
+        from core.security import redact_sensitive_data, secure_file_path
+        
         documents = []
-
+        
+        if not validate_output_format(output_format):
+            logger.error(f"Invalid output format: {output_format}")
+            return documents
+            
+        # Validate limit if provided
+        if limit is not None and limit <= 0:
+            logger.warning(f"Invalid limit value: {limit}, using default")
+            limit = None
+            
         # Process single URL
         if url:
-            logger.info(f"Extracting content from URL: {url}")
+            if not validate_url(url):
+                logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")
+                return documents
+                
+            logger.info(f"Extracting content from URL: {redact_sensitive_data(url)}")
             if document := self._process_single_url(url, output_format, skip_cache):
                 documents.append(document)
 
         elif urls:
-            logger.info(f"Extracting content from {len(urls)} URLs")
-            documents = self._process_url_list(urls, limit, output_format, skip_cache)
+            if not urls:
+                logger.error("Empty URL list provided")
+                return documents
+                
+            valid_urls = []
+            for u in urls:
+                if validate_url(u):
+                    valid_urls.append(u)
+                else:
+                    logger.warning(f"Skipping invalid URL: {redact_sensitive_data(u)}")
+            
+            if not valid_urls:
+                logger.error("No valid URLs found in the provided list")
+                return documents
+                
+            logger.info(f"Extracting content from {len(valid_urls)} URLs")
+            documents = self._process_url_list(valid_urls, limit, output_format, skip_cache)
 
         elif sitemap_url:
-            logger.info(f"Extracting content from sitemap: {sitemap_url}")
+            if not validate_url(sitemap_url):
+                logger.error(f"Invalid sitemap URL format: {redact_sensitive_data(sitemap_url)}")
+                return documents
+                
+            logger.info(f"Extracting content from sitemap: {redact_sensitive_data(sitemap_url)}")
             if sitemap_urls := self._get_urls_from_sitemap(sitemap_url, limit):
                 documents = self._process_url_list(
                     sitemap_urls, None, output_format, skip_cache
                 )
 
         elif links_file:
-            logger.info(f"Extracting content from links in file: {links_file}")
-            if file_urls := self._get_urls_from_file(links_file, limit):
+            if not validate_file_path(links_file, ["txt", "csv"]):
+                logger.error(f"Invalid links file path: {redact_sensitive_data(links_file)}")
+                return documents
+                
+            secure_path = secure_file_path(str(self.data_dir), links_file)
+            
+            logger.info(f"Extracting content from links in file: {redact_sensitive_data(secure_path)}")
+            if file_urls := self._get_urls_from_file(secure_path, limit):
                 documents = self._process_url_list(
                     file_urls, None, output_format, skip_cache
                 )
 
         # Save raw documents if output file specified
         if output_file:
-            self._save_documents(documents, output_file)
+            if not validate_file_path(output_file, ["json", "jsonl"]):
+                logger.error(f"Invalid output file path: {redact_sensitive_data(output_file)}")
+            else:
+                secure_output_path = secure_file_path(str(self.data_dir), output_file)
+                self._save_documents(documents, secure_output_path)
 
         return documents
 
