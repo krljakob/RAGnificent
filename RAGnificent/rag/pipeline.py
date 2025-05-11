@@ -11,7 +11,9 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
+from core.config import EmbeddingModelType
 
 # Use relative imports for internal modules
 # Import fix applied
@@ -86,8 +88,18 @@ class Pipeline:
         )
 
         # Initialize embedding service
+        from core.config import EmbeddingModelType
+        
+        # Convert string to EmbeddingModelType enum if provided
+        model_type_enum = None
+        if embedding_model_type:
+            if isinstance(embedding_model_type, str):
+                model_type_enum = EmbeddingModelType(embedding_model_type)
+            else:
+                model_type_enum = embedding_model_type
+            
         self.embedding_service = get_embedding_service(
-            embedding_model_type, embedding_model_name
+            model_type_enum, embedding_model_name
         )
 
         # Initialize vector store
@@ -118,8 +130,15 @@ class Pipeline:
             Document dictionary or None if extraction failed
         """
         try:
+            from ragnificent_rs import OutputFormat
+            
+            # Convert string to OutputFormat enum if it's not already an enum
+            output_format_enum = output_format
+            if isinstance(output_format, str):
+                output_format_enum = OutputFormat(output_format)
+            
             html_content = self.scraper.scrape_website(url, skip_cache=skip_cache)
-            content = self.scraper.convert_html(html_content, url, output_format)
+            content = self.scraper.convert_html(html_content, url, output_format_enum)
 
             return {
                 "url": url,
@@ -180,7 +199,16 @@ class Pipeline:
             from utils.sitemap_utils import SitemapParser
 
             parser = SitemapParser()
-            return parser.parse_sitemap(sitemap_url, limit=limit)
+            sitemap_urls = parser.parse_sitemap(sitemap_url)
+            
+            # Extract URL strings from SitemapURL objects
+            url_strings = [url.loc for url in sitemap_urls]
+            
+            # Then apply limit if specified
+            if limit is not None and limit > 0 and url_strings:
+                url_strings = url_strings[:limit]
+                
+            return url_strings
         except Exception as e:
             logger.error(f"Error processing sitemap {sitemap_url}: {e}")
             return []
@@ -529,7 +557,8 @@ class Pipeline:
 
         try:
             # Generate embeddings in batch
-            embedded_chunks = self.embedding_service.embed_chunks(chunks)
+            chunk_list = chunks if isinstance(chunks, list) else []
+            embedded_chunks = self.embedding_service.embed_chunks(chunk_list)
 
             # Save embedded chunks if output file specified
             if output_file and embedded_chunks:
@@ -554,6 +583,9 @@ class Pipeline:
 
         except Exception as e:
             logger.error(f"Error embedding chunks: {e}")
+            # Ensure we return a list of dictionaries, not a string
+            if isinstance(chunks, str):
+                return []
             return chunks  # Return original chunks without embeddings
 
     def store_chunks(
@@ -585,14 +617,17 @@ class Pipeline:
                     for chunk in chunks
                 ):
                     logger.info("Re-embedding chunks from file")
-                    chunks = self.embedding_service.embed_chunks(chunks)
+                    chunk_list = chunks if isinstance(chunks, list) else []
+                    chunks = self.embedding_service.embed_chunks(chunk_list)
 
             except Exception as e:
                 logger.error(f"Error loading embedded chunks from {chunks}: {e}")
                 return False
 
         # Ensure we have chunks with embeddings
-        valid_chunks = [chunk for chunk in chunks if embedding_field in chunk]
+        chunk_list = chunks if isinstance(chunks, list) else []
+        valid_chunks = [chunk for chunk in chunk_list if embedding_field in chunk]
+        
         if not valid_chunks:
             logger.warning("No chunks with embeddings to store")
             return False
@@ -637,7 +672,7 @@ class Pipeline:
         query: str,
         limit: int = 5,
         threshold: float = 0.7,
-        model: str = None,
+        model: Optional[str] = "",
         temperature: float = 0.7,
         system_prompt: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -681,8 +716,11 @@ class Pipeline:
             model = self.config.openai.completion_model
 
         # Format context for prompt
+        # Ensure we're working with dictionaries by explicitly requesting as_dict=True
+        # Convert SearchResult objects to dictionaries if needed
         context_str = "\n\n".join(
-            f"DOCUMENT {i+1}:\n{result['content']}" for i, result in enumerate(results)
+            f"DOCUMENT {i+1}:\n{result['content'] if isinstance(result, dict) else result.content}" 
+            for i, result in enumerate(results)
         )
 
         # Create default system prompt if none provided
@@ -957,7 +995,7 @@ _default_pipeline = None
 
 def get_pipeline(
     collection_name: Optional[str] = None,
-    embedding_model_type: Optional[str] = None,
+    embedding_model_type: Optional[Union[str, EmbeddingModelType]] = None,
     embedding_model_name: Optional[str] = None,
 ) -> Pipeline:
     """

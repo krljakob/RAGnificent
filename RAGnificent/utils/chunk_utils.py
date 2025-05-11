@@ -280,3 +280,87 @@ def create_semantic_chunks(
         chunks.append(chunk)
 
     return chunks
+
+
+def chunk_text(
+    content: str, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> List[str]:
+    """
+    Split text into overlapping chunks of specified size.
+    
+    Args:
+        content: Text content to split
+        chunk_size: Maximum size of each chunk in characters
+        chunk_overlap: Overlap between chunks in characters
+        
+    Returns:
+        List of text chunks
+    """
+    if not content:
+        return []
+        
+    # Split into words for more natural chunking
+    words = content.split()
+    
+    avg_word_length = len(content) / max(len(words), 1)
+    words_per_chunk = int(chunk_size / avg_word_length)
+    overlap_words = int(chunk_overlap / avg_word_length)
+    
+    words_per_chunk = max(words_per_chunk, 1)
+    overlap_words = min(overlap_words, words_per_chunk - 1)
+    
+    chunks = []
+    for i in range(0, len(words), words_per_chunk - overlap_words):
+        chunk_words = words[i:i + words_per_chunk]
+        if not chunk_words:
+            continue
+            
+        chunk = " ".join(chunk_words)
+        chunks.append(chunk)
+        
+    return chunks
+
+
+def recursive_chunk_text(
+    content: str, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> List[str]:
+    """
+    Split text into chunks using a recursive approach that tries to maintain semantic boundaries.
+    
+    Args:
+        content: Text content to split
+        chunk_size: Maximum size of each chunk in characters
+        chunk_overlap: Overlap between chunks in characters
+        
+    Returns:
+        List of text chunks
+    """
+    if not content or len(content) <= chunk_size:
+        return [content] if content else []
+    
+    paragraphs = re.split(r'\n\s*\n', content)
+    
+    # If we have multiple paragraphs, try to group them into chunks
+    if len(paragraphs) > 1:
+        chunks = []
+        current_chunk = ""
+        
+        for para in paragraphs:
+            if len(current_chunk) + len(para) + 2 > chunk_size and current_chunk:
+                chunks.append(current_chunk)
+                # Start new chunk with overlap from previous chunk
+                overlap_text = current_chunk[-chunk_overlap:] if chunk_overlap < len(current_chunk) else current_chunk
+                current_chunk = overlap_text + "\n\n" + para
+            else:
+                if current_chunk:
+                    current_chunk += "\n\n" + para
+                else:
+                    current_chunk = para
+        
+        # Add the last chunk if it's not empty
+        if current_chunk:
+            chunks.append(current_chunk)
+            
+        return chunks
+    
+    return chunk_text(content, chunk_size, chunk_overlap)
