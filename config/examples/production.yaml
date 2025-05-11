@@ -1,0 +1,50 @@
+
+qdrant:
+  host: "qdrant.example.com"  # Remote Qdrant server
+  port: 6333
+  collection: "ragnificent_prod"
+  api_key: "${QDRANT_API_KEY}"  # Use environment variable
+  https: true
+  timeout: 30
+  prefer_grpc: true
+
+embedding:
+  model_type: "openai"  # Use OpenAI for production
+  device: "cuda"  # Use GPU if available
+  use_cache: true
+  cache_dir: "/var/cache/ragnificent/embeddings"
+
+openai:
+  embedding_model: "text-embedding-3-large"
+  completion_model: "gpt-4"
+  max_tokens: 2000
+  temperature: 0.5
+  request_timeout: 60
+  max_retries: 5
+
+chunking:
+  strategy: "semantic"
+  chunk_size: 800
+  chunk_overlap: 150
+
+scraper:
+  max_depth: 3
+  timeout: 20
+  rate_limit: 1.0
+  cache_max_age: 86400  # 24 hours
+
+search:
+  max_results: 10
+  score_threshold: 0.7
+  use_hybrid_search: true
+  rate_limit_per_minute: 120
+  cache_ttl: 7200  # 2 hours
+
+logging:
+  level: "WARNING"
+  file: "/var/log/ragnificent/app.log"
+  console: false
+
+data_dir: "/var/data/ragnificent"
+models_dir: "/var/models/ragnificent"
+cache_dir: "/var/cache/ragnificent"

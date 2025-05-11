@@ -1,0 +1,61 @@
+
+qdrant:
+  host: ":memory:"  # Use in-memory database by default
+  port: 6333
+  collection: "ragnificent"
+  vector_size: 384
+  timeout: 10
+  prefer_grpc: true
+
+embedding:
+  model_type: "sentence_transformer"
+  model_name: "BAAI/bge-small-en-v1.5"
+  batch_size: 32
+  device: "cpu"
+  use_cache: true
+  dimension: 384
+  normalize: true
+
+openai:
+  embedding_model: "text-embedding-3-small"
+  completion_model: "gpt-3.5-turbo"
+  max_tokens: 1000
+  temperature: 0.7
+  request_timeout: 30
+  max_retries: 3
+
+chunking:
+  strategy: "semantic"
+  chunk_size: 1000
+  chunk_overlap: 200
+  separator: "\n"
+  keep_separator: true
+
+scraper:
+  use_sitemap: true
+  follow_links: true
+  max_depth: 2
+  timeout: 10
+  user_agent: "Mozilla/5.0 RAGnificent/1.0"
+  respect_robots_txt: true
+  rate_limit: 0.5
+  use_rust_implementation: true
+  cache_enabled: true
+  cache_max_age: 3600
+
+search:
+  max_results: 5
+  score_threshold: 0.6
+  use_hybrid_search: false
+  rate_limit_per_minute: 60
+  enable_caching: true
+  cache_ttl: 3600
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  console: true
+
+data_dir: "./data"
+models_dir: "./models"
+cache_dir: "./cache"
