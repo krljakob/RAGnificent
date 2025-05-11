@@ -13,7 +13,7 @@ import sys
 import time
 import tracemalloc
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from urllib.parse import urljoin, urlparse
 
 # Use relative imports for internal modules
