@@ -7,6 +7,7 @@ and its users.
 """
 
 import logging
+import bleach
 import re
 import time
 from functools import wraps
@@ -248,21 +249,13 @@ def sanitize_content(content: str) -> str:
     if not content:
         return ""
 
-    content = re.sub(
-        r"<script.*?>.*?</script>", "", content, flags=re.IGNORECASE | re.DOTALL
-    )
-
-    content = re.sub(
-        r'\s+on\w+\s*=\s*["\'][^"\']*["\']', "", content, flags=re.IGNORECASE
-    )
-
-    content = re.sub(r"javascript:", "void:", content, flags=re.IGNORECASE)
-
-    return re.sub(
-        r"<(iframe|object|embed).*?>.*?</\1>",
-        "",
+    # Use bleach to sanitize content
+    return bleach.clean(
         content,
-        flags=re.IGNORECASE | re.DOTALL,
+        tags=[],  # Remove all HTML tags
+        attributes={},  # Remove all attributes
+        protocols=[],  # Remove all protocols
+        strip=True,  # Strip disallowed tags instead of escaping
     )
 
 

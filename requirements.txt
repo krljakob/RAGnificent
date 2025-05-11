@@ -29,3 +29,5 @@ uvicorn>=0.29.0
 # Required dependencies for embeddings
 openai>=1.6.0
 scikit-learn>=1.3.0
+
+bleach==6.2.0
