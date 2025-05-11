@@ -81,7 +81,7 @@ class SitemapParser:
         self.discovered_urls: List[SitemapURL] = []
         self.processed_sitemaps: Set[str] = set()
 
-    def _make_request(self, url: str) -> Optional[Union[str, requests.Response]]:
+    def _make_request(self, url: str) -> Optional[requests.Response]:
         """
         Make an HTTP request with retry logic.
 
@@ -89,8 +89,7 @@ class SitemapParser:
             url: The URL to request
 
         Returns:
-            Either the response text or the full Response object if return_full_response=True,
-            or None if the request failed
+            The Response object or None if the request failed
         """
         for attempt in range(self.max_retries):
             try:
@@ -133,12 +132,13 @@ class SitemapParser:
         robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
 
         logger.info(f"Checking robots.txt at {robots_url}")
-        robots_content = self._make_request(robots_url)
+        response = self._make_request(robots_url)
 
-        if not robots_content:
+        if not response:
             logger.warning(f"Could not retrieve robots.txt from {robots_url}")
             return []
 
+        robots_content = response.text
         sitemap_urls = []
         for line in robots_content.splitlines():
             if line.lower().startswith("sitemap:"):
@@ -338,7 +338,7 @@ class SitemapParser:
             return []
 
     # TODO Rename this here and in `_process_sitemap`
-    def _extracted_from__process_sitemap_28(self, response):
+    def _extracted_from__process_sitemap_28(self, response: requests.Response) -> List[SitemapURL]:
         # Handle XML sitemap
         content = response.text
         urls, sitemap_indices = self._parse_sitemap_xml(content)
