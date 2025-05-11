@@ -168,10 +168,8 @@ class ContentChunker:
         current_section = None
 
         for line in lines:
-            # Check if line is a header by looking for # at the beginning
-            stripped_line = line.strip()
-            if stripped_line and stripped_line[0] == '#':
-                if header_match := re.match(r"^(#+)\s+(.*?)$", stripped_line):
+            # Check if line is a header by matching up to three leading spaces followed by #
+            if header_match := re.match(r"^ {0,3}(#+)\s+(.*?)$", line):
                     # This is a header line
                     level = len(header_match[1])
                     heading_text = header_match[2].strip()
