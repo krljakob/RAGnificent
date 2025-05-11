@@ -69,7 +69,7 @@ class Pipeline:
         self.data_dir = Path(data_dir) if data_dir else Path(self.config.data_dir)
         os.makedirs(self.data_dir, exist_ok=True)
 
-        # Initialize scraper with Rust optimization when available
+        # Initialize scraper with enhanced throttling and parallel processing
         self.scraper = MarkdownScraper(
             requests_per_second=requests_per_second or self.config.scraper.rate_limit,
             chunk_size=chunk_size or self.config.chunking.chunk_size,
@@ -79,6 +79,9 @@ class Pipeline:
                 if cache_enabled is not None
                 else self.config.scraper.cache_enabled
             ),
+            domain_specific_limits=self.config.scraper.domain_rate_limits if hasattr(self.config.scraper, 'domain_rate_limits') else None,
+            max_workers=self.config.scraper.max_workers if hasattr(self.config.scraper, 'max_workers') else 10,
+            adaptive_throttling=self.config.scraper.adaptive_throttling if hasattr(self.config.scraper, 'adaptive_throttling') else True,
         )
 
         # Initialize chunker
@@ -896,9 +899,13 @@ Always cite your sources by referencing the document numbers.
         run_chunk: bool = True,
         run_embed: bool = True,
         run_store: bool = True,
+        batch_size: int = 50,
+        max_memory_percent: float = 80.0,
+        enable_backpressure: bool = True,
+        enable_benchmarking: bool = True,
     ) -> Dict[str, Any]:
         """
-        Run the complete RAG pipeline.
+        Run the complete RAG pipeline with backpressure mechanisms and benchmarking.
 
         Args:
             url: Single URL to process
@@ -911,12 +918,103 @@ Always cite your sources by referencing the document numbers.
             run_chunk: Whether to run chunking step
             run_embed: Whether to run embedding step
             run_store: Whether to run storage step
+            batch_size: Maximum number of items to process in a batch
+            max_memory_percent: Maximum memory usage percentage before throttling
+            enable_backpressure: Whether to enable backpressure mechanisms
+            enable_benchmarking: Whether to enable performance benchmarking
 
         Returns:
             Dictionary with pipeline status and document counts
         """
-        logger.info("Starting RAG pipeline")
-        result = {
+        import time
+        import psutil
+        from functools import wraps
+        
+        def benchmark(name):
+            def decorator(func):
+                @wraps(func)
+                def wrapper(*args, **kwargs):
+                    if not enable_benchmarking:
+                        return func(*args, **kwargs)
+                    
+                    start_time = time.time()
+                    start_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # MB
+                    
+                    result = func(*args, **kwargs)
+                    
+                    end_time = time.time()
+                    end_memory = psutil.Process().memory_info().rss / (1024 * 1024)  # MB
+                    
+                    duration = end_time - start_time
+                    memory_delta = end_memory - start_memory
+                    
+                    logger.info(f"BENCHMARK - {name}: Time={duration:.2f}s, Memory Delta={memory_delta:.2f}MB")
+                    
+                    if "benchmarks" not in pipeline_result:
+                        pipeline_result["benchmarks"] = {}
+                    
+                    pipeline_result["benchmarks"][name] = {
+                        "duration_seconds": round(duration, 2),
+                        "memory_delta_mb": round(memory_delta, 2),
+                        "items_processed": getattr(result, "__len__", lambda: 1)() if result else 0
+                    }
+                    
+                    return result
+                return wrapper
+            return decorator
+        
+        def apply_backpressure(current_batch_size):
+            if not enable_backpressure:
+                return current_batch_size
+                
+            memory_percent = psutil.virtual_memory().percent
+            
+            if memory_percent > max_memory_percent:
+                new_batch_size = max(1, int(current_batch_size * 0.5))
+                logger.warning(
+                    f"High memory usage ({memory_percent:.1f}%), reducing batch size from {current_batch_size} to {new_batch_size}"
+                )
+                import gc
+                gc.collect()
+                time.sleep(1)
+                return new_batch_size
+            elif memory_percent < max_memory_percent * 0.7:
+                new_batch_size = min(batch_size * 2, 500)  # Cap at 500
+                if new_batch_size > current_batch_size:
+                    logger.info(
+                        f"Low memory usage ({memory_percent:.1f}%), increasing batch size from {current_batch_size} to {new_batch_size}"
+                    )
+                    return new_batch_size
+            
+            return current_batch_size
+        
+        # Batch processing function
+        def process_in_batches(items, process_func, batch_size_initial=batch_size):
+            if not items:
+                return []
+                
+            results = []
+            current_batch_size = batch_size_initial
+            
+            for i in range(0, len(items), current_batch_size):
+                batch = items[i:i+current_batch_size]
+                logger.info(f"Processing batch {i//current_batch_size + 1}/{(len(items) + current_batch_size - 1)//current_batch_size} ({len(batch)} items)")
+                
+                # Process the batch
+                batch_results = process_func(batch)
+                
+                if batch_results:
+                    results.extend(batch_results)
+                
+                current_batch_size = apply_backpressure(current_batch_size)
+                
+                if i + current_batch_size < len(items):
+                    time.sleep(0.5)
+            
+            return results
+        
+        logger.info("Starting RAG pipeline with performance optimization")
+        pipeline_result = {
             "success": True,
             "steps": {},
             "timestamp": datetime.now().isoformat(),
@@ -944,15 +1042,16 @@ Always cite your sources by referencing the document numbers.
             }
 
             # Define the extract function to pass to _execute_pipeline_step
+            @benchmark("extract_content")
             def extract_fn(_):
                 return self.extract_content(**extract_params)
 
-            extract_success, documents, result = self._execute_pipeline_step(
-                "documents", extract_fn, None, False, True, result
+            extract_success, documents, pipeline_result = self._execute_pipeline_step(
+                "documents", extract_fn, None, False, True, pipeline_result
             )
 
             if not extract_success and run_chunk:
-                return result
+                return pipeline_result
 
         # Step 2: Chunk documents
         if run_chunk:
@@ -960,18 +1059,34 @@ Always cite your sources by referencing the document numbers.
             if not documents and not run_extract:
                 documents = self._get_default_input("documents", "raw_documents.json")
 
-            # Define the chunking function
+            # Define the chunking function with batching
+            @benchmark("chunk_documents")
             def chunk_fn(docs):
-                return self.chunk_documents(
-                    documents=docs, output_file="document_chunks.json"
-                )
+                if enable_backpressure and isinstance(docs, list) and len(docs) > batch_size:
+                    # Process documents in batches
+                    def process_batch(batch):
+                        return self.chunk_documents(
+                            documents=batch, output_file=None
+                        )
+                    
+                    all_chunks = process_in_batches(docs, process_batch)
+                    
+                    if all_chunks:
+                        self._save_chunks_to_file(all_chunks, "document_chunks.json")
+                    
+                    return all_chunks
+                else:
+                    # Process all documents at once if backpressure is disabled or batch is small
+                    return self.chunk_documents(
+                        documents=docs, output_file="document_chunks.json"
+                    )
 
-            chunk_success, chunks, result = self._execute_pipeline_step(
-                "chunks", chunk_fn, documents, run_extract, extract_success, result
+            chunk_success, chunks, pipeline_result = self._execute_pipeline_step(
+                "chunks", chunk_fn, documents, run_extract, extract_success, pipeline_result
             )
 
             if not chunk_success and run_embed:
-                return result
+                return pipeline_result
 
         # Step 3: Embed chunks
         if run_embed:
@@ -979,18 +1094,34 @@ Always cite your sources by referencing the document numbers.
             if not chunks and not run_chunk:
                 chunks = self._get_default_input("chunks", "document_chunks.json")
 
-            # Define the embedding function
+            # Define the embedding function with batching
+            @benchmark("embed_chunks")
             def embed_fn(chunk_data):
-                return self.embed_chunks(
-                    chunks=chunk_data, output_file="embedded_chunks.json"
-                )
+                if enable_backpressure and isinstance(chunk_data, list) and len(chunk_data) > batch_size:
+                    # Process chunks in batches
+                    def process_batch(batch):
+                        return self.embed_chunks(
+                            chunks=batch, output_file=None
+                        )
+                    
+                    all_embedded = process_in_batches(chunk_data, process_batch)
+                    
+                    if all_embedded:
+                        self._save_chunks_to_file(all_embedded, "embedded_chunks.json")
+                    
+                    return all_embedded
+                else:
+                    # Process all chunks at once if backpressure is disabled or batch is small
+                    return self.embed_chunks(
+                        chunks=chunk_data, output_file="embedded_chunks.json"
+                    )
 
-            embed_success, embedded_chunks, result = self._execute_pipeline_step(
-                "embedded_chunks", embed_fn, chunks, run_chunk, chunk_success, result
+            embed_success, embedded_chunks, pipeline_result = self._execute_pipeline_step(
+                "embedded_chunks", embed_fn, chunks, run_chunk, chunk_success, pipeline_result
             )
 
             if not embed_success and run_store:
-                return result
+                return pipeline_result
 
         # Step 4: Store chunks
         if run_store:
@@ -1000,21 +1131,56 @@ Always cite your sources by referencing the document numbers.
                     "embedded_chunks", "embedded_chunks.json"
                 )
 
-            # Define the storage function
+            # Define the storage function with batching
+            @benchmark("store_chunks")
             def store_fn(embeds):
-                success = self.store_chunks(embeds)
-                if success:
-                    # Count documents in vector store
-                    doc_count = self.vector_store.count_documents()
-                    result["document_counts"]["stored_vectors"] = doc_count
-                return success
+                if enable_backpressure and isinstance(embeds, list) and len(embeds) > batch_size:
+                    # Process embedded chunks in batches
+                    def process_batch(batch):
+                        return self.store_chunks(batch)
+                    
+                    # Store in batches but don't collect results (just success/failure)
+                    success = True
+                    for i in range(0, len(embeds), batch_size):
+                        batch = embeds[i:i+batch_size]
+                        logger.info(f"Storing batch {i//batch_size + 1}/{(len(embeds) + batch_size - 1)//batch_size} ({len(batch)} items)")
+                        batch_success = process_batch(batch)
+                        if not batch_success:
+                            success = False
+                        
+                        apply_backpressure(batch_size)
+                    
+                    if success:
+                        # Count documents in vector store
+                        doc_count = self.vector_store.count_documents()
+                        pipeline_result["document_counts"]["stored_vectors"] = doc_count
+                    
+                    return success
+                else:
+                    # Process all embedded chunks at once if backpressure is disabled or batch is small
+                    success = self.store_chunks(embeds)
+                    if success:
+                        # Count documents in vector store
+                        doc_count = self.vector_store.count_documents()
+                        pipeline_result["document_counts"]["stored_vectors"] = doc_count
+                    return success
 
-            store_success, _, result = self._execute_pipeline_step(
-                "store", store_fn, embedded_chunks, run_embed, embed_success, result
+            store_success, _, pipeline_result = self._execute_pipeline_step(
+                "store", store_fn, embedded_chunks, run_embed, embed_success, pipeline_result
             )
 
-        logger.info("RAG pipeline completed successfully")
-        return result
+        if enable_benchmarking and "benchmarks" in pipeline_result:
+            total_duration = sum(b["duration_seconds"] for b in pipeline_result["benchmarks"].values())
+            pipeline_result["benchmarks"]["total"] = {
+                "duration_seconds": round(total_duration, 2),
+                "steps_executed": len(pipeline_result["benchmarks"])
+            }
+            
+            logger.info(f"RAG pipeline completed in {total_duration:.2f} seconds")
+        else:
+            logger.info("RAG pipeline completed successfully")
+            
+        return pipeline_result
 
     def _extract_title(self, content: str, url: str) -> str:
         """Extract title from content."""
