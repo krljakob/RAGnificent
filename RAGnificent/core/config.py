@@ -386,7 +386,36 @@ class AppConfig:
         # Configure logging based on settings
         self.configure_logging()
 
-    def update_from_dict(self, config_dict: Dict[str, Any]) -> None:
+You can collapse most of the repetition by introducing small “maps” and loops instead of hand‐writing every branch.
+
+1. Replace `update_from_dict`’s long `if …` chain with a simple field→class map:
+```python
+# at module top
+_UPDATE_MAP: dict[str, type] = {
+    "qdrant":     QdrantConfig,
+    "embedding":  EmbeddingConfig,
+    "openai":     OpenAIConfig,
+    "chunking":   ChunkingConfig,
+    "scraper":    ScraperConfig,
+    "search":     SearchConfig,
+    "logging":    LoggingConfig,
+    "data_dir":   Path,
+    "models_dir": Path,
+    "cache_dir":  Path,
+}
+
+class AppConfig:
+    …
+    def update_from_dict(self, config: dict[str, Any]) -> None:
+        for key, cls in _UPDATE_MAP.items():
+            if key in config:
+                val = config[key]
+                obj = (
+                    cls.model_validate(val)
+                    if hasattr(cls, "model_validate")
+                    else cls(val)
+                )
+                setattr(self, key, obj)
         """
         Update configuration from dictionary.
         
