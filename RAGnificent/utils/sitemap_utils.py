@@ -91,22 +91,40 @@ class SitemapParser:
         Returns:
             The Response object or None if the request failed
         """
+        from core.validators import validate_url, sanitize_url
+        from core.security import redact_sensitive_data, sanitize_headers
+        
+        if not validate_url(url):
+            logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")
+            return None
+            
+        sanitized_url = sanitize_url(url)
+        if sanitized_url != url:
+            logger.warning(f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}")
+            url = sanitized_url
+        
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
+                
+                if logger.isEnabledFor(logging.DEBUG):
+                    safe_headers = sanitize_headers(dict(response.headers))
+                    logger.debug(f"Request to {redact_sensitive_data(url)} succeeded with status {response.status_code}")
+                    logger.debug(f"Response headers: {safe_headers}")
+                    
                 return response
             except (
                 requests.exceptions.RequestException,
                 requests.exceptions.HTTPError,
             ) as e:
                 logger.warning(
-                    f"Request error on attempt {attempt + 1}/{self.max_retries}: {e}"
+                    f"Request error on attempt {attempt + 1}/{self.max_retries} for {redact_sensitive_data(url)}: {str(e)}"
                 )
                 if attempt == self.max_retries - 1:
                     logger.error(
-                        f"Failed to retrieve {url} after {self.max_retries} attempts"
+                        f"Failed to retrieve {redact_sensitive_data(url)} after {self.max_retries} attempts"
                     )
                     return None
                 time.sleep(2**attempt)  # Exponential backoff

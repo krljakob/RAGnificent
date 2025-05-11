@@ -140,10 +140,23 @@ class MarkdownScraper:
 
         Raises:
             requests.exceptions.RequestException: If the request fails after retries
+            ValueError: If the URL is invalid
         """
+        from core.validators import validate_url, sanitize_url
+        from core.security import redact_sensitive_data
+        
+        if not validate_url(url):
+            error_msg = f"Invalid URL format: {redact_sensitive_data(url)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        sanitized_url = sanitize_url(url)
+        if sanitized_url != url:
+            logger.warning(f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}")
+            url = sanitized_url
+        
         try:
             import psutil  # type: ignore
-
             psutil_available = True
         except ImportError:
             psutil_available = False
@@ -153,21 +166,25 @@ class MarkdownScraper:
         if cached_content is not None:
             return cached_content
 
-        logger.info(f"Attempting to scrape the website: {url}")
+        logger.info(f"Attempting to scrape the website: {redact_sensitive_data(url)}")
 
         # Start performance monitoring
         performance_monitor = self._start_performance_monitoring(psutil_available)
 
-        # Attempt to fetch content with retries
-        html_content = self._fetch_with_retries(url)
-
-        # Stop performance monitoring and log results
-        self._log_performance_metrics(url, performance_monitor, psutil_available)
-
-        # Cache the response if enabled
-        self._cache_response(url, html_content)
-
-        return html_content
+        try:
+            # Attempt to fetch content with retries
+            html_content = self._fetch_with_retries(url)
+            
+            # Cache the response if enabled
+            self._cache_response(url, html_content)
+            
+            return html_content
+        except Exception as e:
+            logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {str(e)}")
+            raise
+        finally:
+            # Stop performance monitoring and log results
+            self._log_performance_metrics(url, performance_monitor, psutil_available)
 
     def _check_cache(self, url: str, skip_cache: bool) -> Optional[str]:
         """Check if content is available in cache."""
