@@ -453,8 +453,8 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 - [x] Consolidate sitemap implementations
 - [ ] Implement custom markdown templates
 - [ ] Include CSS selector support
-- [ ] Add configuration file support
-- [ ] Add comprehensive test coverage for edge cases
+- [x] Add configuration file support
+- [x] Add comprehensive test coverage for edge cases
 
 ## Author
 
