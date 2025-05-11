@@ -65,6 +65,8 @@ class ContentChunker:
             content = section["content"]
             heading_level = section["level"]
             heading_path = section["path"]
+            parent_headers = section.get("parent_headers", [])
+            path_elements = section.get("path_elements", [])
 
             # If the section is smaller than chunk_size, keep it as one chunk
             if len(content) <= self.chunk_size:
@@ -78,9 +80,12 @@ class ContentChunker:
                         "heading": heading,
                         "heading_level": heading_level,
                         "heading_path": heading_path,
+                        "path_elements": path_elements,
+                        "parent_headers": parent_headers,
                         "domain": domain,
                         "word_count": len(content.split()),
                         "char_count": len(content),
+                        "nested_level": len(parent_headers),
                     },
                     source_url=source_url,
                     created_at=datetime.now().isoformat(),
@@ -100,13 +105,19 @@ class ContentChunker:
                     if not chunk_words:
                         continue
 
-                    # Always include the heading at the start of each chunk for context
-                    if (
-                        i > 0
-                        and heading
-                        and not " ".join(chunk_words).startswith(heading)
-                    ):
-                        chunk_content = f"{heading}\n\n" + " ".join(chunk_words)
+                    if i > 0:
+                        context_headers = [
+                            parent["markdown"] for parent in parent_headers
+                        ]
+                        # Add the current section header
+                        if heading and not " ".join(chunk_words).startswith(heading):
+                            context_headers.append(heading)
+
+                        if context_headers:
+                            context_prefix = "\n".join(context_headers) + "\n\n"
+                            chunk_content = context_prefix + " ".join(chunk_words)
+                        else:
+                            chunk_content = " ".join(chunk_words)
                     else:
                         chunk_content = " ".join(chunk_words)
 
@@ -121,10 +132,14 @@ class ContentChunker:
                             "heading": heading,
                             "heading_level": heading_level,
                             "heading_path": heading_path,
+                            "path_elements": path_elements,
+                            "parent_headers": parent_headers,
                             "domain": domain,
                             "position": i // (words_per_chunk - overlap_words),
                             "word_count": len(chunk_words),
                             "char_count": len(chunk_content),
+                            "nested_level": len(parent_headers),
+                            "is_continuation": i > 0,
                         },
                         source_url=source_url,
                         created_at=datetime.now().isoformat(),
@@ -142,7 +157,7 @@ class ContentChunker:
             markdown_content: The markdown content to parse
 
         Returns:
-            A list of section dictionaries containing heading, content, level, and path
+            A list of section dictionaries containing heading, content, level, path, and parent_headers
         """
         sections = []
         lines = markdown_content.split("\n")
@@ -152,7 +167,8 @@ class ContentChunker:
         current_section = None
 
         for line in lines:
-            if header_match := re.match(r"^(#+)\s+(.*)", line):
+            # Check if line is a header by matching up to three leading spaces followed by #
+            if header_match := re.match(r"^ {0,3}(#+)\s+(.*?)$", line):
                 # This is a header line
                 level = len(header_match[1])
                 heading_text = header_match[2].strip()
@@ -166,8 +182,17 @@ class ContentChunker:
                     header_stack.pop()
 
                 # Create path representation of current location in hierarchy
-                path = " > ".join([h["text"] for h in header_stack] + [heading_text])
+                path_elements = [h["text"] for h in header_stack] + [heading_text]
+                path = " > ".join(path_elements)
 
+                parent_headers = [
+                    {
+                        "text": header["text"],
+                        "level": header["level"],
+                        "markdown": "#" * header["level"] + " " + header["text"],
+                    }
+                    for header in header_stack
+                ]
                 # Create new header entry
                 header_entry = {"level": level, "text": heading_text}
 
@@ -176,10 +201,13 @@ class ContentChunker:
 
                 # Start new section
                 current_section = {
-                    "heading": line,
-                    "content": line + "\n",
+                    "heading": stripped_line,
+                    "content": stripped_line + "\n",
                     "level": level,
                     "path": path,
+                    "path_elements": path_elements,
+                    "parent_headers": parent_headers,
+                    "nested_level": len(parent_headers),
                 }
             elif current_section:
                 # Add line to current section content
@@ -191,6 +219,9 @@ class ContentChunker:
                     "content": line + "\n",
                     "level": 0,
                     "path": "Document Start",
+                    "path_elements": ["Document Start"],
+                    "parent_headers": [],
+                    "nested_level": 0,
                 }
 
         # Add the final section if it exists
@@ -280,3 +311,86 @@ def create_semantic_chunks(
         chunks.append(chunk)
 
     return chunks
+
+
+def chunk_text(
+    content: str, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> List[str]:
+    """
+    Split text into overlapping chunks of specified size.
+
+    Args:
+        content: Text content to split
+        chunk_size: Maximum size of each chunk in characters
+        chunk_overlap: Overlap between chunks in characters
+
+    Returns:
+        List of text chunks
+    """
+    if not content:
+        return []
+
+    # Split into words for more natural chunking
+    words = content.split()
+
+    avg_word_length = len(content) / max(len(words), 1)
+    words_per_chunk = int(chunk_size / avg_word_length)
+    overlap_words = int(chunk_overlap / avg_word_length)
+
+    words_per_chunk = max(words_per_chunk, 1)
+    overlap_words = min(overlap_words, words_per_chunk - 1)
+
+    chunks = []
+    for i in range(0, len(words), words_per_chunk - overlap_words):
+        if chunk_words := words[i : i + words_per_chunk]:
+            chunks.append(" ".join(chunk_words))
+
+    return chunks
+
+
+def recursive_chunk_text(
+    content: str, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> List[str]:
+    """
+    Split text into chunks using a recursive approach that tries to maintain semantic boundaries.
+
+    Args:
+        content: Text content to split
+        chunk_size: Maximum size of each chunk in characters
+        chunk_overlap: Overlap between chunks in characters
+
+    Returns:
+        List of text chunks
+    """
+    if not content or len(content) <= chunk_size:
+        return [content] if content else []
+
+    paragraphs = re.split(r"\n\s*\n", content)
+
+    # If we have multiple paragraphs, try to group them into chunks
+    if len(paragraphs) > 1:
+        chunks = []
+        current_chunk = ""
+
+        for para in paragraphs:
+            if len(current_chunk) + len(para) + 2 > chunk_size and current_chunk:
+                chunks.append(current_chunk)
+                # Start new chunk with overlap from previous chunk
+                overlap_text = (
+                    current_chunk[-chunk_overlap:]
+                    if chunk_overlap < len(current_chunk)
+                    else current_chunk
+                )
+                current_chunk = overlap_text + "\n\n" + para
+            elif current_chunk:
+                current_chunk += "\n\n" + para
+            else:
+                current_chunk = para
+
+        # Add the last chunk if it's not empty
+        if current_chunk:
+            chunks.append(current_chunk)
+
+        return chunks
+
+    return chunk_text(content, chunk_size, chunk_overlap)

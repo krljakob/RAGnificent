@@ -1,0 +1,36 @@
+{
+  "qdrant": {
+    "host": ":memory:",
+    "collection": "ragnificent_dev"
+  },
+  "embedding": {
+    "model_type": "sentence_transformer",
+    "model_name": "BAAI/bge-small-en-v1.5",
+    "device": "cpu",
+    "use_cache": true
+  },
+  "openai": {
+    "completion_model": "gpt-3.5-turbo",
+    "temperature": 0.8
+  },
+  "chunking": {
+    "strategy": "recursive",
+    "chunk_size": 500,
+    "chunk_overlap": 100
+  },
+  "scraper": {
+    "max_depth": 1,
+    "timeout": 5,
+    "cache_enabled": true
+  },
+  "search": {
+    "max_results": 3,
+    "enable_caching": true
+  },
+  "logging": {
+    "level": "DEBUG",
+    "console": true
+  },
+  "data_dir": "./data_dev",
+  "cache_dir": "./cache_dev"
+}

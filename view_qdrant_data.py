@@ -74,11 +74,7 @@ def view_collection_info(collection_name: Optional[str] = None):
         client = get_qdrant_client()
 
         # Get collection info
-        collection_info = client.get_collection(collection_name=collection_name)
-
-        # Show schema if available
-        if hasattr(collection_info, "schema") and collection_info.schema:
-            pass
+        client.get_collection(collection_name=collection_name)
 
     except QdrantConnectionError as e:
         logger.error(f"Connection error: {e}")
@@ -114,29 +110,15 @@ def list_points(collection_name: Optional[str] = None, limit: int = 10):
             with_vectors=False,  # Set to True if you want to see the actual vectors
         )[0]
 
-
-        for _i, point in enumerate(points):
-
+        for point in points:
             # Print metadata and content
             if hasattr(point, "payload") and point.payload:
-                if "metadata" in point.payload:
-                    pass
-
                 if "content" in point.payload:
-                    content = point.payload["content"]
-                    # Truncate long content for display
-                    if len(content) > 300:
-                        pass
-                    else:
-                        pass
-
+                    point.payload["content"]
                 if other_fields := [
                     k for k in point.payload if k not in ("metadata", "content")
                 ]:
-                    for _field in other_fields:
-                        pass
-
-
+                    pass
         return points
 
     except QdrantConnectionError as e:
@@ -183,23 +165,14 @@ def search_similar(query: str, collection_name: Optional[str] = None, limit: int
             with_payload=True,
         )
 
-
-        for _i, result in enumerate(search_results):
-
+        for result in search_results:
             # Print metadata and content
-            if hasattr(result, "payload") and result.payload:
-                if "metadata" in result.payload:
-                    pass
-
-                if "content" in result.payload:
-                    content = result.payload["content"]
-                    # Truncate long content for display
-                    if len(content) > 300:
-                        pass
-                    else:
-                        pass
-
-
+            if (
+                hasattr(result, "payload")
+                and result.payload
+                and "content" in result.payload
+            ):
+                result.payload["content"]
         return search_results
 
     except QdrantConnectionError as e:
@@ -269,7 +242,6 @@ def export_collection(
         with open(output_file, "w") as f:
             json.dump(export_data, f, indent=2)
 
-
     except QdrantConnectionError as e:
         logger.error(f"Connection error: {e}")
     except Exception as e:
@@ -314,8 +286,6 @@ def main():
             export_collection(collection_name, output_file)
         elif choice == "4":
             break
-        else:
-            pass
 
 
 if __name__ == "__main__":

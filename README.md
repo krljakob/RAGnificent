@@ -373,7 +373,6 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
   - `utils/`: Utility modules
     - `chunk_utils.py`: Utilities for chunking text for RAG
     - `sitemap_utils.py`: Sitemap parsing and URL discovery
-    - `sitemap.py`: Simplified sitemap parsing (to be consolidated)
     - `version.py`: Version information
   - `ragnificent_rs.py`: Python interface to Rust components with fallbacks
 
@@ -414,11 +413,106 @@ cargo build --release --features real_rendering
 
 See `docs/JS_RENDERING.md` for more details.
 
+## Production Deployment Guidelines
+
+### Containerization
+
+For production deployment, it's recommended to containerize RAGnificent using Docker:
+
+```dockerfile
+FROM python:3.10-slim
+
+# Install Rust and required dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Add Rust to PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Set up working directory
+WORKDIR /app
+
+# Copy project files
+COPY . .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Build Rust components
+RUN cargo build --release
+
+# Expose port if needed (e.g., for API)
+EXPOSE 8000
+
+# Set environment variables
+ENV PYTHONPATH=/app
+
+# Run the application
+CMD ["python", "-m", "RAGnificent"]
+```
+
+### Scaling Considerations
+
+1. **Vector Database**: For production workloads, use a dedicated Qdrant instance rather than the in-memory option:
+   ```python
+   from RAGnificent.core.config import load_config, AppConfig
+   
+   config = load_config()
+   config.qdrant.host = "your-qdrant-server"
+   config.qdrant.port = 6333
+   config.qdrant.https = True
+   config.qdrant.api_key = "your-api-key"
+   ```
+
+2. **Embedding Service**: For high-volume embedding generation, consider:
+   - Using a dedicated GPU server for SentenceTransformer models
+   - Implementing a caching layer with Redis or similar
+   - Setting up a separate embedding service with API endpoints
+
+3. **Rate Limiting**: Configure appropriate rate limits for external requests:
+   ```python
+   config.scraper.rate_limit = 0.5  # 2 requests per second
+   ```
+
+4. **Memory Management**: Adjust cache settings based on available resources:
+   ```python
+   config.scraper.cache_enabled = True
+   config.scraper.cache_max_age = 86400  # 24 hours
+   ```
+
+### Monitoring and Logging
+
+1. **Structured Logging**: Configure JSON logging for production:
+   ```python
+   config.logging.format = '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
+   config.logging.file = "/var/log/ragnificent/app.log"
+   ```
+
+2. **Health Checks**: Implement health check endpoints if exposing as a service
+
+3. **Performance Metrics**: Track key metrics like:
+   - Scraping latency
+   - Embedding generation time
+   - Vector search performance
+   - Memory usage
+
+### Security Best Practices
+
+1. **API Keys**: Store sensitive keys in environment variables or a secure vault
+2. **Input Validation**: Validate all user inputs, especially URLs
+3. **Rate Limiting**: Implement rate limiting for any exposed APIs
+4. **Content Security**: Sanitize and validate all scraped content before processing
+
 ## Performance Considerations
 
 - HTML to Markdown conversion is optimized for medium to large documents
 - Chunking algorithm balances semantic coherence with performance
 - JavaScript rendering can be CPU and memory intensive
+- For large-scale deployments, consider distributing the workload across multiple instances
 
 ## Dependencies
 
@@ -451,11 +545,11 @@ This project is licensed under the MIT License - see the [LICENSE file](LICENSE)
 - [x] Implement memory management for caches
 - [x] Add support for JavaScript-rendered pages (requires feature flag)
 - [ ] Improve nested header handling in chunking algorithm
-- [ ] Consolidate sitemap implementations
+- [x] Consolidate sitemap implementations
 - [ ] Implement custom markdown templates
 - [ ] Include CSS selector support
-- [ ] Add configuration file support
-- [ ] Add comprehensive test coverage for edge cases
+- [x] Add configuration file support
+- [x] Add comprehensive test coverage for edge cases
 
 ## Author
 

@@ -124,10 +124,7 @@ def test_format_conversion(mock_get, scraper):
 
     except ImportError:
         # Fall back to Python implementation (import a helper)
-        from ragnificent_rs import (
-            document_to_xml,
-            parse_markdown_to_document,
-        )
+        from ragnificent_rs import document_to_xml, parse_markdown_to_document
 
         # Convert to markdown first
         markdown_content = scraper.convert_to_markdown(mock_response.text)

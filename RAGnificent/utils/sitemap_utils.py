@@ -21,7 +21,7 @@ import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple
 from urllib.parse import urljoin, urlparse
 from xml.etree.ElementTree import ParseError
 
@@ -81,7 +81,7 @@ class SitemapParser:
         self.discovered_urls: List[SitemapURL] = []
         self.processed_sitemaps: Set[str] = set()
 
-    def _make_request(self, url: str) -> Optional[Union[str, requests.Response]]:
+    def _make_request(self, url: str) -> Optional[requests.Response]:
         """
         Make an HTTP request with retry logic.
 
@@ -89,25 +89,46 @@ class SitemapParser:
             url: The URL to request
 
         Returns:
-            Either the response text or the full Response object if return_full_response=True,
-            or None if the request failed
+            The Response object or None if the request failed
         """
+        from core.security import redact_sensitive_data, sanitize_headers
+        from core.validators import sanitize_url, validate_url
+
+        if not validate_url(url):
+            logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")
+            return None
+
+        sanitized_url = sanitize_url(url)
+        if sanitized_url != url:
+            logger.warning(
+                f"URL sanitized for security: {redact_sensitive_data(url)} -> {redact_sensitive_data(sanitized_url)}"
+            )
+            url = sanitized_url
+
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
+
+                if logger.isEnabledFor(logging.DEBUG):
+                    safe_headers = sanitize_headers(dict(response.headers))
+                    logger.debug(
+                        f"Request to {redact_sensitive_data(url)} succeeded with status {response.status_code}"
+                    )
+                    logger.debug(f"Response headers: {safe_headers}")
+
                 return response
             except (
                 requests.exceptions.RequestException,
                 requests.exceptions.HTTPError,
             ) as e:
                 logger.warning(
-                    f"Request error on attempt {attempt + 1}/{self.max_retries}: {e}"
+                    f"Request error on attempt {attempt + 1}/{self.max_retries} for {redact_sensitive_data(url)}: {str(e)}"
                 )
                 if attempt == self.max_retries - 1:
                     logger.error(
-                        f"Failed to retrieve {url} after {self.max_retries} attempts"
+                        f"Failed to retrieve {redact_sensitive_data(url)} after {self.max_retries} attempts"
                     )
                     return None
                 time.sleep(2**attempt)  # Exponential backoff
@@ -133,12 +154,13 @@ class SitemapParser:
         robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
 
         logger.info(f"Checking robots.txt at {robots_url}")
-        robots_content = self._make_request(robots_url)
+        response = self._make_request(robots_url)
 
-        if not robots_content:
+        if not response:
             logger.warning(f"Could not retrieve robots.txt from {robots_url}")
             return []
 
+        robots_content = response.text
         sitemap_urls = []
         for line in robots_content.splitlines():
             if line.lower().startswith("sitemap:"):
@@ -320,7 +342,7 @@ class SitemapParser:
         content_type = response.headers.get("Content-Type", "").lower()
 
         if "xml" in content_type:
-            return self._extracted_from__process_sitemap_28(response)
+            return self._process_xml_sitemap(response)
         if "html" in content_type:
             # Handle HTML sitemap
             logger.info(f"Detected HTML sitemap at {sitemap_url}")
@@ -332,13 +354,12 @@ class SitemapParser:
         )
         # Try to parse as XML anyway as a fallback
         try:
-            return self._extracted_from__process_sitemap_28(response)
+            return self._process_xml_sitemap(response)
         except Exception as e:
             logger.error(f"Failed to parse sitemap with unknown content type: {e}")
             return []
 
-    # TODO Rename this here and in `_process_sitemap`
-    def _extracted_from__process_sitemap_28(self, response):
+    def _process_xml_sitemap(self, response: requests.Response) -> List[SitemapURL]:
         # Handle XML sitemap
         content = response.text
         urls, sitemap_indices = self._parse_sitemap_xml(content)

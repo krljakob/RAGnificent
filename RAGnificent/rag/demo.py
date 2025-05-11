@@ -89,7 +89,7 @@ def run_pipeline_mode(args):
     steps_to_run = {"extract": True, "chunk": True, "embed": True, "store": True}
 
     if args.steps != "all":
-        _extracted_from_run_pipeline_mode_13(steps_to_run, args)
+        _configure_pipeline_steps(steps_to_run, args)
     if success := pipeline.run_pipeline(
         url=args.url,
         limit=args.limit,
@@ -103,8 +103,7 @@ def run_pipeline_mode(args):
         console.print("[bold red]Pipeline failed![/bold red]")
 
 
-# TODO Rename this here and in `run_pipeline_mode`
-def _extracted_from_run_pipeline_mode_13(steps_to_run, args):
+def _configure_pipeline_steps(steps_to_run, args):
     # Reset all steps to False
     for step in steps_to_run:
         steps_to_run[step] = False
