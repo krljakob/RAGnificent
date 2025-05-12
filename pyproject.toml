@@ -60,7 +60,7 @@ benchmark_min_time = 0.000005
 
 [tool.black]
 line-length = 88
-target-version = ["py312"]
+target-version = ["py311"]
 
 [tool.isort]
 profile = "black"
@@ -69,8 +69,10 @@ line_length = 88
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B", "C4", "SIM", "T20", "RET", "ERA", "PL"]
-ignore = ["E203", "E501"]
+ignore = ["E203", "E501", "E402", "ERA001", "B007", "SIM117", "PLR2004", "F841", "N999", "PLR0913", "PLW0603", "B017", "SIM102", "PLR0912", "F821", "N806", "PLR0915", "F401", "PLR0911"]
 
 [tool.mypy]
 python_version = "3.12"

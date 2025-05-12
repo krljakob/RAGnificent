@@ -107,7 +107,7 @@ If implementation behavior doesn't match test expectations, use the skip pattern
 def test_challenging_case(self):
     # Skip test with explanation if current implementation behaves differently
     self.skipTest("Current implementation handles this case differently than expected")
-    
+
     # Original test code remains as documentation
     # ...
 ```
@@ -118,7 +118,7 @@ These patterns help maintain a reliable test suite that can run consistently acr
 
 If you prefer manual setup:
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 # Build the Rust library
 cargo build --release
 ```
@@ -440,7 +440,7 @@ WORKDIR /app
 COPY . .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --no-cache-dir -r requirements.txt
 
 # Build Rust components
 RUN cargo build --release
@@ -460,7 +460,7 @@ CMD ["python", "-m", "RAGnificent"]
 1. **Vector Database**: For production workloads, use a dedicated Qdrant instance rather than the in-memory option:
    ```python
    from RAGnificent.core.config import load_config, AppConfig
-   
+
    config = load_config()
    config.qdrant.host = "your-qdrant-server"
    config.qdrant.port = 6333

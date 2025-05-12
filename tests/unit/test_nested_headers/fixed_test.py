@@ -44,9 +44,6 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
             self.nested_markdown, "https://example.com/test"
         )
 
-        for _i, chunk in enumerate(chunks):
-            pass
-
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
 
         subtopic_1_1_chunks = [

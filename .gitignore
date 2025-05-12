@@ -186,3 +186,4 @@ dmypy.json
 .ssh
 .ssh.pub
 **/.claude/settings.local.json
+dev/

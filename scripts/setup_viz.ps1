@@ -5,8 +5,8 @@ python -m venv .venv
 
 # Install Python dependencies
 Write-Host "Installing Python dependencies..." -ForegroundColor Green
-python -m pip install --upgrade pip
-python -m pip install -r scripts/requirements.txt
+python -m uv pip install --upgrade uv pip
+python -m uv pip install -r scripts/requirements.txt
 
 # Generate visualizations
 Write-Host "Generating benchmark visualizations..." -ForegroundColor Green

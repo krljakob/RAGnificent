@@ -56,16 +56,10 @@ def main():
             query="What is retrieval-augmented generation?", limit=3
         )
 
-        for _i, _result in enumerate(search_results):
-            pass
-
         pipeline.query_with_context(
             query="Explain retrieval-augmented generation in simple terms",
             max_tokens=200,
         )
-
-    else:
-        pass
 
 
 if __name__ == "__main__":
