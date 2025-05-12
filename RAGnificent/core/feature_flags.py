@@ -253,7 +253,7 @@ class FeatureGate:
         import hashlib
 
         hash_input = f"{self.user_id_salt}:{user_id}:{self.feature}"
-        hash_value = int(hashlib.md5(hash_input.encode()).hexdigest(), 16)
+        hash_value = int(hashlib.sha256(hash_input.encode()).hexdigest(), 16)
 
         user_percentage = (hash_value % 10000) / 100.0
 
