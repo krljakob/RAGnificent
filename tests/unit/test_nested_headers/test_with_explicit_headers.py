@@ -21,9 +21,6 @@ class TestNestedHeaderChunking(unittest.TestCase):
         """Test that markdown sections are correctly parsed."""
         sections = self.chunker._parse_markdown_sections(self.nested_markdown)
 
-        for _i, _section in enumerate(sections):
-            pass
-
         self.assertGreaterEqual(len(sections), 5, "Should find at least 5 sections")
 
         header_levels = [
@@ -47,9 +44,6 @@ class TestNestedHeaderChunking(unittest.TestCase):
         chunks = self.chunker.create_chunks_from_markdown(
             self.nested_markdown, "https://example.com/test"
         )
-
-        for _i, _chunk in enumerate(chunks):
-            pass
 
         self.assertGreater(len(chunks), 1, "Should create multiple chunks")
 

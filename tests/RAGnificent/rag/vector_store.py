@@ -124,7 +124,7 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
 
     except ImportError as exc:
         logger.error(
-            "Qdrant client not installed. Install with: pip install qdrant-client"
+            "Qdrant client not installed. Install with: uv pip install qdrant-client"
         )
         raise QdrantConnectionError("Qdrant client not installed") from exc
 

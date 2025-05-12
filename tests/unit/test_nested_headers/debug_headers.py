@@ -33,10 +33,7 @@ We want to verify that the parent headers are correctly tracked and included.
 The hierarchy should show that this is under Subtopic 2, not Subtopic 1.
 """
 
-    for _i, line in enumerate(nested_markdown.split("\n")):
-        pass
-
-    for _i, line in enumerate(nested_markdown.split("\n")):
+    for line in nested_markdown.split("\n"):
         if (
             match := re.match(r"^(#+)\s+(.*?)$", line.strip())
         ) or line.strip().startswith("#"):
@@ -45,9 +42,6 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1.
     chunker = ContentChunker(chunk_size=500, chunk_overlap=100)
 
     sections = chunker._parse_markdown_sections(nested_markdown)
-
-    for _i, _section in enumerate(sections):
-        pass
 
 
 if __name__ == "__main__":

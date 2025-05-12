@@ -35,9 +35,9 @@ class RequestCache:
         self.max_age = max_age
         self.max_memory_items = max_memory_items
         self.max_memory_size_mb = max_memory_size_mb
-        self.memory_cache: Dict[str, Tuple[str, float]] = (
-            {}
-        )  # url -> (content, timestamp)
+        self.memory_cache: Dict[
+            str, Tuple[str, float]
+        ] = {}  # url -> (content, timestamp)
         self.current_memory_usage = 0  # Approximate memory usage in bytes
 
     def _get_cache_key(self, url: str) -> str:

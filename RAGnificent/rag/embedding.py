@@ -164,7 +164,7 @@ class SentenceTransformerEmbedding:
 
         except ImportError as e:
             logger.error(
-                "SentenceTransformers package not installed. Please install with: pip install sentence-transformers"
+                "SentenceTransformers package not installed. Please install with: uv pip install sentence-transformers"
             )
             raise EmbeddingModelError(
                 "SentenceTransformers package not installed"
@@ -278,7 +278,7 @@ class OpenAIEmbedding:
 
         except ImportError as e:
             logger.error(
-                "OpenAI package not installed. Please install with: pip install openai"
+                "OpenAI package not installed. Please install with: uv pip install openai"
             )
             raise EmbeddingModelError("OpenAI package not installed") from e
 
@@ -421,9 +421,11 @@ class OpenAIEmbedding:
             texts = [text] if is_single_text else text
 
             # Check cache and prepare texts for embedding
-            cached_embeddings, texts_to_embed, original_indices = (
-                self._get_cached_embeddings(texts, is_single_text)
-            )
+            (
+                cached_embeddings,
+                texts_to_embed,
+                original_indices,
+            ) = self._get_cached_embeddings(texts, is_single_text)
 
             if not texts_to_embed:
                 if not is_single_text:
@@ -472,7 +474,7 @@ class TFIDFEmbedding:
 
         except ImportError as e:
             logger.error(
-                "Scikit-learn package not installed. Please install with: pip install scikit-learn"
+                "Scikit-learn package not installed. Please install with: uv pip install scikit-learn"
             )
             raise EmbeddingModelError("Scikit-learn package not installed") from e
 

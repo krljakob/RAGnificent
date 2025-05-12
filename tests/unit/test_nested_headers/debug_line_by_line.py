@@ -57,11 +57,6 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
                 else:
                     break
 
-        if is_header:
-            pass
-        else:
-            pass
-
 
 if __name__ == "__main__":
     debug_markdown_parsing()

@@ -32,9 +32,9 @@ if not test_module_symlink.exists() and ragnificent_dir.exists():
         pass
 
 # Modify Python path to include the project root for absolute imports
-os.environ["PYTHONPATH"] = (
-    f"{project_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"
-)
+os.environ[
+    "PYTHONPATH"
+] = f"{project_root}{os.pathsep}{os.environ.get('PYTHONPATH', '')}"
 
 
 # Run pytest with the specified arguments

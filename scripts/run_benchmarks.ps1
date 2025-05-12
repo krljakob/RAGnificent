@@ -5,7 +5,7 @@ python -m venv .venv
 
 # Install Python dependencies
 Write-Host "Installing Python dependencies..." -ForegroundColor Green
-python -m pip install -r scripts/requirements.txt
+python -m uv pip install -r scripts/requirements.txt
 
 # Run Rust benchmarks
 Write-Host "Running Rust benchmarks..." -ForegroundColor Green

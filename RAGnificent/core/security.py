@@ -7,11 +7,12 @@ and its users.
 """
 
 import logging
-import bleach
 import re
 import time
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import bleach
 
 logger = logging.getLogger(__name__)
 

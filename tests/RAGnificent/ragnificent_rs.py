@@ -3,7 +3,7 @@ Python interface to the Rust implementation of RAGnificent components.
 This module provides a fallback to Python implementations if the Rust extension is not available.
 
 To build the Rust extension:
-1. Install maturin: pip install maturin
+1. Install maturin: uv pip install maturin
 2. Build the extension: maturin develop
 """
 

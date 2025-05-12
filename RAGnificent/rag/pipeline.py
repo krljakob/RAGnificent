@@ -8,23 +8,16 @@ combining Rust-optimized scraping with embedding, vector storage, and search.
 import json
 import logging
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from core.config import EmbeddingModelType
-
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from core.config import ChunkingStrategy, get_config
-from core.scraper import MarkdownScraper
-from rag.embedding import get_embedding_service
-from rag.search import SearchResult, get_search
-from rag.vector_store import get_vector_store
-from utils.chunk_utils import ContentChunker
+from ..core.config import ChunkingStrategy, EmbeddingModelType, get_config
+from ..core.scraper import MarkdownScraper
+from ..utils.chunk_utils import ContentChunker
+from .embedding import get_embedding_service
+from .search import SearchResult, get_search
+from .vector_store import get_vector_store
 
 # Optional LLM integration for RAG
 try:
@@ -103,7 +96,7 @@ class Pipeline:
         )
 
         # Initialize embedding service
-        from core.config import EmbeddingModelType
+        from ..core.config import EmbeddingModelType
 
         # Convert string to EmbeddingModelType enum if provided
         model_type_enum = None
@@ -297,8 +290,8 @@ class Pipeline:
         Returns:
             List of document dictionaries
         """
-        from core.security import redact_sensitive_data, secure_file_path
-        from core.validators import (
+        from ..core.security import redact_sensitive_data, secure_file_path
+        from ..core.validators import (
             validate_file_path,
             validate_output_format,
             validate_url,
@@ -1159,15 +1152,17 @@ Always cite your sources by referencing the document numbers.
                     chunks=chunk_data, output_file="embedded_chunks.json"
                 )
 
-            embed_success, embedded_chunks, pipeline_result = (
-                self._execute_pipeline_step(
-                    "embedded_chunks",
-                    embed_fn,
-                    chunks,
-                    run_chunk,
-                    chunk_success,
-                    pipeline_result,
-                )
+            (
+                embed_success,
+                embedded_chunks,
+                pipeline_result,
+            ) = self._execute_pipeline_step(
+                "embedded_chunks",
+                embed_fn,
+                chunks,
+                run_chunk,
+                chunk_success,
+                pipeline_result,
             )
 
             if not embed_success and run_store:

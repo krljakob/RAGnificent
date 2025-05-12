@@ -498,9 +498,7 @@ class AppConfig:
                 return [convert_to_serializable(item) for item in obj]
             if isinstance(obj, Path):
                 return str(obj)
-            if isinstance(obj, Enum):
-                return obj.value
-            return obj
+            return obj.value if isinstance(obj, Enum) else obj
 
         config_dict = convert_to_serializable(config_dict)
 

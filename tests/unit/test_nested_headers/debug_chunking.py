@@ -35,15 +35,11 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1.
 """
 
     sections = chunker._parse_markdown_sections(nested_markdown)
-    for _i, _section in enumerate(sections):
-        pass
-
     chunks = chunker.create_chunks_from_markdown(
         nested_markdown, "https://example.com/test"
     )
 
-    for _i, chunk in enumerate(chunks):
-
+    for chunk in chunks:
         if "Nested Subtopic 1.1" in chunk.metadata.get("heading_path", ""):
             pass
         if "Nested Subtopic 2.1" in chunk.metadata.get("heading_path", ""):

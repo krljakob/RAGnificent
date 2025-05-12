@@ -29,21 +29,16 @@ Again, this paragraph is intentionally verbose to trigger the chunking algorithm
 We want to verify that the parent headers are correctly tracked and included.
 The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
 
-    for i, char in enumerate(nested_markdown[:100]):  # First 100 chars only
-        pass
-
     lines = nested_markdown.split("\n")
 
     for i, line in enumerate(lines):
-        if i < 10:  # First 10 lines only
-
-            if line.strip().startswith("#"):
-                count = 0
-                for char in line.strip():
-                    if char == "#":
-                        count += 1
-                    else:
-                        break
+        if i < 10 and line.strip().startswith("#"):
+            count = 0
+            for char in line.strip():
+                if char == "#":
+                    count += 1
+                else:
+                    break
 
 
 if __name__ == "__main__":
