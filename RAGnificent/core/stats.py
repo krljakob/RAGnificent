@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 class StatsMixin:
     """Mixin class for statistics collection functionality."""
-    def __init__(self, *args, enable_stats: bool = True, **kwargs):
+    def __init__(self, *args, *, enable_stats: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
         self.enable_stats = enable_stats
 
