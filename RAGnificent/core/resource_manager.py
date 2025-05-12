@@ -22,7 +22,9 @@ import psutil
 logger = logging.getLogger(__name__)
 
 
-class ResourceManager:
+from .stats import StatsMixin
+
+class ResourceManager(StatsMixin):
     """
     Centralized resource manager for the application.
 
@@ -55,7 +57,7 @@ class ResourceManager:
         self.max_connections = max_connections
         self.max_thread_workers = max_thread_workers
         self.cleanup_interval = cleanup_interval
-        self.enable_monitoring = enable_monitoring
+        super().__init__(enable_stats=enable_monitoring)
 
         self.connection_pools: Dict[str, Any] = {}
 
@@ -531,7 +533,7 @@ class ConnectionPool:
         finally:
             self.release_connection(conn)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def _get_stats_implementation(self) -> Dict[str, Any]:
         """
         Get statistics about the connection pool.
 

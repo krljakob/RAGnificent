@@ -34,7 +34,9 @@ class DomainStats:
     backoff_until: Optional[float] = None
 
 
-class RequestThrottler:
+from .stats import StatsMixin
+
+class RequestThrottler(StatsMixin):
     """
     Advanced request throttler with domain-specific rate limiting and adaptive throttling.
 
@@ -75,7 +77,7 @@ class RequestThrottler:
         self.adaptive_throttling = adaptive_throttling
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        self.enable_stats = enable_stats
+        super().__init__(enable_stats=enable_stats)
 
         self.domain_last_request: Dict[str, float] = defaultdict(float)
         self.domain_stats: Dict[str, DomainStats] = defaultdict(DomainStats)
@@ -357,15 +359,13 @@ class RequestThrottler:
 
         return retry_after
 
-    def get_stats(self) -> Dict[str, Any]:
+    def _get_stats_implementation(self) -> Dict[str, Any]:
         """
         Get throttling statistics.
 
         Returns:
             Dictionary of throttling statistics
         """
-        if not self.enable_stats:
-            return {"stats_disabled": True}
 
         with self.lock:
             stats = {
