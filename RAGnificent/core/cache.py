@@ -17,7 +17,9 @@ from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
 logger = logging.getLogger("request_cache")
 
 
-class RequestCache:
+from .stats import StatsMixin
+
+class RequestCache(StatsMixin):
     """
     Advanced cache for HTTP requests with TTL, compression, and monitoring.
 
@@ -56,7 +58,7 @@ class RequestCache:
         self.max_memory_items = max_memory_items
         self.max_memory_size_mb = max_memory_size_mb
         self.compression_threshold = compression_threshold
-        self.enable_stats = enable_stats
+        super().__init__(enable_stats=enable_stats)
 
         self.memory_cache: Dict[str, Tuple[str, float, Optional[int], bool]] = {}
         self.current_memory_usage = 0  # Approximate memory usage in bytes
@@ -510,15 +512,13 @@ class RequestCache:
 
         return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def _get_stats_implementation(self) -> Dict[str, Any]:
         """
         Get cache statistics.
 
         Returns:
             Dictionary of cache statistics
         """
-        if not self.enable_stats:
-            return {"stats_disabled": True}
 
         # Calculate hit rate
         total_requests = self.stats["hits"] + self.stats["misses"]
