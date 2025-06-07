@@ -6,16 +6,24 @@ from pathlib import Path
 
 import yaml
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-from RAGnificent.core.config import (
-    AppConfig,
-    ChunkingStrategy,
-    EmbeddingModelType,
-    load_config,
-    load_configs_from_directory,
-)
+try:
+    from RAGnificent.core.config import (
+        AppConfig,
+        ChunkingStrategy,
+        EmbeddingModelType,
+        load_config,
+        load_configs_from_directory,
+    )
+except ImportError:
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root))
+    from RAGnificent.core.config import (
+        AppConfig,
+        ChunkingStrategy,
+        EmbeddingModelType,
+        load_config,
+        load_configs_from_directory,
+    )
 
 
 class TestConfigFileSupport(unittest.TestCase):
@@ -24,12 +32,12 @@ class TestConfigFileSupport(unittest.TestCase):
     def test_app_config_initialization_with_dict_override(self):
         """Ensure that AppConfig applies overrides from config_dict"""
         override = {
-            "chunking_strategy": ChunkingStrategy.SENTENCE.value,
+            "chunking_strategy": ChunkingStrategy.SEMANTIC.value,
             "embedding_model_type": EmbeddingModelType.OPENAI.value,
         }
         config = AppConfig(config_dict=override)
         # Overrides should map back to enum values
-        self.assertEqual(config.chunking_strategy, ChunkingStrategy.SENTENCE)
+        self.assertEqual(config.chunking_strategy, ChunkingStrategy.SEMANTIC)
         self.assertEqual(config.embedding_model_type, EmbeddingModelType.OPENAI)
 
     def setUp(self):

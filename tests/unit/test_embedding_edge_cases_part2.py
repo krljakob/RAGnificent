@@ -8,16 +8,23 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-project_root = Path(__file__).parent.parent.parent
-rag_path = project_root / "RAGnificent" / "rag"
-sys.path.insert(0, str(project_root))
-
-from RAGnificent.rag.embedding import (
-    EmbeddingAPIError,
-    EmbeddingModelError,
-    OpenAIEmbedding,
-    SentenceTransformerEmbedding,
-)
+try:
+    from RAGnificent.rag.embedding import (
+        EmbeddingAPIError,
+        EmbeddingModelError,
+        OpenAIEmbedding,
+        SentenceTransformerEmbedding,
+    )
+except ImportError:
+    project_root = Path(__file__).parent.parent.parent
+    rag_path = project_root / "RAGnificent" / "rag"
+    sys.path.insert(0, str(project_root))
+    from RAGnificent.rag.embedding import (
+        EmbeddingAPIError,
+        EmbeddingModelError,
+        OpenAIEmbedding,
+        SentenceTransformerEmbedding,
+    )
 
 
 class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
@@ -40,7 +47,7 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
         """Clean up test environment."""
         self.config_patcher.stop()
 
-    @mock.patch("RAGnificent.rag.embedding.SentenceTransformer")
+    @mock.patch("sentence_transformers.SentenceTransformer", create=True)
     def test_sentence_transformer_import_error(self, mock_st):
         """Test handling of SentenceTransformer import error."""
         mock_st.side_effect = ImportError("No module named 'sentence_transformers'")
@@ -48,7 +55,7 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
         with self.assertRaises(EmbeddingModelError):
             SentenceTransformerEmbedding()
 
-    @mock.patch("RAGnificent.rag.embedding.SentenceTransformer")
+    @mock.patch("sentence_transformers.SentenceTransformer", create=True)
     def test_sentence_transformer_model_error(self, mock_st):
         """Test handling of SentenceTransformer model loading error."""
         mock_st.side_effect = Exception("Model not found")
@@ -56,7 +63,7 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
         with self.assertRaises(EmbeddingModelError):
             SentenceTransformerEmbedding()
 
-    @mock.patch("RAGnificent.rag.embedding.SentenceTransformer")
+    @mock.patch("sentence_transformers.SentenceTransformer", create=True)
     def test_sentence_transformer_embedding_error(self, mock_st):
         """Test handling of SentenceTransformer embedding error."""
         mock_model = mock.MagicMock()
@@ -76,23 +83,23 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
             with self.assertRaises(EmbeddingModelError):
                 OpenAIEmbedding()
 
-    @mock.patch("RAGnificent.rag.embedding.openai")
+    @mock.patch("openai.embeddings.create", create=True)
     def test_openai_api_error(self, mock_openai):
         """Test handling of OpenAI API error."""
-        mock_openai.embeddings.create.side_effect = Exception("API error")
+        mock_openai.side_effect = Exception("API error")
 
         embedding_model = OpenAIEmbedding()
 
         with self.assertRaises(EmbeddingAPIError):
             embedding_model.embed("Test text")
 
-    @mock.patch("RAGnificent.rag.embedding.openai")
+    @mock.patch("openai.embeddings.create", create=True)
     def test_openai_retry_logic(self, mock_openai):
         """Test OpenAI retry logic for transient errors."""
         mock_response = mock.MagicMock()
         mock_response.data = [mock.MagicMock(embedding=[0.1, 0.2, 0.3])]
 
-        mock_openai.embeddings.create.side_effect = [
+        mock_openai.side_effect = [
             Exception("Transient error"),
             mock_response,
         ]
@@ -102,6 +109,4 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
         result = embedding_model.embed("Test text")
 
         self.assertIsNotNone(result, "Should return embedding after successful retry")
-        self.assertEqual(
-            mock_openai.embeddings.create.call_count, 2, "Should have called API twice"
-        )
+        self.assertEqual(mock_openai.call_count, 2, "Should have called API twice")

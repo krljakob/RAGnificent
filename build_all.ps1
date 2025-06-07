@@ -17,11 +17,10 @@ uv pip install -r requirements.txt
 
 # 4. Build Rust extension with maturin (in venv)
 Write-Host "Building Rust extension with maturin..."
-maturin build --release
 maturin develop --release
 
 # 5. Run tests
 Write-Host "Running tests..."
-pytest --maxfail=0 --disable-warnings
+pytest
 
 Write-Host "Build and test complete!"

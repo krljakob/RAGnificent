@@ -17,7 +17,11 @@ from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
 logger = logging.getLogger("request_cache")
 
 
-from .stats import StatsMixin
+try:
+    from .stats import StatsMixin
+except ImportError:
+    from stats import StatsMixin
+
 
 class RequestCache(StatsMixin):
     """

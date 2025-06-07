@@ -22,7 +22,11 @@ import psutil
 logger = logging.getLogger(__name__)
 
 
-from .stats import StatsMixin
+try:
+    from .stats import StatsMixin
+except ImportError:
+    from stats import StatsMixin
+
 
 class ResourceManager(StatsMixin):
     """

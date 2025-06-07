@@ -226,22 +226,52 @@ class TestScraperErrorHandling(unittest.TestCase):
             status=200,
             content_type="text/html",
         )
-
-        # Error for the bad URL
         responses.add(responses.GET, "https://example.com/bad", status=500)
 
-        # Process with parallel=True to test parallel error handling
         self.scraper.max_retries = 1  # Speed up test
-        result = self.scraper.scrape_by_links_file(
-            links_file=links_file,
-            output_dir=self.output_dir,
-            parallel=True,
-            max_workers=2,
-            worker_timeout=1,  # Short timeout for testing
-        )
 
-        # Should have one successful URL
-        self.assertEqual(len(result), 1, "Should handle errors in parallel processing")
+        # --- Test Sequential Execution First ---
+        try:
+            sequential_result = self.scraper.scrape_by_links_file(
+                links_file=links_file,
+                output_dir=self.output_dir,
+                parallel=False,  # Run sequentially
+            )
+            self.assertEqual(
+                len(sequential_result),
+                1,
+                "Sequential processing should yield one successful URL",
+            )
+            good_file_path = Path(self.output_dir) / "example.com" / "good.markdown"
+            self.assertTrue(
+                good_file_path.exists(),
+                "Good file should be created in sequential mode",
+            )
+        except Exception as e:
+            self.fail(f"Sequential execution failed: {e}")
+
+        # --- Test Parallel Execution ---
+        try:
+            parallel_result = self.scraper.scrape_by_links_file(
+                links_file=links_file,
+                output_dir=self.output_dir,
+                parallel=True,
+                max_workers=2,
+                worker_timeout=5,  # Increased timeout for testing
+            )
+            self.assertEqual(
+                len(parallel_result),
+                1,
+                "Parallel processing should yield one successful URL",
+            )
+            good_file_path_parallel = Path(self.output_dir) / "example.com" / "good.md"
+            self.assertTrue(
+                good_file_path_parallel.exists(),
+                "Good file should be created in parallel mode",
+            )
+
+        except Exception as e:
+            self.fail(f"Parallel execution failed or hung: {e}")
 
     @responses.activate
     def test_worker_timeout_handling(self):

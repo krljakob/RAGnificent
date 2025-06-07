@@ -34,7 +34,10 @@ if str(core_path) not in sys.path:
     sys.path.append(str(core_path))
 
 # Now import directly from the module
-from throttle import RequestThrottler
+try:
+    from throttle import RequestThrottler
+except ImportError:
+    from core.throttle import RequestThrottler
 
 logger = logging.getLogger("sitemap_parser")
 
