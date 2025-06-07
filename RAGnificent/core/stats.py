@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 class StatsMixin:
     """Mixin class for statistics collection functionality."""
+
     def __init__(self, *args, enable_stats: bool = True, **kwargs):
         super().__init__(*args, **kwargs)
         self.enable_stats = enable_stats
@@ -11,7 +12,7 @@ class StatsMixin:
     def get_stats(self) -> Dict[str, Any]:
         """
         Get statistics about the component.
-        
+
         Returns:
             Dictionary of component statistics
         """

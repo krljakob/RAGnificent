@@ -210,16 +210,13 @@ class TestScraperErrorHandling(unittest.TestCase):
     @responses.activate
     def test_parallel_processing_error_handling(self):
         """Test error handling with parallel processing."""
-        print("\\n[DEBUG] Starting test_parallel_processing_error_handling")
         # Create output directory
         os.makedirs(self.output_dir, exist_ok=True)
-        print(f"[DEBUG] Output directory: {self.output_dir}")
 
         # Create a links file
         links_file = os.path.join(self.temp_dir, "links.txt")
         with open(links_file, "w") as f:
             f.write("https://example.com/good\nhttps://example.com/bad\n")
-        print(f"[DEBUG] Links file created: {links_file}")
 
         # Mock responses for the URLs
         responses.add(
@@ -230,29 +227,30 @@ class TestScraperErrorHandling(unittest.TestCase):
             content_type="text/html",
         )
         responses.add(responses.GET, "https://example.com/bad", status=500)
-        print("[DEBUG] Mock responses added for /good (200) and /bad (500)")
 
         self.scraper.max_retries = 1  # Speed up test
 
         # --- Test Sequential Execution First ---
-        print("\\n[DEBUG] Testing sequential execution...")
         try:
             sequential_result = self.scraper.scrape_by_links_file(
                 links_file=links_file,
                 output_dir=self.output_dir,
-                parallel=False, # Run sequentially
+                parallel=False,  # Run sequentially
             )
-            print(f"[DEBUG] Sequential execution result: {sequential_result}")
-            self.assertEqual(len(sequential_result), 1, "Sequential processing should yield one successful URL")
+            self.assertEqual(
+                len(sequential_result),
+                1,
+                "Sequential processing should yield one successful URL",
+            )
             good_file_path = Path(self.output_dir) / "example.com" / "good.markdown"
-            self.assertTrue(good_file_path.exists(), "Good file should be created in sequential mode")
-            print("[DEBUG] Sequential execution successful and assertions passed.")
+            self.assertTrue(
+                good_file_path.exists(),
+                "Good file should be created in sequential mode",
+            )
         except Exception as e:
-            print(f"[DEBUG] Error during sequential execution: {e}")
             self.fail(f"Sequential execution failed: {e}")
 
         # --- Test Parallel Execution ---
-        print("\\n[DEBUG] Testing parallel execution...")
         try:
             parallel_result = self.scraper.scrape_by_links_file(
                 links_file=links_file,
@@ -261,17 +259,19 @@ class TestScraperErrorHandling(unittest.TestCase):
                 max_workers=2,
                 worker_timeout=5,  # Increased timeout for testing
             )
-            print(f"[DEBUG] Parallel execution result: {parallel_result}")
-            self.assertEqual(len(parallel_result), 1, "Parallel processing should yield one successful URL")
+            self.assertEqual(
+                len(parallel_result),
+                1,
+                "Parallel processing should yield one successful URL",
+            )
             good_file_path_parallel = Path(self.output_dir) / "example.com" / "good.md"
-            self.assertTrue(good_file_path_parallel.exists(), "Good file should be created in parallel mode")
-            print("[DEBUG] Parallel execution successful and assertions passed.")
+            self.assertTrue(
+                good_file_path_parallel.exists(),
+                "Good file should be created in parallel mode",
+            )
 
         except Exception as e:
-            print(f"[DEBUG] Error during parallel execution: {e}")
             self.fail(f"Parallel execution failed or hung: {e}")
-        
-        print("[DEBUG] Finished test_parallel_processing_error_handling\\n")
 
     @responses.activate
     def test_worker_timeout_handling(self):

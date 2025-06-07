@@ -19,6 +19,7 @@ try:
     from RAGnificent.utils.chunk_utils import ContentChunker
 except ImportError:
     import sys
+
     project_root = Path(__file__).parent.parent.parent
     sys.path.insert(0, str(project_root))
     sys.path.insert(0, str(project_root / "RAGnificent"))
@@ -224,7 +225,9 @@ def mock_vector_store():
         def __init__(self):
             self.documents = []
 
-        def store_documents(self, documents, embedding_field="embedding", id_field="id"):
+        def store_documents(
+            self, documents, embedding_field="embedding", id_field="id"
+        ):
             time.sleep(0.01 * len(documents))
             self.documents.extend(documents)
             return True
@@ -342,6 +345,7 @@ def test_throttler_performance():
         def mock_request_wrapper():
             time.sleep(0.05)
             return type("Response", (), {"status_code": 200})
+
         results = throttler.execute_parallel(mock_request_wrapper, urls)
         assert len(results) == 20
 
@@ -375,15 +379,21 @@ def test_chunker_performance():
             chunker = ContentChunker(chunk_size, chunk_overlap)
 
         with PerformanceTimer(f"Chunking small content (size={chunk_size})"):
-            small_chunks = chunker.create_chunks_from_markdown(small_content, "https://example.com/small")
+            small_chunks = chunker.create_chunks_from_markdown(
+                small_content, "https://example.com/small"
+            )
             logger.info(f"Created {len(small_chunks)} chunks from small content")
 
         with PerformanceTimer(f"Chunking medium content (size={chunk_size})"):
-            medium_chunks = chunker.create_chunks_from_markdown(medium_content, "https://example.com/medium")
+            medium_chunks = chunker.create_chunks_from_markdown(
+                medium_content, "https://example.com/medium"
+            )
             logger.info(f"Created {len(medium_chunks)} chunks from medium content")
 
         with PerformanceTimer(f"Chunking large content (size={chunk_size})"):
-            large_chunks = chunker.create_chunks_from_markdown(large_content, "https://example.com/large")
+            large_chunks = chunker.create_chunks_from_markdown(
+                large_content, "https://example.com/large"
+            )
             logger.info(f"Created {len(large_chunks)} chunks from large content")
 
     from RAGnificent.core.config import ChunkingStrategy
@@ -396,13 +406,19 @@ def test_chunker_performance():
         with PerformanceTimer(f"Chunking with {strategy.name} strategy"):
             chunker = ContentChunker(500, 100)
             if strategy == ChunkingStrategy.SEMANTIC:
-                chunks = chunker.create_chunks_from_markdown(medium_content, "https://example.com/strategy")
+                chunks = chunker.create_chunks_from_markdown(
+                    medium_content, "https://example.com/strategy"
+                )
             elif strategy == ChunkingStrategy.SLIDING_WINDOW:
                 from RAGnificent.utils.chunk_utils import chunk_text
-                chunk_data = chunk_text(medium_content, chunker.chunk_size, chunker.chunk_overlap)
+
+                chunk_data = chunk_text(
+                    medium_content, chunker.chunk_size, chunker.chunk_overlap
+                )
                 chunks = [{"content": chunk} for chunk in chunk_data]
             elif strategy == ChunkingStrategy.RECURSIVE:
                 from RAGnificent.utils.chunk_utils import recursive_chunk_text
+
                 chunk_data = recursive_chunk_text(medium_content, chunker.chunk_size)
                 chunks = [{"content": chunk} for chunk in chunk_data]
 
@@ -489,7 +505,9 @@ def test_parallel_scraping_performance(test_urls):
 
     with PerformanceTimer("Parallel scraping with sitemap (5 URLs)"):
         original_discover = enhanced_scraper._discover_urls_from_sitemap
-        enhanced_scraper._discover_urls_from_sitemap = lambda base_url, min_priority=None, include_patterns=None, exclude_patterns=None, limit=None: [type('SitemapURL', (), {'loc': url}) for url in test_urls]
+        enhanced_scraper._discover_urls_from_sitemap = lambda base_url, min_priority=None, include_patterns=None, exclude_patterns=None, limit=None: [
+            type("SitemapURL", (), {"loc": url}) for url in test_urls
+        ]
 
         original_process = enhanced_scraper._process_single_url
         enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {
@@ -498,7 +516,9 @@ def test_parallel_scraping_performance(test_urls):
         }
 
         results = enhanced_scraper.scrape_by_sitemap(
-            "https://example.com/sitemap.xml", output_dir="/tmp/benchmark_output", limit=5
+            "https://example.com/sitemap.xml",
+            output_dir="/tmp/benchmark_output",
+            limit=5,
         )
         logger.info(f"Scraped {len(results)} URLs in parallel from sitemap")
 

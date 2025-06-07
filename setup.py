@@ -1,10 +1,10 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="RAGnificent",
     version="0.1.0",
     packages=find_packages(),
-    package_data={'RAGnificent': ['*.pyi']},
+    package_data={"RAGnificent": ["*.pyi"]},
     install_requires=[
         "requests>=2.32.3",
         "beautifulsoup4>=4.13.4",

@@ -109,6 +109,4 @@ class TestEmbeddingEdgeCasesPart2(unittest.TestCase):
         result = embedding_model.embed("Test text")
 
         self.assertIsNotNone(result, "Should return embedding after successful retry")
-        self.assertEqual(
-            mock_openai.call_count, 2, "Should have called API twice"
-        )
+        self.assertEqual(mock_openai.call_count, 2, "Should have called API twice")

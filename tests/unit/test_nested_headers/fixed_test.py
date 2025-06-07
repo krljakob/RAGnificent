@@ -50,9 +50,7 @@ The hierarchy should show that this is under Subtopic 2, not Subtopic 1."""
 
         # Look for chunks containing specific content since the test markdown doesn't have explicit headers
         subtopic_1_chunks = [
-            chunk
-            for chunk in chunks
-            if "content under subtopic 1" in chunk.content
+            chunk for chunk in chunks if "content under subtopic 1" in chunk.content
         ]
 
         self.assertGreater(
