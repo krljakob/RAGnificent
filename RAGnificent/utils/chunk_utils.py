@@ -201,8 +201,8 @@ class ContentChunker:
 
                 # Start new section
                 current_section = {
-                    "heading": stripped_line,
-                    "content": stripped_line + "\n",
+                    "heading": line,
+                    "content": line + "\n",
                     "level": level,
                     "path": path,
                     "path_elements": path_elements,

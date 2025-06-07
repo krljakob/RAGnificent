@@ -9,11 +9,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-from RAGnificent.core.config import ChunkingStrategy
-from RAGnificent.rag.pipeline import Pipeline
+try:
+    from RAGnificent.core.config import ChunkingStrategy
+    from RAGnificent.rag.pipeline import Pipeline
+except ImportError:
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root))
+    from RAGnificent.core.config import ChunkingStrategy
+    from RAGnificent.rag.pipeline import Pipeline
 
 
 class TestRAGIntegration(unittest.TestCase):

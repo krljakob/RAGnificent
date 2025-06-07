@@ -23,25 +23,39 @@ collection := "ragnificent"
 default:
     @just --list
 
-# Install all Python and Rust dependencies
+# Install all Python and Rust dependencies (creates venv if needed)
 setup:
+    #!/usr/bin/env bash
+    if [ ! -d ".venv" ]; then
+        echo "Creating virtual environment with uv..."
+        uv venv
+    fi
+    export PATH=".venv/bin:$PATH"
+    echo "Installing Python dependencies..."
     uv pip install -r requirements.txt
-    cargo build --release
+    echo "Building Rust extension with maturin..."
+    maturin develop --release
 
-# Build the Rust components
+# Build the Rust components with maturin
 build:
-    cargo build --release
+    maturin build --release
+    maturin develop --release
 
 # Build with JavaScript rendering support
 build-with-js:
-    cargo build --release --features real_rendering
+    maturin build --release --features real_rendering
+    maturin develop --release --features real_rendering
 
 # Run all Python tests
 test-python:
+    #!/usr/bin/env bash
+    export PATH=".venv/bin:$PATH"
     pytest
 
 # Run Python binding tests
 test-bindings:
+    #!/usr/bin/env bash
+    export PATH=".venv/bin:$PATH"
     pytest tests/rust/test_python_bindings.py -v
 
 # Run Rust tests
@@ -53,7 +67,9 @@ test: test-rust test-python
 
 # Run all tests with debug logging
 test-debug:
+    #!/usr/bin/env bash
     RUST_LOG=debug cargo test -- --nocapture
+    export PATH=".venv/bin:$PATH"
     pytest -v
 
 # Run benchmarks
@@ -66,11 +82,15 @@ bench-html:
 
 # Run benchmarks and visualize results
 bench-viz:
+    #!/usr/bin/env bash
     cargo bench
+    export PATH=".venv/bin:$PATH"
     python scripts/visualize_benchmarks.py
 
 # Format Python code
 format-python:
+    #!/usr/bin/env bash
+    export PATH=".venv/bin:$PATH"
     black . --target-version py311
     isort .
     ruff check . --fix
@@ -84,12 +104,16 @@ format: format-rust format-python
 
 # Run linting checks
 lint:
+    #!/usr/bin/env bash
     cargo clippy
+    export PATH=".venv/bin:$PATH"
     ruff check .
     mypy *.py
 
 # Full code quality check with fixes
 code-quality:
+    #!/usr/bin/env bash
+    export PATH=".venv/bin:$PATH"
     black . --target-version py311
     isort .
     ruff check . --fix
@@ -98,7 +122,7 @@ code-quality:
     cargo clippy --fix
 
 # Create a clean build for all components
-clean-build: clean build
+clean-build: clean setup
 
 # Clean build artifacts
 clean:
@@ -113,12 +137,11 @@ clean:
     find . -type d -name ".mypy_cache" -exec rm -rf {} +
     find . -type d -name ".pytest_cache" -exec rm -rf {} +
 
-# One-shot build and test for platform-specific builds
-build-all-unix:
-    ./build_all.sh
-
-build-all-windows:
-    powershell -File .\build_all.ps1
+# One-shot build and test (replaces build_all.sh functionality)
+build-all:
+    just setup
+    just test
+    @echo "Build and test complete!"
 
 # Scrape a single URL and convert to markdown
 scrape url output="output.md":

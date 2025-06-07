@@ -6,15 +6,12 @@ set -e
 
 # 1. Create .venv if not present
 if [ ! -d ".venv" ]; then
-  echo "Creating virtual environment with uv..."
-  uv venv
+    echo "Creating virtual environment with uv..."
+    uv venv
 fi
 
-# 2. Activate the venv
-# shellcheck disable=SC1091
-source .venv/bin/activate
-
-echo "Virtual environment activated."
+# 2. Set PATH to use virtual environment
+export PATH=".venv/bin:$PATH"
 
 # 3. Install Python dependencies
 echo "Installing Python dependencies..."
@@ -22,11 +19,10 @@ uv pip install -r requirements.txt
 
 # 4. Build Rust extension with maturin (in venv)
 echo "Building Rust extension with maturin..."
-maturin build --release
 maturin develop --release
 
 # 5. Run tests
 echo "Running tests..."
-pytest --maxfail=0 --disable-warnings
+pytest
 
 echo "Build and test complete!"

@@ -10,11 +10,13 @@ from unittest import mock
 
 import numpy as np
 
-project_root = Path(__file__).parent.parent.parent
-rag_path = project_root / "RAGnificent" / "rag"
-sys.path.insert(0, str(project_root))
-
-from RAGnificent.rag.search import SearchResult, SemanticSearch
+try:
+    from RAGnificent.rag.search import SearchResult, SemanticSearch
+except ImportError:
+    project_root = Path(__file__).parent.parent.parent
+    rag_path = project_root / "RAGnificent" / "rag"
+    sys.path.insert(0, str(project_root))
+    from RAGnificent.rag.search import SearchResult, SemanticSearch
 
 
 class TestSearchEdgeCases(unittest.TestCase):

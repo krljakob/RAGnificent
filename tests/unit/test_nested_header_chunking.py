@@ -2,10 +2,12 @@ import sys
 import unittest
 from pathlib import Path
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-from RAGnificent.utils.chunk_utils import ContentChunker
+try:
+    from RAGnificent.utils.chunk_utils import ContentChunker
+except ImportError:
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root))
+    from RAGnificent.utils.chunk_utils import ContentChunker
 
 
 class TestNestedHeaderChunking(unittest.TestCase):

@@ -34,7 +34,11 @@ class DomainStats:
     backoff_until: Optional[float] = None
 
 
-from .stats import StatsMixin
+try:
+    from .stats import StatsMixin
+except ImportError:
+    from stats import StatsMixin
+
 
 class RequestThrottler(StatsMixin):
     """

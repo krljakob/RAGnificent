@@ -15,14 +15,9 @@ ragnificent_path = repo_root / "RAGnificent"
 utils_path = ragnificent_path / "utils"
 core_path = ragnificent_path / "core"
 
-# Clear any existing paths that might interfere with our imports
-# but keep standard library and site-packages
-sys.path = [p for p in sys.path if "site-packages" in p or "lib" in p.lower()]
-
 # Add paths in priority order
 sys.path.insert(0, str(repo_root))  # Highest priority - allows 'RAGnificent.x' imports
 sys.path.insert(0, str(ragnificent_path))  # Next priority - allows 'utils.x' imports
-sys.path.insert(0, str(utils_path.parent))  # Next - for direct imports from utils
 
 
 # Helper function to dynamically import modules from file paths
