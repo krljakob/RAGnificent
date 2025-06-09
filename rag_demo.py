@@ -231,10 +231,7 @@ def demo_end_to_end_pipeline():
 
         print(f"🚀 Running end-to-end pipeline for: {test_url}")
 
-        # Extract, chunk, embed, and store
-        success = pipeline.process_url(test_url)
-
-        if success:
+        if success := pipeline.process_url(test_url):
             print("✅ Pipeline completed successfully")
 
             # Test search
