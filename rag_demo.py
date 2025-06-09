@@ -190,9 +190,8 @@ def demo_search_functionality(vector_store, chunks: List[Dict[str, Any]]):
             print(f"\n🔍 Query: '{query}'")
 
             # Perform search
-            results = search(
+            results = vector_store.search(
                 query=query,
-                collection_name="ragnificent_demo",
                 limit=3,
                 threshold=0.3
             )
