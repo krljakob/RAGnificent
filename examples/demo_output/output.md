@@ -452,7 +452,7 @@ Looking for categories?
 
 1. httpstat - Visualizes curl(1) statistics in a way of beauty and clarity.
 
-1. httpyac - A command line interface to execute *.http, *.rest files.
+1. httpyac - A command line interface to execute *.http,*.rest files.
 
 1. humble-explorer - cross-platform, command-line Bluetooth Low Energy scanner.
 

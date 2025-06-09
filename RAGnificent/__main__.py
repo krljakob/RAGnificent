@@ -9,7 +9,7 @@ from pathlib import Path
 # Import fix applied
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.scraper import main
+from RAGnificent.core.scraper import main
 
 if __name__ == "__main__":
     # Re-execute main with the same arguments

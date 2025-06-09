@@ -12,7 +12,8 @@ This document summarizes the major structural reorganization of the RAGnificent 
 
 ## Directory Structure Changes
 
-### Before:
+### Before
+
 ```
 RAGnificent/
 ├── Cargo.lock
@@ -35,7 +36,8 @@ RAGnificent/
 └── throttle.py
 ```
 
-### After:
+### After
+
 ```
 RAGnificent/
 ├── Cargo.lock
@@ -88,12 +90,14 @@ RAGnificent/
 ## Key Changes
 
 ### 1. Package Structure
+
 - Created a proper `RAGnificent` Python package with:
   - Package-level `__init__.py` with version information
   - Module-level `__main__.py` for CLI usage
   - Subpackages for core functionality and utilities
 
 ### 2. Code Organization
+
 - **Core Functionality**: Moved main components to `RAGnificent/core/`
   - Extracted `RequestCache` class to its own module (`cache.py`)
   - Moved and reorganized the `main.py` content into `core/scraper.py`
@@ -105,6 +109,7 @@ RAGnificent/
   - Created a version module in `utils/version.py`
 
 ### 3. Testing Structure
+
 - Reorganized tests into a proper test hierarchy:
   - Unit tests in `tests/unit/`
   - Integration tests in `tests/integration/`
@@ -112,6 +117,7 @@ RAGnificent/
   - Added a `conftest.py` for pytest configuration
 
 ### 4. Documentation and Examples
+
 - Created a dedicated `docs/` directory for documentation
   - Moved markdown documentation files
   - Created an `assets/` subdirectory for images and diagrams
@@ -120,6 +126,7 @@ RAGnificent/
   - Added a simple "hello world" example
 
 ### 5. Build System
+
 - Enhanced `pyproject.toml` with:
   - Better metadata and descriptions
   - Optional dependencies for development, testing, and JS features
@@ -127,22 +134,26 @@ RAGnificent/
   - Tool configuration for linters and formatters
 
 ## Import Updates
+
 - Updated all imports throughout the codebase to use the new package structure:
   - Changed `from main import MarkdownScraper` to `from RAGnificent.core.scraper import MarkdownScraper`
   - Changed `from sitemap_utils import SitemapParser` to `from RAGnificent.utils.sitemap_utils import SitemapParser`
   - Changed `from RAGnificent_rs import convert_html` to `from RAGnificent.RAGnificent_rs import convert_html`
 
 ## Dependency Management
+
 - Made `psutil` optional and platform-specific
 - Added proper version constraints for dependencies
 - Created dependency groups for development, testing, and optional features
 
 ## CLI Interface
+
 - Updated CLI usage to use the Python module format:
   - Changed `python main.py` to `python -m RAGnificent`
 - Ensured backward compatibility by maintaining the same command-line arguments
 
 ## Documentation Updates
+
 - Updated README.md to reflect the new structure
 - Updated import examples in documentation
 - Created this refactoring summary document

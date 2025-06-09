@@ -29,6 +29,9 @@ RAGnificent combines Python and Rust components to scrape websites and convert H
 - ✅ Robust error handling with exponential backoff
 - 🏎️ Performance optimizations and best practices
 - 🏷️ Semantic RAG chunking and parallel URL processing
+- 🔒 Security features including HTML sanitization and rate limiting
+- 🚦 Feature flags for gradual rollout of new features
+- 📊 Resource management with connection pooling and memory monitoring
 
 ## Installation
 
@@ -40,18 +43,23 @@ cd RAGnificent
 ## Quick Build & Test (Recommended)
 
 ### Option 1: One-Shot Scripts
+
 Use the provided scripts to set up everything automatically:
 
 - **Windows (PowerShell):**
+
   ```powershell
   .\build_all.ps1
   ```
+
 - **Unix/macOS (Bash):**
+
   ```bash
   ./build_all.sh
   ```
 
 These scripts will:
+
 - Create a virtual environment with `uv` if not present
 - Activate the environment
 - Install all Python dependencies
@@ -59,6 +67,7 @@ These scripts will:
 - Run the full test suite with `pytest`
 
 ### Option 2: Manual Setup (Step-by-Step)
+
 ```bash
 # Create and activate virtual environment
 uv venv
@@ -78,22 +87,26 @@ This approach gives you more control and is recommended for development work.
 ### Test Structure and Reliability
 
 #### Current Test Status
-- **90+ tests** currently working and collected (significantly improved from previous 64)
+
+- **121 tests** currently collected (significantly improved from previous 64)
 - **Major test fixes completed**: Fixed 22 failing tests including performance benchmarks, config tests, embedding edge cases, and nested header chunking
 - **Working categories**: chunk utils, main functionality, Rust bindings, benchmarks, sitemap utils, embedding service, scraper error handling, pipeline tests, search tests
 - **Test reliability**: Comprehensive fixes to method signatures, parameter passing, mock configurations, and test expectations
+- **Known issues**: One config test failing due to `chunking_strategy` attribute access
 
 #### Import Patterns
 
 RAGnificent now supports both package-based imports (recommended) and fallback imports:
 
 **Recommended approach** (with package installed in editable mode):
+
 ```python
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.utils.chunk_utils import ContentChunker
 ```
 
 **Fallback approach** for compatibility:
+
 ```python
 try:
     from .stats import StatsMixin
@@ -143,27 +156,33 @@ These patterns help maintain a reliable test suite that can run consistently acr
 The recent comprehensive test fixes addressed various issues:
 
 **Performance Tests**:
+
 - Fixed URL parameter passing in throttler execute methods
 - Added missing `source_url` parameter to chunking method calls
 - Updated mock vector store to accept required keyword arguments
 - Corrected lambda function signatures for parallel processing tests
 
 **Configuration Tests**:
+
 - Replaced invalid enum values with correct ones (e.g., `SENTENCE` → `SEMANTIC`)
 - Updated test assertions to match available configuration options
 
 **Embedding Tests**:
+
 - Updated mock decorator paths from module-level to actual import paths
 - Fixed OpenAI and SentenceTransformer mock configurations
 - Ensured mocks match conditional import patterns used in the codebase
 
 **Nested Header Tests**:
+
 - Updated test expectations to match actual chunk content structure
 - Changed from non-existent header path checks to content-based validation
 - Adjusted section parsing expectations to match real test data
 
 ### Recent Improvements
+
 Major test suite improvements include:
+
 - **Fixed 22 failing tests** across performance benchmarks, configuration, embedding edge cases, and nested header chunking
 - **Improved test reliability** with proper method signatures, parameter passing, and mock configurations
 - **Updated mock paths** to match actual import locations for better test isolation
@@ -336,6 +355,32 @@ urls = parser.filter_urls(min_priority=0.5)
 parser.export_urls_to_file(urls, "sitemap_urls.txt")
 ```
 
+## Enterprise Features
+
+### Feature Flags
+
+RAGnificent includes a comprehensive feature flag system for safe rollouts:
+
+- **Advanced chunking**: Enable experimental chunking algorithms
+- **Parallel processing**: Toggle parallel URL processing
+- **Memory optimization**: Enable memory-efficient operations
+- **Security features**: Toggle enhanced security measures
+- **Gradual rollouts**: Percentage-based feature deployment
+
+### Security Features
+
+- **HTML Sanitization**: Automatic cleaning of scraped content using bleach
+- **Rate Limiting**: Built-in rate limiting for API protection
+- **Sensitive Data Redaction**: Automatic removal of sensitive information
+- **Input Validation**: Comprehensive URL and input validation
+
+### Resource Management
+
+- **Connection Pooling**: Efficient management of HTTP connections
+- **Memory Monitoring**: Track and limit memory usage
+- **Graceful Shutdown**: Proper cleanup of resources
+- **Thread Management**: Control concurrent operations
+
 ## Sitemap Integration Features
 
 The library intelligently discovers and parses XML sitemaps to scrape exactly what you need:
@@ -372,7 +417,7 @@ pytest tests/rust/test_python_bindings.py -v         # Rust binding tests
 pytest tests/unit/test_main.py -v                    # Main functionality tests
 ```
 
-**Current Status**: 90+ tests working with comprehensive fixes applied to eliminate most test failures.
+**Current Status**: 121 tests collected with comprehensive fixes applied to eliminate most test failures.
 
 ## Running Tests
 
@@ -428,6 +473,19 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
     - `scraper.py`: Main scraper implementation
     - `cache.py`: Request caching with memory management
     - `throttle.py`: Rate limiting for web requests
+    - `config.py`: Configuration management with environment support
+    - `feature_flags.py`: Feature toggle system
+    - `resource_manager.py`: Connection pooling and memory management
+    - `security.py`: Security features (rate limiting, sanitization)
+    - `stats.py`: Statistics mixin for tracking
+    - `validators.py`: Input validation
+  - `rag/`: RAG-specific components
+    - `embedding.py`: Text embedding service
+    - `vector_store.py`: Vector database interface
+    - `search.py`: Semantic search implementation
+    - `pipeline.py`: End-to-end RAG pipeline
+    - `chat.py`: Chat interface for RAG
+    - `demo.py`: Demo utilities
   - `utils/`: Utility modules
     - `chunk_utils.py`: Utilities for chunking text for RAG
     - `sitemap_utils.py`: Sitemap parsing and URL discovery
@@ -437,9 +495,10 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
 - `src/`: Rust source code
   - `lib.rs`: Main library and Python bindings
   - `html_parser.rs`: HTML parsing utilities
-  - `markdown_converter.rs`: HTML to Markdown conversion
+  - `markdown_converter.rs`: HTML to Markdown/JSON/XML conversion
   - `chunker.rs`: Markdown chunking logic
-  - `js_renderer.rs`: JavaScript page rendering
+  - `js_renderer.rs`: JavaScript page rendering (optional feature)
+  - `tests.rs`: Rust unit tests
 
 - `tests/`: Test files
   - `unit/`: Python unit tests
@@ -458,8 +517,9 @@ This will create a `benchmark_results.png` file with a bar chart showing the per
   - `assets/`: Documentation assets like images
 
 - `main.py`: Legacy CLI entry point (use `python -m RAGnificent` instead)
-
-- `v1_implementation/`: Previous version of the implementation (for reference)
+- `webui.py`: Web interface for RAGnificent
+- `view_qdrant_data.py`: Utility to inspect vector database content
+- `simple_demo.py`: Simple demonstration script
 
 ### Running with Real JavaScript Rendering
 
@@ -516,6 +576,7 @@ CMD ["python", "-m", "RAGnificent"]
 ### Scaling Considerations
 
 1. **Vector Database**: For production workloads, use a dedicated Qdrant instance rather than the in-memory option:
+
    ```python
    from RAGnificent.core.config import load_config, AppConfig
 
@@ -532,11 +593,13 @@ CMD ["python", "-m", "RAGnificent"]
    - Setting up a separate embedding service with API endpoints
 
 3. **Rate Limiting**: Configure appropriate rate limits for external requests:
+
    ```python
    config.scraper.rate_limit = 0.5  # 2 requests per second
    ```
 
 4. **Memory Management**: Adjust cache settings based on available resources:
+
    ```python
    config.scraper.cache_enabled = True
    config.scraper.cache_max_age = 86400  # 24 hours
@@ -545,6 +608,7 @@ CMD ["python", "-m", "RAGnificent"]
 ### Monitoring and Logging
 
 1. **Structured Logging**: Configure JSON logging for production:
+
    ```python
    config.logging.format = '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s"}'
    config.logging.file = "/var/log/ragnificent/app.log"
@@ -574,12 +638,29 @@ CMD ["python", "-m", "RAGnificent"]
 
 ## Dependencies
 
+### Core Dependencies
+
+- **Python 3.12+**: Required Python version
 - requests: Web scraping and HTTP requests
 - beautifulsoup4: HTML parsing
-- pytest: Testing framework
+- pytest: Testing framework  
 - typing-extensions: Additional type checking support
 - pathlib: Object-oriented filesystem paths
 - python-dateutil: Powerful extensions to the standard datetime module
+
+### ML/Embedding Dependencies
+
+- sentence-transformers>=4.1.0: For text embeddings
+- torch>=2.7.0: PyTorch for ML operations
+- transformers==4.51.3: Hugging Face transformers
+- qdrant-client>=1.4.0: Vector database client
+
+### Additional Features
+
+- sentry-sdk[fastapi]>=2.29.1: Error tracking and monitoring
+- bleach==6.2.0: HTML sanitization for security
+- pydantic>=2.0: Configuration management
+- python-dotenv: Environment variable loading
 
 ## Contributing
 

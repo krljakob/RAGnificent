@@ -17,7 +17,7 @@ We've implemented a two-level caching mechanism for HTTP requests in the Markdow
 
 3. **CLI Options:**
    - `--no-cache`: Disable the cache
-   - `--cache-max-age`: Maximum age of cached responses in seconds 
+   - `--cache-max-age`: Maximum age of cached responses in seconds
    - `--skip-cache`: Skip the cache and force new requests
 
 ### Performance Improvements

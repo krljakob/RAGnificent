@@ -13,7 +13,9 @@ dependencies = [
     "sentence-transformers>=4.1.0",
     "torch>=2.7.0",
     "pydantic-settings>=2.9.1",
-    "transformers==4.51.3"
+    "transformers==4.51.3",
+    "ty>=0.0.1a8",
+    "sentry-sdk[fastapi]>=2.29.1",
 ]
 
 [project.optional-dependencies]
