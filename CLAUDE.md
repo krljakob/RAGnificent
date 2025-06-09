@@ -149,7 +149,7 @@ This project includes a comprehensive `justfile` for common development tasks:
 ## Development Dependencies
 
 - **uv**: Package installer and dependency manager (preferred over pip)
-- **maturin**: Build backend for Python/Rust hybrid projects  
+- **maturin**: Build backend for Python/Rust hybrid projects
 - **pytest**: Testing framework with benchmark support
 - **ruff**: Fast Python linter and formatter
 - **black**: Python code formatter
