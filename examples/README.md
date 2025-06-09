@@ -59,7 +59,7 @@ python examples/rag_pipeline_example.py
 
 The `demo_output/` directory contains sample outputs in different formats:
 - `output.md` - Markdown format
-- `output.json` - JSON format  
+- `output.json` - JSON format
 - `output.xml` - XML format
 
 ## Running Examples
