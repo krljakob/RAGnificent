@@ -34,12 +34,11 @@ if str(core_path) not in sys.path:
 if str(utils_path) not in sys.path:
     sys.path.append(str(utils_path))
 
+# Now import directly from modules
+from cache import RequestCache
 from chunk_utils import ContentChunker, create_semantic_chunks
 from sitemap_utils import SitemapParser
 from throttle import RequestThrottler
-
-# Now import directly from modules
-from cache import RequestCache
 
 # Configure logging with more detailed formatting
 logging.basicConfig(
