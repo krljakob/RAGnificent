@@ -192,7 +192,8 @@ class Pipeline:
                 f"Pipeline configuration file not found: {config_path}"
             )
 
-        if not str(config_path).startswith(str(safe_root)):
+        # Ensure the normalized path is contained within the safe root directory
+        if not config_path.is_relative_to(safe_root):
             raise ValueError(
                 f"Access to the configuration file is not allowed: {config_path}"
             )
