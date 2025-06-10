@@ -193,7 +193,7 @@ class Pipeline:
             )
 
         # Ensure the normalized path is contained within the safe root directory
-        if not config_path.is_relative_to(safe_root):
+        if not str(config_path).startswith(str(safe_root) + os.sep):
             raise ValueError(
                 f"Access to the configuration file is not allowed: {config_path}"
             )
