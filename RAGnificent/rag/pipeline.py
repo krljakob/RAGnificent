@@ -183,19 +183,32 @@ class Pipeline:
             return config
 
         # Load from file path
-        normalized_path = os.path.normpath(config)
-        config_path = Path(normalized_path).resolve()
-        safe_root = Path("/safe/config/directory").resolve()
-
+        config_path = Path(config).resolve()
+        
+        # Define safe root directories for configuration files
+        project_root = Path(__file__).parent.parent.parent.resolve()
+        safe_roots = [
+            project_root / "config",
+            project_root / "examples", 
+            Path.cwd(),  # Current working directory
+        ]
+        
         if not config_path.exists():
             raise FileNotFoundError(
                 f"Pipeline configuration file not found: {config_path}"
             )
-
-        # Ensure the normalized path is contained within the safe root directory
-        if not str(config_path).startswith(str(safe_root) + os.sep):
+        
+        # Ensure the config path is within allowed directories
+        is_safe = any(
+            str(config_path).startswith(str(safe_root.resolve()) + os.sep) or 
+            config_path == safe_root.resolve()
+            for safe_root in safe_roots
+        )
+        
+        if not is_safe:
             raise ValueError(
-                f"Access to the configuration file is not allowed: {config_path}"
+                f"Access to configuration file outside allowed directories: {config_path}. "
+                f"Allowed directories: {[str(r) for r in safe_roots]}"
             )
 
         with open(config_path, "r") as f:
@@ -303,13 +316,18 @@ class Pipeline:
     def _execute_index_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Execute an indexing step."""
         input_dir = config.get("input_dir", self.data_dir)
-        input_dir = os.path.normpath(os.path.realpath(input_dir))
-
-        # Ensure the input_dir is within the safe root directory
-        if not input_dir.startswith(str(self.data_dir)):
+        input_dir_path = Path(input_dir).resolve()
+        data_dir_path = Path(self.data_dir).resolve()
+        
+        # Ensure the input_dir is within the allowed data directory
+        try:
+            input_dir_path.relative_to(data_dir_path)
+        except ValueError:
             raise ValueError(
-                f"Input directory {input_dir} is outside the allowed root directory {self.data_dir}"
+                f"Input directory {input_dir_path} is outside the allowed data directory {data_dir_path}"
             )
+        
+        input_dir = str(input_dir_path)
 
         # Find all markdown files in input directory
         md_files = list(Path(input_dir).glob("*.md"))

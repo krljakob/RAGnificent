@@ -8,7 +8,6 @@ Supports multiple embedding strategies including SentenceTransformers, OpenAI, a
 import hashlib
 import logging
 import os
-import pickle
 import sys
 import time
 from pathlib import Path
@@ -78,7 +77,7 @@ def compute_text_hash(text: str) -> str:
     Returns:
         Hash string
     """
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
@@ -102,8 +101,7 @@ def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
 
     if cache_path.exists():
         try:
-            with open(cache_path, "rb") as f:
-                return pickle.load(f)
+            return np.load(cache_path)
         except Exception as e:
             logger.warning(f"Failed to load cached embedding: {e}")
 
@@ -131,8 +129,7 @@ def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -
     cache_path = get_embedding_cache_path(model_name, text_hash)
 
     try:
-        with open(cache_path, "wb") as f:
-            pickle.dump(embedding, f)
+        np.save(cache_path, embedding)
         return True
     except Exception as e:
         logger.warning(f"Failed to save embedding to cache: {e}")
