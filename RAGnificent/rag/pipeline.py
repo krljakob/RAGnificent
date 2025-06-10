@@ -183,10 +183,17 @@ class Pipeline:
             return config
 
         # Load from file path
-        config_path = Path(config)
+        config_path = Path(config).resolve()
+        safe_root = Path("/safe/config/directory").resolve()
+
         if not config_path.exists():
             raise FileNotFoundError(
                 f"Pipeline configuration file not found: {config_path}"
+            )
+
+        if not str(config_path).startswith(str(safe_root)):
+            raise ValueError(
+                f"Access to the configuration file is not allowed: {config_path}"
             )
 
         with open(config_path, "r") as f:
