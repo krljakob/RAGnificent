@@ -294,6 +294,11 @@ class Pipeline:
     def _execute_index_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Execute an indexing step."""
         input_dir = config.get("input_dir", self.data_dir)
+        input_dir = os.path.normpath(os.path.realpath(input_dir))
+
+        # Ensure the input_dir is within the safe root directory
+        if not input_dir.startswith(str(self.data_dir)):
+            raise ValueError(f"Input directory {input_dir} is outside the allowed root directory {self.data_dir}")
 
         # Find all markdown files in input directory
         md_files = list(Path(input_dir).glob("*.md"))
