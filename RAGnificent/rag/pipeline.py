@@ -216,7 +216,11 @@ class Pipeline:
             )
         
         # Ensure the config path is within allowed directories
-        if not any(config_path.is_relative_to(safe_root) for safe_root in safe_roots):
+        config_path_real = os.path.realpath(config_path)  # Resolve symbolic links
+        if not any(
+            os.path.commonpath([config_path_real, str(safe_root)]) == str(safe_root)
+            for safe_root in safe_roots
+        ):
             raise ValueError(
                 f"Access to configuration file outside allowed directories: {config_path}. "
                 f"Allowed directories: {[str(r) for r in safe_roots]}"
