@@ -113,7 +113,20 @@ class Pipeline:
         pipeline_data_dir = self.pipeline_config.get(
             "data_dir"
         ) or self.pipeline_config.get("output_dir")
-        self.data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir)
+        resolved_data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir).resolve()
+        
+        # Define safe root directory for data operations
+        safe_root_dir = Path(self.config.data_dir_root).resolve()
+        
+        # Ensure the resolved data directory is within the safe root directory
+        try:
+            resolved_data_dir.relative_to(safe_root_dir)
+        except ValueError:
+            raise ValueError(
+                f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
+            )
+        
+        self.data_dir = resolved_data_dir
         os.makedirs(self.data_dir, exist_ok=True)
 
         # Initialize scraper with enhanced throttling and parallel processing

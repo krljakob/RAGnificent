@@ -419,7 +419,9 @@ async def pipeline_endpoint(
 
         # Create pipeline from config
         pipeline = Pipeline(
-            config=request.config, continue_on_error=request.continue_on_error
+            config=request.config,
+            continue_on_error=request.continue_on_error,
+            data_dir=self.config.data_dir_root,  # Pass the safe root directory
         )
 
         # Execute pipeline steps
