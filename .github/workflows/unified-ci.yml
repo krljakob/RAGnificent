@@ -52,19 +52,24 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'uv pip'
+          cache: 'pip'
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
 
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Install build dependencies
         run: uv pip install maturin
 
       - name: Install project and dependencies
         run: |
-          python -m uv pip install --upgrade uv pip
+          uv pip install --upgrade pip
           uv pip install .[dev,test]
 
       - name: Lint with ruff
