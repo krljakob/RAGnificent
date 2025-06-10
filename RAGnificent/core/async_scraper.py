@@ -323,10 +323,15 @@ class AsyncMarkdownScraper:
                 base_name = self._url_path_pattern.sub("_", parsed_url.netloc)
 
             # Save the converted content
-            extension = "md" if output_format == "markdown" else output_format
+            allowed_extensions = {"markdown": "md", "json": "json", "xml": "xml"}
+            extension = allowed_extensions.get(output_format, "md")
             output_file = Path(output_dir) / f"{base_name}.{extension}"
+            normalized_output_file = Path(os.path.normpath(output_file))
 
-            with open(output_file, "w", encoding="utf-8") as f:
+            if not str(normalized_output_file).startswith(str(output_dir)):
+                raise ValueError("Attempted to write outside the allowed directory.")
+
+            with open(normalized_output_file, "w", encoding="utf-8") as f:
                 f.write(output)
 
             logger.info(f"Saved {output_format} to: {output_file}")
@@ -342,7 +347,12 @@ class AsyncMarkdownScraper:
                     chunk_file = (
                         Path(chunks_output_dir) / f"{base_name}_chunk_{i:03d}.md"
                     )
-                    with open(chunk_file, "w", encoding="utf-8") as f:
+                    normalized_chunk_file = Path(os.path.normpath(chunk_file))
+
+                    if not str(normalized_chunk_file).startswith(str(chunks_output_dir)):
+                        raise ValueError("Attempted to write chunk outside the allowed directory.")
+
+                    with open(normalized_chunk_file, "w", encoding="utf-8") as f:
                         f.write(chunk["content"])
 
                 logger.info(f"Saved {len(chunks)} chunks to: {chunks_output_dir}")
