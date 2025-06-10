@@ -2,6 +2,7 @@
 Cache module for HTTP requests to avoid repeated network calls.
 
 Provides optimized caching with TTL, compression, and monitoring capabilities.
+Enhanced with diskcache and joblib.Memory support for persistent caching.
 """
 
 import gzip
@@ -13,6 +14,21 @@ import time
 from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
+
+# Optional advanced caching dependencies
+try:
+    import diskcache
+
+    DISKCACHE_AVAILABLE = True
+except ImportError:
+    DISKCACHE_AVAILABLE = False
+
+try:
+    from joblib import Memory
+
+    JOBLIB_AVAILABLE = True
+except ImportError:
+    JOBLIB_AVAILABLE = False
 
 logger = logging.getLogger("request_cache")
 
@@ -44,6 +60,9 @@ class RequestCache(StatsMixin):
         max_memory_size_mb: int = 50,
         compression_threshold: int = 10240,  # 10KB
         enable_stats: bool = True,
+        cache_backend: str = "auto",  # "auto", "diskcache", "joblib", "filesystem"
+        diskcache_size_limit: int = 2**30,  # 1GB default
+        joblib_compress: bool = True,
     ):
         """
         Initialize the request cache.
@@ -55,6 +74,9 @@ class RequestCache(StatsMixin):
             max_memory_size_mb: Maximum size of memory cache in MB
             compression_threshold: Minimum size in bytes for compressing content
             enable_stats: Whether to collect cache statistics
+            cache_backend: Backend to use ("auto", "diskcache", "joblib", "filesystem")
+            diskcache_size_limit: Maximum size for diskcache backend
+            joblib_compress: Enable compression for joblib backend
         """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -64,10 +86,17 @@ class RequestCache(StatsMixin):
         self.compression_threshold = compression_threshold
         super().__init__(enable_stats=enable_stats)
 
+        # Determine cache backend
+        self.cache_backend = self._select_cache_backend(cache_backend)
+        self._init_cache_backend(diskcache_size_limit, joblib_compress)
+
+        # Memory cache for all backends
         self.memory_cache: Dict[str, Tuple[str, float, Optional[int], bool]] = {}
         self.current_memory_usage = 0  # Approximate memory usage in bytes
 
         self.ttl_patterns: List[Tuple[Pattern, int]] = []
+
+        logger.info(f"Initialized RequestCache with {self.cache_backend} backend")
 
         self.stats = {
             "hits": 0,
@@ -84,6 +113,47 @@ class RequestCache(StatsMixin):
         self.metadata_dir.mkdir(exist_ok=True)
 
         self._load_ttl_patterns()
+
+    def _select_cache_backend(self, backend: str) -> str:
+        """Select the best available cache backend."""
+        if backend == "auto":
+            if DISKCACHE_AVAILABLE:
+                return "diskcache"
+            return "joblib" if JOBLIB_AVAILABLE else "filesystem"
+        if backend == "diskcache" and not DISKCACHE_AVAILABLE:
+            logger.warning("diskcache not available, falling back to filesystem")
+            return "filesystem"
+        if backend == "joblib" and not JOBLIB_AVAILABLE:
+            logger.warning("joblib not available, falling back to filesystem")
+            return "filesystem"
+        return backend
+
+    def _init_cache_backend(
+        self, diskcache_size_limit: int, joblib_compress: bool
+    ) -> None:
+        """Initialize the selected cache backend."""
+        if self.cache_backend == "diskcache":
+            self.disk_cache = diskcache.Cache(
+                str(self.cache_dir / "diskcache"),
+                size_limit=diskcache_size_limit,
+                eviction_policy="least-recently-stored",
+            )
+            logger.info(
+                f"Initialized diskcache with {diskcache_size_limit} bytes limit"
+            )
+
+        elif self.cache_backend == "joblib":
+            self.memory_backend = Memory(
+                location=str(self.cache_dir / "joblib"),
+                compress=joblib_compress,
+                verbose=0,
+            )
+            logger.info(f"Initialized joblib Memory with compression={joblib_compress}")
+
+        else:  # filesystem
+            self.disk_cache = None
+            self.memory_backend = None
+            logger.info("Using filesystem cache backend")
 
     def _load_ttl_patterns(self) -> None:
         """Load TTL patterns from metadata file."""
@@ -206,7 +276,18 @@ class RequestCache(StatsMixin):
             del self.memory_cache[url]
             logger.debug(f"Memory cache expired for {url}")
 
-        # Check disk cache
+        # Check backend cache
+        cached_content = self._get_from_backend(url, url_ttl, current_time)
+        if cached_content is not None:
+            if self.enable_stats:
+                self.stats["hits"] += 1
+                self.stats["disk_hits"] += 1
+
+            # Cache in memory for faster access
+            self._add_to_memory_cache(url, cached_content, current_time, url_ttl)
+            return cached_content
+
+        # Legacy filesystem check for backward compatibility
         cache_path = self._get_cache_path(url)
         metadata_path = self._get_metadata_path(url)
 
@@ -277,6 +358,82 @@ class RequestCache(StatsMixin):
 
         return None
 
+    def _get_from_backend(
+        self, url: str, url_ttl: int, current_time: float
+    ) -> Optional[str]:
+        """Get content from the configured backend cache."""
+        cache_key = self._get_cache_key(url)
+
+        if self.cache_backend == "diskcache":
+            try:
+                if cached_data := self.disk_cache.get(cache_key):
+                    content, timestamp, ttl = cached_data
+                    effective_ttl = ttl or url_ttl
+
+                    if current_time - timestamp <= effective_ttl:
+                        return content
+                    # Remove expired item
+                    del self.disk_cache[cache_key]
+            except Exception as e:
+                logger.warning(f"Error accessing diskcache: {e}")
+
+        elif self.cache_backend == "joblib":
+            try:
+                # Joblib Memory doesn't have built-in TTL, so we store timestamp with data
+                cached_func = self.memory_backend.cache(lambda key: None)
+                if cached_data := cached_func.call_and_shelve(cache_key).get():
+                    content, timestamp, ttl = cached_data
+                    effective_ttl = ttl or url_ttl
+
+                    if current_time - timestamp <= effective_ttl:
+                        return content
+                    # Clear expired item
+                    cached_func.call_and_shelve(cache_key).clear()
+            except Exception as e:
+                logger.warning(f"Error accessing joblib cache: {e}")
+
+        return None
+
+    def _set_to_backend(
+        self, url: str, content: str, ttl: Optional[int] = None
+    ) -> None:
+        """Store content in the configured backend cache."""
+        cache_key = self._get_cache_key(url)
+        timestamp = time.time()
+        cached_data = (content, timestamp, ttl)
+
+        if self.cache_backend == "diskcache":
+            try:
+                self.disk_cache[cache_key] = cached_data
+            except Exception as e:
+                logger.warning(f"Error storing to diskcache: {e}")
+
+        elif self.cache_backend == "joblib":
+            try:
+                cached_func = self.memory_backend.cache(lambda key: cached_data)
+                cached_func(cache_key)
+            except Exception as e:
+                logger.warning(f"Error storing to joblib cache: {e}")
+
+    def _add_to_memory_cache(
+        self, url: str, content: str, timestamp: float, ttl: Optional[int] = None
+    ) -> None:
+        """Add content to memory cache with size management."""
+        # Check if compression is needed
+        should_compress = len(content.encode("utf-8")) > self.compression_threshold
+        if should_compress:
+            compressed_content = self._compress_content(content)
+            self.memory_cache[url] = (compressed_content, timestamp, ttl, True)
+        else:
+            self.memory_cache[url] = (content, timestamp, ttl, False)
+
+        # Manage memory cache size
+        self._manage_memory_cache()
+
+    def _get_cache_key(self, url: str) -> str:
+        """Generate a cache key for the given URL."""
+        return hashlib.sha256(url.encode("utf-8")).hexdigest()
+
     def set(self, url: str, content: str, ttl: Optional[int] = None) -> None:
         """
         Cache a response for a URL.
@@ -311,6 +468,9 @@ class RequestCache(StatsMixin):
 
             # Check if we need to make room in the memory cache
             self._check_memory_limits()
+
+        # Store in backend cache
+        self._set_to_backend(url, content, ttl)
 
         # Update memory cache with compressed data if applicable
         current_time = time.time()
@@ -566,4 +726,81 @@ class RequestCache(StatsMixin):
             "disk_items": disk_items,
             "compression_savings_mb": compression_savings_mb,
             "top_patterns": dict(self.stats["url_patterns"].most_common(5)),
+            "cache_backend": self.cache_backend,
         }
+
+
+def cached_function(cache: RequestCache, ttl: Optional[int] = None):
+    """
+    Decorator for caching function results using the enhanced RequestCache.
+
+    Args:
+        cache: RequestCache instance to use
+        ttl: Time-to-live for cached results
+
+    Usage:
+        @cached_function(cache, ttl=3600)
+        def expensive_function(arg1, arg2):
+            # Some expensive computation
+            return result
+    """
+
+    def decorator(func: Callable) -> Callable:
+        def wrapper(*args, **kwargs):
+            # Create cache key from function name and arguments
+            cache_key = f"{func.__name__}:{hashlib.sha256(str(args + tuple(sorted(kwargs.items()))).encode()).hexdigest()}"
+
+            # Try to get from cache
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                try:
+                    return json.loads(cached_result)
+                except json.JSONDecodeError:
+                    # Fall back to string result
+                    return cached_result
+
+            # Compute result and cache it
+            result = func(*args, **kwargs)
+
+            # Serialize result for caching
+            try:
+                serialized = json.dumps(result, default=str)
+            except (TypeError, ValueError):
+                serialized = str(result)
+
+            cache.set(cache_key, serialized, ttl)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def create_advanced_cache(
+    cache_dir: str = ".rag_cache",
+    backend: str = "auto",
+    max_age: int = 3600,
+    size_limit_gb: float = 1.0,
+) -> RequestCache:
+    """
+    Factory function to create an advanced cache with optimal settings.
+
+    Args:
+        cache_dir: Directory for cache storage
+        backend: Cache backend ("auto", "diskcache", "joblib", "filesystem")
+        max_age: Default TTL in seconds
+        size_limit_gb: Size limit in GB for disk cache
+
+    Returns:
+        Configured RequestCache instance
+    """
+    return RequestCache(
+        cache_dir=cache_dir,
+        cache_backend=backend,
+        max_age=max_age,
+        diskcache_size_limit=int(size_limit_gb * 1024**3),
+        joblib_compress=True,
+        max_memory_items=200,
+        max_memory_size_mb=100,
+        enable_stats=True,
+    )

@@ -68,7 +68,6 @@ https://docs.python.org/3/tutorial/introduction.html
             chunk_format="jsonl",
         )
 
-
         # Check output
         output_dir = Path("demo_output")
         chunk_dir = Path("demo_chunks")
@@ -93,7 +92,6 @@ def demo_embedding_check():
     try:
         from RAGnificent.core.config import EmbeddingModelType
         from RAGnificent.rag.embedding import EmbeddingService
-
 
         # Try to initialize embedding service
         embedding_service = EmbeddingService(
@@ -129,7 +127,6 @@ def main():
 
         # Check embedding functionality
         demo_embedding_check()
-
 
     except Exception as e:
         import traceback

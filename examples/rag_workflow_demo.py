@@ -74,7 +74,6 @@ class RAGDemo:
 
                 all_chunks.extend(chunks)
 
-
             except Exception as e:
                 pass
 
@@ -285,7 +284,6 @@ def main():
     )
 
     args = parser.parse_args()
-
 
     demo = RAGDemo(model_name=args.model)
     start_time = time.time()

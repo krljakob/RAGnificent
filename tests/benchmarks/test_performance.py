@@ -341,6 +341,7 @@ def test_throttler_performance():
 
     with PerformanceTimer("Execute parallel (20 requests)"):
         urls = [f"https://example.com/page{i}" for i in range(20)]
+
         # Create a wrapper function that doesn't need URL parameter
         def mock_request_wrapper():
             time.sleep(0.05)

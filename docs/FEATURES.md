@@ -27,6 +27,7 @@ RAGnificent handles various HTML elements:
 ## Advanced Features
 
 ### 🚦 Feature Flags
+
 - **Advanced chunking**: Enable experimental chunking algorithms
 - **Parallel processing**: Toggle parallel URL processing
 - **Memory optimization**: Enable memory-efficient operations
@@ -34,12 +35,14 @@ RAGnificent handles various HTML elements:
 - **Gradual rollouts**: Percentage-based feature deployment
 
 ### 🔒 Security Features
+
 - **HTML Sanitization**: Automatic cleaning of scraped content using bleach
 - **Rate Limiting**: Built-in rate limiting for API protection
 - **Sensitive Data Redaction**: Automatic removal of sensitive information
 - **Input Validation**: Comprehensive URL and input validation
 
 ### 📊 Resource Management
+
 - **Connection Pooling**: Efficient management of HTTP connections
 - **Memory Monitoring**: Track and limit memory usage
 - **Graceful Shutdown**: Proper cleanup of resources
@@ -69,18 +72,21 @@ Intelligent chunking designed specifically for RAG systems:
 ## Output Formats
 
 ### Markdown (Default)
+
 - Clean, human-readable format
 - Preserves document structure
 - Maintains link relationships
 - Code block formatting
 
 ### JSON
+
 - Structured data format for programmatic usage
 - Document structure with title, headers, paragraphs, links, images
 - Serialized with proper indentation for readability
 - Includes metadata and source information
 
 ### XML
+
 - Markup format for document interchange
 - Document structure with proper XML tags and hierarchy
 - Includes XML declaration and proper escaping

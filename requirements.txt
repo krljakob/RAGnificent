@@ -1,37 +1,72 @@
+# Core dependencies
 requests>=2.32.3
 beautifulsoup4>=4.13.4
-pytest>=8.3.5
 markdownify>=1.1.0
-pytest-mock>=3.14.0
-argparse>=1.4.0
-typing-extensions>=4.13.2
-pathlib>=1.0.1
-python-dateutil>=2.9.0.post0
-psutil
+python-dateutil>=2.9.0
+psutil>=5.9.0
 pydantic>=2.11.4
 pydantic-settings>=2.9.1
-responses>=0.25.7
-patchelf
-pylint
 
-# Type stubs for external libraries
-types-requests>=2.32.0.20250328
-types-beautifulsoup4>=4.12.0.20250204
-mypy>=1.15.0
-pytest-benchmark>=5.1.0
-pytest>=8.3.5
-matplotlib>=3.10.3
-seaborn>=0.13.2
-pandas>=2.2.3
-# Optional dependencies for Rust integration
-maturin>=1.8.4
-qdrant-client>=1.14.2
-python-dotenv>=1.1.0
-fastapi>=0.115.12
-uvicorn>=0.34.2
-# Required dependencies for embeddings
-openai>=1.78.0
-scikit-learn>=1.6.1
+# Async and HTTP
+httpx>=0.27.0
+anyio>=4.0.0
+
+# Logging and output
+rich>=13.7.1
+structlog>=24.4.0
+loguru>=0.7.2
+
+# Caching
+diskcache>=5.6.3
+joblib>=1.3.2
+
+# CLI and TUI
+typer[all]>=0.12.0
+rich-rst>=1.2.0
+prompt-toolkit>=3.0.43
+
+# Data processing
 numpy>=1.26.0
+pandas>=2.2.3
+scikit-learn>=1.6.1
 
-bleach==6.2.0
+# Vector databases and embeddings
+qdrant-client>=1.14.2
+openai>=1.78.0
+sentence-transformers>=3.0.0
+
+# Web and API
+fastapi>=0.115.12
+uvicorn[standard]>=0.34.2
+python-multipart>=0.0.9
+
+# Development and testing
+pytest>=8.3.5
+pytest-mock>=3.14.0
+pytest-benchmark>=5.1.0
+pytest-cov>=5.0.0
+pytest-asyncio>=0.23.6
+pylint>=3.1.0
+mypy>=1.15.0
+black>=24.4.2
+isort>=5.13.2
+flake8>=7.1.0
+
+# Type stubs
+types-requests>=2.32.0
+types-beautifulsoup4>=4.12.0
+types-python-dateutil>=2.8.19
+types-psutil>=5.9.5
+
+# Documentation
+mkdocs>=1.5.3
+mkdocs-material>=9.5.0
+mkdocstrings[python]>=0.25.1
+
+# Rust integration (optional)
+maturin>=1.8.4
+
+# Other
+python-dotenv>=1.1.0
+patchelf>=0.17.0,<0.18
+bleach>=6.2.0

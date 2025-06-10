@@ -22,6 +22,7 @@ config = load_config("config/examples/default.yaml")
 ## Configuration Formats
 
 Supported formats:
+
 - **YAML** (`.yaml`, `.yml`) - Human-readable, recommended
 - **JSON** (`.json`) - Machine-readable, programmatic use
 

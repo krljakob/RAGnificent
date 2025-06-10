@@ -14,7 +14,7 @@ document_chunks := data_dir + "/document_chunks.json"
 embedded_chunks := data_dir + "/embedded_chunks.json"
 
 # Default URLs file
-links_file := "links.txt"
+links_file := "test_links.txt"
 
 # Default collection name for Qdrant
 collection := "ragnificent"
@@ -49,14 +49,12 @@ build-with-js:
 # Run all Python tests
 test-python:
     #!/usr/bin/env bash
-    export PATH=".venv/bin:$PATH"
-    pytest
+    source .venv/bin/activate && pytest
 
 # Run Python binding tests
 test-bindings:
     #!/usr/bin/env bash
-    export PATH=".venv/bin:$PATH"
-    pytest tests/rust/test_python_bindings.py -v
+    source .venv/bin/activate && pytest tests/rust/test_python_bindings.py -v
 
 # Run Rust tests
 test-rust:
@@ -91,7 +89,7 @@ bench-viz:
 format-python:
     #!/usr/bin/env bash
     export PATH=".venv/bin:$PATH"
-    black . --target-version py311
+    black . --target-version py312
     isort .
     ruff check . --fix
 
@@ -114,10 +112,10 @@ lint:
 code-quality:
     #!/usr/bin/env bash
     export PATH=".venv/bin:$PATH"
-    black . --target-version py311
+    black . --target-version py312
     isort .
     ruff check . --fix
-    sourcery review . --fix
+    ruff check . --fix --unsafe-fixes
     cargo fmt
     cargo clippy --fix
 
@@ -145,87 +143,99 @@ build-all:
 
 # Scrape a single URL and convert to markdown
 scrape url output="output.md":
-    python -m RAGnificent {{url}} -o {{output}}
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -m RAGnificent {{url}} -o {{output}}
 
 # Scrape a single URL and convert to JSON format
 scrape-json url output="output.json":
-    python -m RAGnificent {{url}} -o {{output}} -f json
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -m RAGnificent {{url}} -o {{output}} -f json
 
 # Scrape a single URL and convert to XML format
 scrape-xml url output="output.xml":
-    python -m RAGnificent {{url}} -o {{output}} -f xml
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -m RAGnificent {{url}} -o {{output}} -f xml
 
 # Scrape a website with sitemap discovery
 scrape-sitemap url output_dir="output":
-    python -m RAGnificent {{url}} -o {{output_dir}} --use-sitemap --save-chunks
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -m RAGnificent {{url}} -o {{output_dir}} --use-sitemap --save-chunks
 
 # Scrape a website with sitemap discovery and parallel processing
 scrape-sitemap-parallel url output_dir="output" workers="8":
-    python -m RAGnificent {{url}} -o {{output_dir}} --use-sitemap --save-chunks --parallel --max-workers {{workers}}
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -m RAGnificent {{url}} -o {{output_dir}} --use-sitemap --save-chunks --parallel --max-workers {{workers}}
 
 # Scrape from a list of URLs in a file
-scrape-list output_dir="output" links="links.txt":
+scrape-list output_dir="output" links="test_links.txt":
     python -m RAGnificent -o {{output_dir}} --links-file {{links}}
 
 # Scrape from a list of URLs in parallel
-scrape-list-parallel output_dir="output" links="links.txt" workers="8":
+scrape-list-parallel output_dir="output" links="test_links.txt" workers="8":
     python -m RAGnificent -o {{output_dir}} --links-file {{links}} --parallel --max-workers {{workers}}
 
-# Run the complete RAG uv pipeline with a single URL
-rag-uv pipeline url collection=collection:
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline = uv pipeline(collection_name='{{collection}}'); uv pipeline.run_uv pipeline(url='{{url}}', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
+# Run the complete RAG pipeline with a single URL
+rag-pipeline url collection=collection:
+    python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='{{collection}}'); pipeline.run_pipeline(url='{{url}}', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
 
-# Run the complete RAG uv pipeline with a list of URLs
-rag-uv-list links=links_file collection=collection:
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline = uv pipeline(collection_name='{{collection}}'); uv pipeline.run_uv pipeline(links_file='{{links}}', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
+# Run the complete RAG pipeline with a list of URLs
+rag-pipeline-list links=links_file collection=collection:
+    python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='{{collection}}'); pipeline.run_pipeline(links_file='{{links}}', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
 
 # Extract content from URLs
 extract url output=raw_documents format="markdown":
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().extract_content(url='{{url}}', output_file='{{output}}', output_format='{{format}}')"
+    python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().extract_content(url='{{url}}', output_file='{{output}}', output_format='{{format}}')"
 
 # Extract content from a list of URLs
 extract-list links=links_file output=raw_documents format="markdown":
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().extract_content(links_file='{{links}}', output_file='{{output}}', output_format='{{format}}')"
+    python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().extract_content(links_file='{{links}}', output_file='{{output}}', output_format='{{format}}')"
 
 # Chunk documents
 chunk docs=raw_documents output=document_chunks:
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().chunk_documents('{{docs}}', '{{output}}')"
+    python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().chunk_documents('{{docs}}', '{{output}}')"
 
 # Embed chunks
 embed chunks=document_chunks output=embedded_chunks:
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().embed_chunks('{{chunks}}', '{{output}}')"
+    python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().embed_chunks('{{chunks}}', '{{output}}')"
 
 # Store chunks in vector database
 store chunks=embedded_chunks collection=collection:
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline(collection_name='{{collection}}').store_chunks('{{chunks}}')"
+    python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline(collection_name='{{collection}}').store_chunks('{{chunks}}')"
 
 # Search the vector database
 search query collection=collection limit="5":
-    python -c "from RAGnificent.rag.search import search; results = search('{{query}}', {{limit}}, collection_name='{{collection}}'); print('\n'.join([f'Score: {r[\"score\"]:.4f}\n{r[\"content\"]}\n' for r in results]))"
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='{{collection}}'); results = pipeline.search_documents('{{query}}', {{limit}}, as_dict=True); print('\n'.join([f'Score: {r[\"score\"]:.4f}\n{r[\"content\"]}\n' for r in results]))"
 
 # Query with RAG context (requires OpenAI API key)
 query query collection=collection limit="3":
-    python -c "from RAGnificent.rag.uv pipeline import uv pipeline; response = uv pipeline(collection_name='{{collection}}').query_with_context('{{query}}', {{limit}}); print(f'Response: {response[\"response\"]}\n\nSources:\n' + '\n'.join([f'- {r[\"source_url\"]}' for r in response['context']]))"
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='{{collection}}'); response = pipeline.query_with_context('{{query}}', {{limit}}); print(f'Response: {response[\"response\"]}\n\nSources:\n' + '\n'.join([f'- {r[\"metadata\"][\"document_url\"]}' for r in response['context'] if 'metadata' in r and 'document_url' in r['metadata']]))"
 
 # Run the demo for all output formats
 run-demo:
-    python examples/demo_formats.py
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python examples/demo_formats.py
 
 # Run a simple example
 run-hello:
-    python examples/hello.py
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python examples/hello.py
 
-# Run the RAG uv pipeline example
+# Run the RAG pipeline example
 run-rag-example:
-    python examples/rag_uv pipeline_example.py
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python examples/rag_pipeline_example.py
 
 # Visualize Qdrant data
 view-qdrant:
-    python view_qdrant_data.py
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python view_qdrant_data.py
 
 # Run the web UI
 run-webui:
-    python webui.py
+    #!/usr/bin/env bash
+    source .venv/bin/activate && python webui.py
 
 # Example end-to-end workflow for a single URL
 workflow-single url="https://example.com" collection=collection:

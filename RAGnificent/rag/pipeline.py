@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+import yaml
+
 from ..core.config import ChunkingStrategy, EmbeddingModelType, get_config
 from ..core.scraper import MarkdownScraper
 from ..utils.chunk_utils import ContentChunker
@@ -33,6 +35,7 @@ class Pipeline:
 
     def __init__(
         self,
+        config: Optional[Union[Dict[str, Any], str, Path]] = None,
         collection_name: Optional[str] = None,
         embedding_model_type: Optional[str] = None,
         embedding_model_name: Optional[str] = None,
@@ -41,11 +44,13 @@ class Pipeline:
         requests_per_second: Optional[float] = None,
         cache_enabled: Optional[bool] = None,
         data_dir: Optional[Union[str, Path]] = None,
+        continue_on_error: bool = False,
     ):
         """
         Initialize the RAG pipeline.
 
         Args:
+            config: Pipeline configuration (dict, YAML file path, or config dict)
             collection_name: Name of the vector collection
             embedding_model_type: Type of embedding model to use
             embedding_model_name: Name of embedding model
@@ -54,24 +59,69 @@ class Pipeline:
             requests_per_second: Maximum number of requests per second for scraping
             cache_enabled: Whether to enable request caching
             data_dir: Directory to save data files
+            continue_on_error: Whether to continue pipeline execution on errors
         """
-        # Load configuration
+        # Load pipeline configuration
+        self.pipeline_config = self._load_pipeline_config(config)
+        self.continue_on_error = continue_on_error
+
+        # Load system configuration
         self.config = get_config()
 
+        # Resolve configuration parameters (CLI args override pipeline config override system config)
+        self.collection_name = (
+            collection_name
+            or self.pipeline_config.get("collection_name")
+            or self.config.qdrant.collection
+        )
+
+        resolved_chunk_size = (
+            chunk_size
+            or self.pipeline_config.get("chunk_size")
+            or self.config.chunking.chunk_size
+        )
+
+        resolved_chunk_overlap = (
+            chunk_overlap
+            or self.pipeline_config.get("chunk_overlap")
+            or self.config.chunking.chunk_overlap
+        )
+
+        resolved_requests_per_second = (
+            requests_per_second
+            or self.pipeline_config.get("requests_per_second")
+            or self.config.scraper.rate_limit
+        )
+
+        resolved_cache_enabled = (
+            cache_enabled
+            if cache_enabled is not None
+            else self.pipeline_config.get(
+                "cache_enabled", self.config.scraper.cache_enabled
+            )
+        )
+
+        resolved_embedding_model_type = (
+            embedding_model_type or self.pipeline_config.get("embedding_model_type")
+        )
+
+        resolved_embedding_model_name = (
+            embedding_model_name or self.pipeline_config.get("embedding_model_name")
+        )
+
         # Set up data directory
-        self.data_dir = Path(data_dir) if data_dir else Path(self.config.data_dir)
+        pipeline_data_dir = self.pipeline_config.get(
+            "data_dir"
+        ) or self.pipeline_config.get("output_dir")
+        self.data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir)
         os.makedirs(self.data_dir, exist_ok=True)
 
         # Initialize scraper with enhanced throttling and parallel processing
         self.scraper = MarkdownScraper(
-            requests_per_second=requests_per_second or self.config.scraper.rate_limit,
-            chunk_size=chunk_size or self.config.chunking.chunk_size,
-            chunk_overlap=chunk_overlap or self.config.chunking.chunk_overlap,
-            cache_enabled=(
-                cache_enabled
-                if cache_enabled is not None
-                else self.config.scraper.cache_enabled
-            ),
+            requests_per_second=resolved_requests_per_second,
+            chunk_size=resolved_chunk_size,
+            chunk_overlap=resolved_chunk_overlap,
+            cache_enabled=resolved_cache_enabled,
             domain_specific_limits=(
                 self.config.scraper.domain_rate_limits
                 if hasattr(self.config.scraper, "domain_rate_limits")
@@ -91,8 +141,8 @@ class Pipeline:
 
         # Initialize chunker
         self.chunker = ContentChunker(
-            chunk_size or self.config.chunking.chunk_size,
-            chunk_overlap or self.config.chunking.chunk_overlap,
+            resolved_chunk_size,
+            resolved_chunk_overlap,
         )
 
         # Initialize embedding service
@@ -100,28 +150,212 @@ class Pipeline:
 
         # Convert string to EmbeddingModelType enum if provided
         model_type_enum = None
-        if embedding_model_type:
-            if isinstance(embedding_model_type, str):
-                model_type_enum = EmbeddingModelType(embedding_model_type)
+        if resolved_embedding_model_type:
+            if isinstance(resolved_embedding_model_type, str):
+                model_type_enum = EmbeddingModelType(resolved_embedding_model_type)
             else:
-                model_type_enum = embedding_model_type
+                model_type_enum = resolved_embedding_model_type
 
         self.embedding_service = get_embedding_service(
-            model_type_enum, embedding_model_name
+            model_type_enum, resolved_embedding_model_name
         )
 
         # Initialize vector store
-        self.vector_store = get_vector_store(collection_name)
+        self.vector_store = get_vector_store(self.collection_name)
 
         # Initialize search
         self.search = get_search(
-            collection_name, embedding_model_type, embedding_model_name
+            self.collection_name,
+            resolved_embedding_model_type,
+            resolved_embedding_model_name,
         )
 
-        # Set collection name
-        self.collection_name = collection_name or self.config.qdrant.collection
-
         logger.info(f"Initialized RAG pipeline with collection: {self.collection_name}")
+
+    def _load_pipeline_config(
+        self, config: Optional[Union[Dict[str, Any], str, Path]]
+    ) -> Dict[str, Any]:
+        """Load pipeline configuration from various sources."""
+        if config is None:
+            return {}
+
+        if isinstance(config, dict):
+            return config
+
+        # Load from file path
+        config_path = Path(config)
+        if not config_path.exists():
+            raise FileNotFoundError(
+                f"Pipeline configuration file not found: {config_path}"
+            )
+
+        with open(config_path, "r") as f:
+            if config_path.suffix.lower() in {".yml", ".yaml"}:
+                return yaml.safe_load(f) or {}
+            if config_path.suffix.lower() == ".json":
+                return json.load(f) or {}
+            raise ValueError(
+                f"Unsupported configuration file format: {config_path.suffix}"
+            )
+
+    def execute(self):
+        """
+        Execute the pipeline steps defined in the configuration.
+
+        Yields step results for progress tracking.
+        """
+        if not self.pipeline_config.get("steps"):
+            logger.warning("No pipeline steps defined")
+            return
+
+        for i, step in enumerate(self.pipeline_config["steps"]):
+            step_name = step.get("name", f"Step {i+1}")
+            step_type = step.get("type")
+            step_config = step.get("config", {})
+
+            logger.info(f"Executing step: {step_name} (type: {step_type})")
+
+            try:
+                if step_type == "scrape":
+                    result = self._execute_scrape_step(step_config)
+                elif step_type == "embed":
+                    result = self._execute_embed_step(step_config)
+                elif step_type == "index":
+                    result = self._execute_index_step(step_config)
+                elif step_type == "search":
+                    result = self._execute_search_step(step_config)
+                else:
+                    raise ValueError(f"Unknown step type: {step_type}")
+
+                yield {
+                    "step_name": step_name,
+                    "step_type": step_type,
+                    "status": "success",
+                    "result": result,
+                }
+
+            except Exception as e:
+                logger.error(f"Error in step '{step_name}': {e}")
+                yield {
+                    "step_name": step_name,
+                    "step_type": step_type,
+                    "status": "error",
+                    "error": str(e),
+                }
+
+                if not self.continue_on_error:
+                    break
+
+    def _execute_scrape_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a scraping step."""
+        urls = config.get("urls", [])
+        if isinstance(urls, str):
+            urls = [urls]
+
+        output_format = config.get("format", "markdown")
+        save_to_disk = config.get("save_to_disk", True)
+
+        results = []
+        for url in urls:
+            try:
+                if save_to_disk:
+                    # Use existing scrape_and_index method
+                    result = self.scrape_and_index([url])
+                    results.append(
+                        {
+                            "url": url,
+                            "status": "success",
+                            "documents_created": len(
+                                result.get("processed_documents", [])
+                            ),
+                        }
+                    )
+                else:
+                    # Just scrape without saving
+                    content = self.scraper.scrape_website(url)
+                    results.append(
+                        {
+                            "url": url,
+                            "status": "success",
+                            "content_length": len(content),
+                        }
+                    )
+            except Exception as e:
+                results.append({"url": url, "status": "error", "error": str(e)})
+
+        return {"scraped_urls": results}
+
+    def _execute_embed_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute an embedding step."""
+        # For now, this is handled as part of the index step
+        logger.info("Embedding step - handled during indexing")
+        return {"status": "embeddings_handled_during_indexing"}
+
+    def _execute_index_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute an indexing step."""
+        input_dir = config.get("input_dir", self.data_dir)
+
+        # Find all markdown files in input directory
+        md_files = list(Path(input_dir).glob("*.md"))
+
+        indexed_count = 0
+        for md_file in md_files:
+            try:
+                with open(md_file, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # Create chunks
+                chunks = self.chunker.create_chunks_from_markdown(
+                    content, source_url=str(md_file)
+                )
+
+                # Generate embeddings and store
+                for chunk in chunks:
+                    embedding = self.embedding_service.generate_embeddings(
+                        [chunk["content"]]
+                    )[0]
+                    self.vector_store.store_documents(
+                        [
+                            {
+                                "content": chunk["content"],
+                                "metadata": chunk["metadata"],
+                                "embedding": embedding,
+                            }
+                        ]
+                    )
+
+                indexed_count += len(chunks)
+
+            except Exception as e:
+                logger.error(f"Error indexing {md_file}: {e}")
+
+        return {"indexed_documents": indexed_count}
+
+    def _execute_search_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a search step."""
+        query = config.get("query")
+        if not query:
+            raise ValueError("Search step requires 'query' parameter")
+
+        top_k = config.get("top_k", 5)
+        threshold = config.get("threshold", 0.7)
+
+        results = self.search.search(query, top_k=top_k, threshold=threshold)
+
+        return {
+            "query": query,
+            "results_count": len(results),
+            "results": [
+                {
+                    "content": (
+                        f"{r.content[:200]}..." if len(r.content) > 200 else r.content
+                    ),
+                    "score": r.score,
+                    "metadata": r.metadata,
+                }
+                for r in results
+            ],
+        }
 
     def _process_single_url(
         self, url: str, output_format: str, skip_cache: bool

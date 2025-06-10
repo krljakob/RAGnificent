@@ -23,6 +23,7 @@ pub fn convert_html_to_markdown(html: &str, base_url: &str) -> String {
 ```
 
 **Benefits**:
+
 - 5-10x faster HTML parsing and conversion
 - Memory-efficient string processing
 - Zero-copy operations where possible
@@ -48,6 +49,7 @@ cache_config = {
 ```
 
 **Cache Layers**:
+
 - **L1 (Memory)**: Fast access to recent requests (LRU eviction)
 - **L2 (Disk)**: Persistent cache for larger datasets
 - **Embedding Cache**: Avoids recomputing embeddings for identical content
@@ -71,6 +73,7 @@ scraper.scrape_by_links_file(
 ```
 
 **Considerations**:
+
 - Optimal worker count: `min(32, (os.cpu_count() or 1) + 4)`
 - Respect rate limits: Total rate = rate_limit / num_workers
 - Memory usage scales with worker count
@@ -90,6 +93,7 @@ resource_config = {
 ```
 
 **Memory Optimizations**:
+
 - **Connection Pooling**: Reuse HTTP connections
 - **Streaming Processing**: Process large documents in chunks
 - **Garbage Collection**: Proactive cleanup of unused objects
@@ -109,6 +113,7 @@ throttler = RequestThrottler(
 ```
 
 **Features**:
+
 - **Adaptive Rate Limiting**: Adjusts based on server responses
 - **Exponential Backoff**: Handles rate limit errors gracefully
 - **Domain-Specific Limits**: Different limits for different domains
@@ -288,6 +293,7 @@ python scripts/visualize_benchmarks.py
 ## Production Optimization Checklist
 
 ### ✅ Infrastructure
+
 - [ ] Use dedicated Qdrant server (not in-memory)
 - [ ] Enable connection pooling
 - [ ] Configure appropriate rate limits
@@ -295,6 +301,7 @@ python scripts/visualize_benchmarks.py
 - [ ] Use SSD storage for caching
 
 ### ✅ Configuration
+
 - [ ] Optimize chunk sizes for your use case
 - [ ] Choose appropriate embedding model
 - [ ] Configure cache sizes based on available memory
@@ -302,6 +309,7 @@ python scripts/visualize_benchmarks.py
 - [ ] Set conservative rate limits for production
 
 ### ✅ Monitoring
+
 - [ ] Track scraping latency and success rates
 - [ ] Monitor embedding generation performance
 - [ ] Watch memory usage and garbage collection
@@ -309,6 +317,7 @@ python scripts/visualize_benchmarks.py
 - [ ] Set up alerts for performance degradation
 
 ### ✅ Scaling
+
 - [ ] Implement horizontal scaling for high-volume workloads
 - [ ] Use separate embedding service for GPU acceleration
 - [ ] Implement caching layer (Redis) for frequent queries
@@ -318,27 +327,35 @@ python scripts/visualize_benchmarks.py
 ## Common Performance Issues
 
 ### Issue: Slow HTML Processing
+
 **Solutions**:
+
 - Ensure Rust components are compiled with `--release`
 - Use parallel processing for multiple URLs
 - Increase chunk sizes to reduce overhead
 
 ### Issue: High Memory Usage
+
 **Solutions**:
+
 - Reduce cache sizes
 - Use streaming processing for large documents
 - Enable garbage collection optimizations
 - Limit parallel worker count
 
 ### Issue: Slow Embedding Generation
+
 **Solutions**:
+
 - Use smaller, faster models for development
 - Increase batch sizes (if memory allows)
 - Implement embedding caching
 - Consider GPU acceleration for production
 
 ### Issue: Vector Search Latency
+
 **Solutions**:
+
 - Optimize Qdrant configuration (HNSW parameters)
 - Use appropriate vector dimensions
 - Implement search result caching

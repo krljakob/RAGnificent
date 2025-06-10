@@ -291,12 +291,14 @@ The configuration system includes comprehensive validation:
 ## Configuration Best Practices
 
 ### Development
+
 - Use higher rate limits for faster development
 - Enable debug logging
 - Use smaller chunk sizes for faster testing
 - Keep feature flags enabled for testing new features
 
 ### Production
+
 - Use conservative rate limits to be respectful to target sites
 - Configure external vector database instead of in-memory
 - Enable comprehensive logging with log rotation
@@ -304,6 +306,7 @@ The configuration system includes comprehensive validation:
 - Implement monitoring for configuration changes
 
 ### Security
+
 - Never commit API keys or sensitive data to configuration files
 - Use environment variables or secure vaults for secrets
 - Validate all configuration inputs

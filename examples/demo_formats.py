@@ -5,7 +5,7 @@ Demo script to showcase RAGnificent's multiple output formats.
 
 from pathlib import Path
 
-from RAGnificent.ragnificent_rs import OutputFormat, convert_html
+from RAGnificent.core.scraper import MarkdownScraper
 
 # HTML sample for conversion testing
 SAMPLE_HTML = """
@@ -51,22 +51,27 @@ def main():
     output_dir = Path("examples/demo_output")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Create scraper instance
+    scraper = MarkdownScraper()
+
     # Convert to all three formats
-    formats = {
-        "markdown": OutputFormat.MARKDOWN,
-        "json": OutputFormat.JSON,
-        "xml": OutputFormat.XML,
-    }
+    formats = ["markdown", "json", "xml"]
 
-    for name, format_enum in formats.items():
-        output_file = output_dir / f"output.{name}"
-        content = convert_html(SAMPLE_HTML, base_url, format_enum)
+    for format_name in formats:
+        output_file = output_dir / f"output.{format_name}"
 
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(content)
+        try:
+            content = scraper.convert_html(SAMPLE_HTML, base_url, format_name)
 
-        # Show a preview of each format
-        content.split("\n")[:5]
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            # Show a preview of each format
+            preview_lines = content.split("\n")[:5]
+            preview = "\n".join(preview_lines)
+
+        except Exception as e:
+            pass
 
 
 if __name__ == "__main__":
