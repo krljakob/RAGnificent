@@ -183,7 +183,8 @@ class Pipeline:
             return config
 
         # Load from file path
-        config_path = Path(config).resolve()
+        normalized_path = os.path.normpath(config)
+        config_path = Path(normalized_path).resolve()
         safe_root = Path("/safe/config/directory").resolve()
 
         if not config_path.exists():
