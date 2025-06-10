@@ -120,7 +120,9 @@ class Pipeline:
         
         # Ensure the resolved data directory is within the safe root directory
         resolved_data_dir_realpath = Path(os.path.realpath(resolved_data_dir))
-        if not str(resolved_data_dir_realpath).startswith(str(safe_root_dir)):
+        
+        # Ensure the resolved data directory is within the safe root directory using commonpath
+        if os.path.commonpath([resolved_data_dir_realpath, safe_root_dir]) != str(safe_root_dir):
             raise ValueError(
                 f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
             )
@@ -133,6 +135,15 @@ class Pipeline:
                     f"Data directory {resolved_data_dir} contains symbolic links pointing outside the allowed root directory {safe_root_dir}"
                 )
             current_path = current_path.parent
+        
+        # Re-check the resolved path after directory creation to prevent race conditions
+        self.data_dir = resolved_data_dir
+        os.makedirs(self.data_dir, exist_ok=True)
+        final_resolved_path = Path(os.path.realpath(self.data_dir))
+        if os.path.commonpath([final_resolved_path, safe_root_dir]) != str(safe_root_dir):
+            raise ValueError(
+                f"Final data directory {final_resolved_path} is outside the allowed root directory {safe_root_dir}"
+            )
         
         self.data_dir = resolved_data_dir
         os.makedirs(self.data_dir, exist_ok=True)
