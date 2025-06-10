@@ -113,17 +113,21 @@ class Pipeline:
         pipeline_data_dir = self.pipeline_config.get(
             "data_dir"
         ) or self.pipeline_config.get("output_dir")
-        resolved_data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir).resolve()
+        resolved_data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir).resolve(strict=True)
         
         # Define safe root directory for data operations
-        safe_root_dir = Path(self.config.data_dir_root).resolve()
+        safe_root_dir = Path(self.config.data_dir_root).resolve(strict=True)
         
         # Ensure the resolved data directory is within the safe root directory
-        try:
-            resolved_data_dir.relative_to(safe_root_dir)
-        except ValueError:
+        if not resolved_data_dir.is_relative_to(safe_root_dir):
             raise ValueError(
                 f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
+            )
+        
+        # Check for symbolic links pointing outside the safe root directory
+        if not resolved_data_dir.samefile(resolved_data_dir):
+            raise ValueError(
+                f"Data directory {resolved_data_dir} contains symbolic links pointing outside the allowed root directory {safe_root_dir}"
             )
         
         self.data_dir = resolved_data_dir
