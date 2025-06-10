@@ -200,28 +200,23 @@ class Pipeline:
             return config
 
         # Load from file path
-        config_path = os.path.realpath(config)
+        config_path = Path(config).resolve(strict=False)
         
         # Define safe root directories for configuration files
-        project_root = os.path.realpath(Path(__file__).parent.parent.parent)
+        project_root = Path(__file__).resolve().parent.parent.parent
         safe_roots = [
-            os.path.realpath(project_root / "config"),
-            os.path.realpath(project_root / "examples"),
-            os.path.realpath(Path.cwd()),  # Current working directory
+            (project_root / "config").resolve(),
+            (project_root / "examples").resolve(),
+            Path.cwd().resolve(),  # Current working directory
         ]
         
-        if not os.path.exists(config_path):
+        if not config_path.exists():
             raise FileNotFoundError(
                 f"Pipeline configuration file not found: {config_path}"
             )
         
         # Ensure the config path is within allowed directories
-        is_safe = any(
-            os.path.commonpath([config_path, safe_root]) == safe_root
-            for safe_root in safe_roots
-        )
-        
-        if not is_safe:
+        if not any(config_path.is_relative_to(safe_root) for safe_root in safe_roots):
             raise ValueError(
                 f"Access to configuration file outside allowed directories: {config_path}. "
                 f"Allowed directories: {[str(r) for r in safe_roots]}"
