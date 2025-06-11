@@ -270,14 +270,14 @@ def _fetch_with_retries(self, url: str) -> str:
              # ... exception handlers
         finally:
             if throttle_acquired:
-                # Ensure release is called with appropriate parameters
-                if response:
-                    response_time = time.time() - start_time
-                    self.throttler.release(url, response.status_code if not error else None, response_time, error)
-                elif error:
-                    self.throttler.release(url, error=error)
+                # Consolidate release logic into a single call
                 response_time = time.time() - start_time
-                self.throttler.release(url, response.status_code, response_time)
+                self.throttler.release(
+                    url,
+                    response.status_code if response else None,
+                    response_time,
+                    error
+                )
 
                 logger.info(
                     f"Successfully retrieved the website content (status code: {response.status_code})."
