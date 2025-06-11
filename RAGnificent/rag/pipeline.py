@@ -113,40 +113,37 @@ class Pipeline:
         pipeline_data_dir = self.pipeline_config.get(
             "data_dir"
         ) or self.pipeline_config.get("output_dir")
-        resolved_data_dir = Path(data_dir or pipeline_data_dir or self.config.data_dir).resolve(strict=True)
-        
-        # Define safe root directory for data operations
-        safe_root_dir = Path(self.config.data_dir_root).resolve(strict=True)
-        
-        # Ensure the resolved data directory is within the safe root directory
-        resolved_data_dir_realpath = Path(os.path.realpath(resolved_data_dir))
-        
-        # Ensure the resolved data directory is within the safe root directory using commonpath
-        if os.path.commonpath([resolved_data_dir_realpath, safe_root_dir]) != str(safe_root_dir):
+        from ..core.security import secure_file_path
+
+        # Secure the data directory path
+        base_data_dir = self.config.data_dir
+        user_data_dir = data_dir or pipeline_data_dir or ""
+
+        if user_data_dir:
+            resolved_data_dir = Path(secure_file_path(base_data_dir, user_data_dir))
+        else:
+            resolved_data_dir = Path(base_data_dir).resolve()
+
+        # Additional validation - ensure path is within allowed directory
+        safe_root_dir = Path(base_data_dir).resolve()
+        try:
+            resolved_data_dir.resolve().relative_to(safe_root_dir)
+        except ValueError as e:
             raise ValueError(
                 f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
-            )
-        
-        # Ensure no symbolic links exist in the directory tree
-        current_path = resolved_data_dir_realpath
-        while current_path != safe_root_dir:
-            if current_path.is_symlink():
-                raise ValueError(
-                    f"Data directory {resolved_data_dir} contains symbolic links pointing outside the allowed root directory {safe_root_dir}"
-                )
-            current_path = current_path.parent
-        
-        # Re-check the resolved path after directory creation to prevent race conditions
+            ) from e
+
+        # Create directory safely
         self.data_dir = resolved_data_dir
         os.makedirs(self.data_dir, exist_ok=True)
-        final_resolved_path = Path(os.path.realpath(self.data_dir))
-        if os.path.commonpath([final_resolved_path, safe_root_dir]) != str(safe_root_dir):
+
+        # Final validation after directory creation
+        try:
+            self.data_dir.resolve().relative_to(safe_root_dir)
+        except ValueError as e:
             raise ValueError(
-                f"Final data directory {final_resolved_path} is outside the allowed root directory {safe_root_dir}"
-            )
-        
-        self.data_dir = resolved_data_dir
-        os.makedirs(self.data_dir, exist_ok=True)
+                f"Final data directory {self.data_dir} is outside the allowed root directory {safe_root_dir}"
+            ) from e
 
         # Initialize scraper with enhanced throttling and parallel processing
         self.scraper = MarkdownScraper(
@@ -214,41 +211,47 @@ class Pipeline:
         if isinstance(config, dict):
             return config
 
-        # Load from file path
-        # Normalize and resolve the user-provided path
-        config_path = os.path.normpath(os.path.realpath(config))
-        
+        # Load from file path with security validation
+        from ..core.security import secure_file_path, validate_file_access
+
         # Define safe root directories for configuration files
         project_root = Path(__file__).resolve().parent.parent.parent
         safe_roots = [
-            os.path.realpath(project_root / "config"),
-            os.path.realpath(project_root / "examples"),
-            os.path.realpath(Path.cwd()),  # Current working directory
+            project_root / "config",
+            project_root / "examples",
+            Path.cwd(),  # Current working directory
         ]
-        
-        # Check if the file exists
-        if not os.path.exists(config_path):
+
+        # Find the appropriate safe root and secure the path
+        config_path = None
+        for safe_root in safe_roots:
+            try:
+                candidate_path = secure_file_path(str(safe_root), str(config))
+                if os.path.exists(candidate_path):
+                    config_path = candidate_path
+                    break
+            except (ValueError, OSError):
+                continue
+
+        if not config_path:
             raise FileNotFoundError(
-                f"Pipeline configuration file not found: {config_path}"
+                f"Pipeline configuration file not found or not accessible: {config}"
             )
-        
-        # Ensure the config path is within allowed directories
-        if not any(
-            os.path.commonpath([config_path, safe_root]) == safe_root
-            for safe_root in safe_roots
-        ):
+
+        # Additional validation
+        if not validate_file_access(config_path):
             raise ValueError(
-                f"Access to configuration file outside allowed directories: {config_path}. "
-                f"Allowed directories: {[str(r) for r in safe_roots]}"
+                f"Access denied to configuration file: {config_path}"
             )
 
         with open(config_path, "r") as f:
-            if config_path.suffix.lower() in {".yml", ".yaml"}:
+            config_path_obj = Path(config_path)
+            if config_path_obj.suffix.lower() in {".yml", ".yaml"}:
                 return yaml.safe_load(f) or {}
-            if config_path.suffix.lower() == ".json":
+            if config_path_obj.suffix.lower() == ".json":
                 return json.load(f) or {}
             raise ValueError(
-                f"Unsupported configuration file format: {config_path.suffix}"
+                f"Unsupported configuration file format: {config_path_obj.suffix}"
             )
 
     def execute(self):
@@ -346,19 +349,14 @@ class Pipeline:
 
     def _execute_index_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Execute an indexing step."""
-        input_dir = config.get("input_dir", self.data_dir)
-        input_dir_path = Path(input_dir).resolve()
-        data_dir_path = Path(self.data_dir).resolve()
-        
-        # Ensure the input_dir is within the allowed data directory
-        try:
-            input_dir_path.relative_to(data_dir_path)
-        except ValueError:
-            raise ValueError(
-                f"Input directory {input_dir_path} is outside the allowed data directory {data_dir_path}"
-            )
-        
-        input_dir = str(input_dir_path)
+        from ..core.security import secure_file_path
+
+        # Secure the input directory path
+        user_input_dir = config.get("input_dir", "")
+        if user_input_dir:
+            input_dir = secure_file_path(str(self.data_dir), user_input_dir)
+        else:
+            input_dir = str(self.data_dir)
 
         # Find all markdown files in input directory
         md_files = list(Path(input_dir).glob("*.md"))
