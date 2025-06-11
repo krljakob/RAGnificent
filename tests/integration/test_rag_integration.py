@@ -4,6 +4,7 @@ Integration tests for the RAG pipeline.
 Tests the end-to-end workflow from content extraction to search.
 """
 
+import pytest
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,8 @@ except ImportError:
     from RAGnificent.rag.pipeline import Pipeline
 
 
+@pytest.mark.integration
+@pytest.mark.requires_model
 class TestRAGIntegration(unittest.TestCase):
     """Integration tests for the RAG pipeline."""
 

@@ -45,6 +45,9 @@
 
 ### Milestone 6: Tests + Docs + Polish
 
+* [x] Optimize test performance (separated benchmarks from unit tests)
+* [x] Add test markers for categorization (benchmark, slow, integration, requires_model)
+* [x] Create `run_tests.sh` for easy test execution
 * [ ] Snapshot test all output formats
 * [ ] Add regression tests for bad input, 404s, invalid sitemaps
 * [ ] Document all CLI commands with examples

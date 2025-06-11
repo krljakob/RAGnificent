@@ -58,9 +58,14 @@
 
 ## 🧪 Tests
 
+* [x] Performance optimization: Separated benchmarks from unit tests
+* [x] Test categorization: Added markers (benchmark, slow, integration, requires_model)
+* [x] Created `run_tests.sh` with fast/unit/integration/benchmark/profile modes
+* [x] Configured `pytest.ini` to skip benchmarks by default
 * [ ] Unit: scrape, convert, plugins
 * [ ] Integration: full CLI → output
 * [ ] Regression: invalid sitemaps, 404s, timeouts
+* [ ] Mock heavy resources (ML models, external APIs) in unit tests
 
 ## 🧼 Docs & Cleanup
 

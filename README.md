@@ -56,15 +56,28 @@ chunks = scraper.create_chunks(markdown, "https://example.com")
 ## Testing
 
 ```bash
-# Run all tests
+# Run all tests (including benchmarks)
 pytest
 
+# Fast development testing (recommended)
+./run_tests.sh fast  # ~15 seconds
+# or
+pytest -m "not benchmark and not slow"
+
 # Run specific test categories
+./run_tests.sh unit         # Unit tests only
+./run_tests.sh integration  # Integration tests
+./run_tests.sh benchmark    # Performance benchmarks
+./run_tests.sh profile      # Show slowest tests
+
+# Run specific test files
 pytest tests/unit/test_chunk_utils.py -v
 pytest tests/rust/test_python_bindings.py -v
 ```
 
-**Current Status**: 121 tests with comprehensive coverage across core functionality.
+**Test Performance**: Tests are organized by speed - fast unit tests run in ~15 seconds, while full suite including benchmarks takes ~22 seconds. Benchmarks are skipped by default for rapid development cycles.
+
+**Current Status**: 48 tests with comprehensive coverage across core functionality.
 
 ## Development
 

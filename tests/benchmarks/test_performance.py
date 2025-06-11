@@ -32,6 +32,9 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmarks")
 
+# Mark all tests in this module as benchmarks
+pytestmark = pytest.mark.benchmark
+
 
 class PerformanceTimer:
     """Utility class for timing operations."""

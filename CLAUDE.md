@@ -18,6 +18,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cargo build` - Build Rust components
 - `cargo build --release --features real_rendering` - Build with JS rendering support
 - `pytest` - Run all Python tests (requires proper environment setup)
+- `./run_tests.sh fast` - Run only fast unit tests (recommended for development)
+- `./run_tests.sh unit` - Run all unit tests
+- `./run_tests.sh integration` - Run integration tests
+- `./run_tests.sh benchmark` - Run performance benchmarks
+- `./run_tests.sh profile` - Run tests with duration profiling
+- `pytest -m "not benchmark"` - Run tests excluding benchmarks
 - `pytest tests/rust/test_python_bindings.py -v` - Run Python binding tests
 - `pytest tests/unit/test_chunk_utils.py -v` - Run chunk utilities tests
 - `pytest test_main.py::test_convert_to_markdown -v` - Run specific Python test
@@ -201,11 +207,20 @@ from RAGnificent.utils.chunk_utils import ContentChunker
 
 ### Current Test Status
 
-- **121 tests** currently collected (significantly improved from previous 64)
-- **Major test fixes completed**: Fixed 22 failing tests including performance benchmarks, config tests, embedding edge cases, and nested header chunking
-- **Working test categories**: chunk utils, main functionality, Rust bindings, benchmarks, sitemap utils, embedding service, scraper error handling, pipeline tests, search tests
-- **Recent improvements**: Fixed method signatures, parameter passing, mock configurations, and test expectations to match actual implementation
-- **Known issues**: One config test failing due to `chunking_strategy` attribute access
+- **48 tests** currently collected with comprehensive coverage
+- **Test Performance Optimized**: Separated slow tests (benchmarks, integration, ML model loading) from fast unit tests
+- **Fast test execution**: ~15 seconds without benchmarks vs ~22 seconds with all tests
+- **Test Categories**:
+  - Unit tests: Core functionality testing (fast)
+  - Integration tests: External service integration (slower)
+  - Benchmark tests: Performance measurements with intentional delays
+  - ML tests: Tests requiring model loading (marked with `requires_model`)
+- **Test Markers Available**:
+  - `@pytest.mark.benchmark` - Performance benchmarks
+  - `@pytest.mark.slow` - Tests with intentional delays
+  - `@pytest.mark.integration` - Integration tests
+  - `@pytest.mark.requires_model` - Tests loading ML models
+  - `@pytest.mark.unit` - Fast unit tests
 
 ### Fallback Import Strategy
 
@@ -221,6 +236,14 @@ except ImportError:
 ### For New Tests
 
 Follow the package-based import pattern and ensure the virtual environment is properly activated with the package installed in editable mode.
+
+### Test Performance Guidelines
+
+- **Default Configuration**: Tests run without benchmarks by default (via `pytest.ini`)
+- **Quick Development Cycle**: Use `./run_tests.sh fast` or `pytest -m "not benchmark and not slow"`
+- **Test Organization**: Place slow/integration tests in appropriate directories and mark them
+- **Benchmarks**: Keep benchmarks separate and run only when needed
+- **Mock Heavy Resources**: Mock ML models and external services in unit tests
 
 ## Test Fixes Applied
 

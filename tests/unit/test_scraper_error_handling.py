@@ -17,6 +17,7 @@ project_root = Path(__file__).parent.parent.parent
 core_path = project_root / "RAGnificent" / "core"
 sys.path.insert(0, str(core_path.parent))
 
+import pytest
 import requests
 import responses
 
@@ -273,6 +274,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         except Exception as e:
             self.fail(f"Parallel execution failed or hung: {e}")
 
+    @pytest.mark.slow
     @responses.activate
     def test_worker_timeout_handling(self):
         """Test handling of worker timeouts in parallel processing."""

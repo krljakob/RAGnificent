@@ -1,0 +1,25 @@
+[
+  {
+    "id": "4d400e9e128711522ee4b11054e4fd4c",
+    "content": "# Test Document\n\nThis is a test document for RAG integration testing.\n\n\nThis is the first section of the test document.\n\n\nThis is a subsection with some specific content about RAG systems.\nRetrieval Augmented Generation combines search with generation.\n\n\nThis is the second section of the test document.\n\n\nThis subsection contains information about testing methodologies.\nIntegration testing verifies that components work together correctly.\n\n",
+    "metadata": {
+      "heading": "# Test Document",
+      "heading_level": 1,
+      "heading_path": "Test Document",
+      "path_elements": [
+        "Test Document"
+      ],
+      "parent_headers": [],
+      "domain": "example.com",
+      "word_count": 63,
+      "char_count": 443,
+      "nested_level": 0,
+      "title": "Test Document",
+      "document_url": "https://example.com/test"
+    },
+    "source_url": "https://example.com/test",
+    "created_at": "2025-06-10T22:57:57.115000",
+    "chunk_type": "section",
+    "has_embedding": true
+  }
+]
