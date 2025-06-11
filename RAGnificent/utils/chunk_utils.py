@@ -166,54 +166,58 @@ class ContentChunker:
         lines = markdown_content.split("\n")
 
         # Track header stack for maintaining hierarchy
-        header_stack = []
+        header_stack: List[Dict[str, Any]] = []
         current_section = None
 
         for line in lines:
-            # Check if line is a header by matching up to three leading spaces followed by #
-            header_match = HEADER_RE.match(line)
-            if header_match:
-                # This is a header line
-                level = len(header_match[1])
-                heading_text = header_match[2].strip()
-
-                # If we have a current section, finalize it and add to sections list
-                if current_section:
-                    sections.append(current_section)
-
-                # Update header stack based on new header level
-                while header_stack and header_stack[-1]["level"] >= level:
-                    header_stack.pop()
-
-                # Create path representation of current location in hierarchy
-                path_elements = [h["text"] for h in header_stack] + [heading_text]
-                path = " > ".join(path_elements)
-
-                parent_headers = [
-                    {
-                        "text": header["text"],
-                        "level": header["level"],
-                        "markdown": "#" * header["level"] + " " + header["text"],
-                    }
-                    for header in header_stack
-                ]
-                # Create new header entry
-                header_entry = {"level": level, "text": heading_text}
-
-                # Push to stack
-                header_stack.append(header_entry)
-
-                # Start new section
-                current_section = {
-                    "heading": line,
-                    "content": line + "\n",
-                    "level": level,
-                    "path": path,
-                    "path_elements": path_elements,
-                    "parent_headers": parent_headers,
-                    "nested_level": len(parent_headers),
-                }
-            elif current_section:
+            # Manual header detection: up to 3 leading spaces, 1-6 '#'s, at least one space, then text
+            stripped = line.lstrip(' ')
+            leading_spaces = len(line) - len(stripped)
+            if 0 <= leading_spaces <= 3 and stripped.startswith('#'):
+                # Count number of consecutive '#' at the start
+                i = 0
+                while i < len(stripped) and stripped[i] == '#':
+                    i += 1
+                if 1 <= i <= 6:
+                    # There must be at least one space after the #'s
+                    if i < len(stripped) and stripped[i] == ' ':
+                        heading_text = stripped[i+1:].strip()
+                        level = i
+                        # This is a header line
+                        # If we have a current section, finalize it and add to sections list
+                        if current_section:
+                            sections.append(current_section)
+                        # Update header stack based on new header level
+                        while header_stack and int(header_stack[-1]["level"]) >= int(level):
+                            header_stack.pop()
+                        # Create path representation of current location in hierarchy
+                        path_elements = [str(h["text"]) for h in header_stack] + [str(heading_text)]
+                        path = " > ".join(path_elements)
+                        parent_headers = [
+                            {
+                                "text": str(header["text"]),
+                                "level": int(header["level"]),
+                                "markdown": "#" * int(header["level"]) + " " + str(header["text"]),
+                            }
+                            for header in header_stack
+                        ]
+                        # Create new header entry
+                        header_entry = {"level": level, "text": heading_text}
+                        # Push to stack
+                        header_stack.append(header_entry)
+                        # Start new section
+                        current_section = {
+                            "heading": line,
+                            "content": line + "\n",
+                            "level": level,
+                            "path": path,
+                            "path_elements": path_elements,
+                            "parent_headers": parent_headers,
+                            "nested_level": len(parent_headers),
+                        }
+                        continue  # Go to next line
+            # Not a header line
+            if current_section:
                 # Add line to current section content
                 current_section["content"] += line + "\n"
             elif line.strip():
