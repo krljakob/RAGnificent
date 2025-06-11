@@ -228,7 +228,7 @@ class RequestThrottler(StatsMixin):
             start_time = time.time()
 
             try:
-                result = func(*args, **kwargs)
+                result = func(url, *args, **kwargs)
                 response_time = time.time() - start_time
 
                 status_code = getattr(result, "status_code", None)

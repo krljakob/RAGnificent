@@ -337,7 +337,7 @@ def test_throttler_performance():
     with PerformanceTimer("Execute (5 requests)"):
         for i in range(5):
             url = f"https://example.com/page{i}"
-            throttler.execute(mock_request, url, url)
+            throttler.execute(mock_request, url)
 
     with PerformanceTimer("Execute parallel (20 requests)"):
         urls = [f"https://example.com/page{i}" for i in range(20)]

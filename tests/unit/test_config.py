@@ -32,13 +32,13 @@ class TestConfigFileSupport(unittest.TestCase):
     def test_app_config_initialization_with_dict_override(self):
         """Ensure that AppConfig applies overrides from config_dict"""
         override = {
-            "chunking_strategy": ChunkingStrategy.SEMANTIC.value,
-            "embedding_model_type": EmbeddingModelType.OPENAI.value,
+            "chunking": {"strategy": ChunkingStrategy.SEMANTIC.value},
+            "embedding": {"model_type": EmbeddingModelType.OPENAI.value},
         }
         config = AppConfig(config_dict=override)
         # Overrides should map back to enum values
-        self.assertEqual(config.chunking_strategy, ChunkingStrategy.SEMANTIC)
-        self.assertEqual(config.embedding_model_type, EmbeddingModelType.OPENAI)
+        self.assertEqual(config.chunking.strategy, ChunkingStrategy.SEMANTIC)
+        self.assertEqual(config.embedding.model_type, EmbeddingModelType.OPENAI)
 
     def setUp(self):
         """Set up test environment."""
