@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
+# Precompiled regex for markdown headers (up to 3 leading spaces, 1-6 #, at least one space, then text)
+HEADER_RE = re.compile(r"^ {0,3}(#{1,6}) +(.*)$")
+
 
 @dataclass
 class Chunk:
@@ -168,7 +171,7 @@ class ContentChunker:
 
         for line in lines:
             # Check if line is a header by matching up to three leading spaces followed by #
-            header_match = re.match(r"^ {0,3}(#{1,6}) +(.*)$", line)
+            header_match = HEADER_RE.match(line)
             if header_match:
                 # This is a header line
                 level = len(header_match[1])
