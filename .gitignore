@@ -187,3 +187,4 @@ dmypy.json
 .ssh.pub
 **/.claude/settings.local.json
 dev/
+ai-reviews/
