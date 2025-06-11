@@ -8,9 +8,21 @@ to ensure security and data integrity throughout the application.
 import logging
 import re
 import urllib.parse
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Callable
 
 logger = logging.getLogger(__name__)
+
+
+def _validate_with_logging(value: Any, validation_func: Callable, error_msg: str = "Validation failed") -> bool:
+    """Helper function to validate with consistent error logging."""
+    if not value:
+        return False
+    
+    try:
+        return validation_func(value)
+    except Exception as e:
+        logger.warning(f"{error_msg}: {e}")
+        return False
 
 
 def validate_url(url: str) -> bool:
@@ -109,33 +121,15 @@ def validate_file_path(
 
 
 def validate_regex_pattern(pattern: str) -> bool:
-    """
-    Validate if a regex pattern is valid and safe.
-
-    Args:
-        pattern: Regex pattern string to validate
-
-    Returns:
-        bool: True if pattern is valid, False otherwise
-    """
-    if not pattern:
-        return False
-
-    try:
-        re.compile(pattern)
-
-        if any(x in pattern for x in ["(.*)*", "(.+)+", "(a|a|a|a|a|a)"]):
-            logger.warning(f"Potentially catastrophic regex pattern: {pattern}")
+    """Validate if a regex pattern is valid and safe."""
+    def _validate_regex(p):
+        re.compile(p)
+        if any(x in p for x in ["(.*)*", "(.+)+", "(a|a|a|a|a|a)"]):
+            logger.warning(f"Potentially catastrophic regex pattern: {p}")
             return False
-
         return True
-    except re.error:
-        logger.warning(f"Invalid regex pattern: {pattern}")
-        return False
-
-    except Exception as e:
-        logger.warning(f"Regex validation error: {e}")
-        return False
+    
+    return _validate_with_logging(pattern, _validate_regex, f"Invalid regex pattern: {pattern}")
 
 
 def validate_html_content(content: str) -> bool:

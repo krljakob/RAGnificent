@@ -5,17 +5,8 @@ This module consolidates functionality from the simplified sitemap.py and the mo
 robust sitemap_utils.py implementations.
 """
 
-import sys
-from pathlib import Path
-
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import logging
 import re
-
-# Import directly using a system-level import approach (no relative imports)
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -28,16 +19,15 @@ from xml.etree.ElementTree import ParseError
 import requests
 from bs4 import BeautifulSoup
 
-# Ensure core module is available in the path
-core_path = Path(__file__).parent.parent / "core"
-if str(core_path) not in sys.path:
-    sys.path.append(str(core_path))
-
-# Now import directly from the module
+# Import local modules with unified fallback handling
 try:
-    from throttle import RequestThrottler
+    from ..core._imports import setup_core_imports
+    setup_core_imports()
+    from ..core.throttle import RequestThrottler
 except ImportError:
-    from core.throttle import RequestThrottler
+    # Fallback for direct execution
+    sys.path.extend([str(Path(__file__).parent.parent / "core")])
+    from throttle import RequestThrottler
 
 logger = logging.getLogger("sitemap_parser")
 
