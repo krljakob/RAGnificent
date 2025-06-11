@@ -32,10 +32,14 @@ except ImportError:
         from RAGnificent.utils.sitemap_utils import SitemapParser
         from RAGnificent.core.throttle import RequestThrottler
         from RAGnificent.core.cache import RequestCache
-    except ImportError:
-        import sys
-        from pathlib import Path
-        sys.path.extend([str(Path(__file__).parent), str(Path(__file__).parent.parent / "utils")])
+except ImportError:
+    # Use already imported sys and Path
+    parent_dir = Path(__file__).parent
+    utils_dir = parent_dir.parent / "utils"
+    # Only add to path if not already present
+    for path in [str(parent_dir), str(utils_dir)]:
+        if path not in sys.path:
+            sys.path.insert(0, path)
         from chunk_utils import ContentChunker, create_semantic_chunks
         from sitemap_utils import SitemapParser
         from throttle import RequestThrottler
@@ -248,20 +252,30 @@ class MarkdownScraper:
     def _cache_response(self, url: str, content: str) -> None:
         """Cache the response if caching is enabled."""
         if self.cache_enabled and self.request_cache is not None:
-            self.request_cache.set(url, content)
+def _fetch_with_retries(self, url: str) -> str:
+     """Fetch URL content with retry logic."""
+     for attempt in range(self.max_retries):
+         response = None
+         start_time = time.time()
+         error = None
+        throttle_acquired = False
 
-    def _fetch_with_retries(self, url: str) -> str:
-        """Fetch URL content with retry logic."""
-        for attempt in range(self.max_retries):
-            response = None
-            start_time = time.time()
-            error = None
-            
-            try:
-                self.throttler.throttle(url)
-                response = self.session.get(url, timeout=self.timeout)
-                response.raise_for_status()
-
+         try:
+             self.throttler.throttle(url)
+            throttle_acquired = True
+             response = self.session.get(url, timeout=self.timeout)
+             response.raise_for_status()
+             # ... rest of success case
+         except ... as ...:
+             # ... exception handlers
+        finally:
+            if throttle_acquired:
+                # Ensure release is called with appropriate parameters
+                if response:
+                    response_time = time.time() - start_time
+                    self.throttler.release(url, response.status_code if not error else None, response_time, error)
+                elif error:
+                    self.throttler.release(url, error=error)
                 response_time = time.time() - start_time
                 self.throttler.release(url, response.status_code, response_time)
 
@@ -281,7 +295,7 @@ class MarkdownScraper:
                     self.throttler.release(url, response.status_code, response_time, http_err)
                 else:
                     self.throttler.release(url, error=http_err)
-                    
+
                 self._handle_request_error(
                     url,
                     attempt,
@@ -597,12 +611,12 @@ class MarkdownScraper:
     ) -> tuple:
         """
         Fallback conversion logic when Rust is not available.
-        
+
         Args:
             html_content: The HTML content to convert
             url: The source URL for resolving relative links
             output_format: The output format (markdown, json, or xml)
-            
+
         Returns:
             Tuple of (converted_content, markdown_content)
         """
@@ -619,22 +633,22 @@ class MarkdownScraper:
             except ImportError:
                 # If markdownify isn't available, use our converter
                 markdown_content = self.convert_to_markdown(html_content, url)
-            
+
             # Try to convert to requested format
             try:
                 from ragnificent_rs import document_to_xml, parse_markdown_to_document
-                
+
                 document = parse_markdown_to_document(markdown_content, url)
-                
+
                 if output_format == "json":
                     content = json.dumps(document, indent=2)
                 elif output_format == "xml":
                     content = document_to_xml(document)
                 else:
                     content = markdown_content
-                    
+
                 return content, markdown_content
-                
+
             except ImportError:
                 # If Rust helpers aren't available, return markdown
                 logger.warning(
@@ -702,7 +716,7 @@ class MarkdownScraper:
         if parallel:
             try:
                 successfully_scraped, failed_urls = self._process_urls_concurrently(
-                    urls, output_path, output_format, save_chunks, 
+                    urls, output_path, output_format, save_chunks,
                     chunk_directory, chunk_format, max_workers, worker_timeout
                 )
             except Exception as e:
@@ -962,7 +976,7 @@ class MarkdownScraper:
         if parallel:
             try:
                 successfully_scraped, failed_urls = self._process_urls_concurrently(
-                    links, output_path, output_format, save_chunks, 
+                    links, output_path, output_format, save_chunks,
                     chunk_directory, chunk_format, max_workers, worker_timeout
                 )
             except Exception as e:
@@ -1019,7 +1033,7 @@ class MarkdownScraper:
     ) -> Tuple[List[str], List[Tuple[str, str]]]:
         """
         Process multiple URLs concurrently with unified parallel logic.
-        
+
         Args:
             urls: List of URLs to process
             output_path: Output directory path
@@ -1029,7 +1043,7 @@ class MarkdownScraper:
             chunk_format: Format for chunks
             max_workers: Maximum number of parallel workers
             worker_timeout: Timeout for individual workers
-            
+
         Returns:
             Tuple of (successfully_scraped, failed_urls)
         """

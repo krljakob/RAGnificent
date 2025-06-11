@@ -76,7 +76,7 @@ class Pipeline:
             'embedding_model_type': (embedding_model_type, 'embedding_model_type', None),
             'embedding_model_name': (embedding_model_name, 'embedding_model_name', None),
         }
-        
+
         resolved_config = self._resolve_config_params(config_params)
         self.collection_name = resolved_config['collection_name']
 
@@ -107,7 +107,7 @@ class Pipeline:
     def _setup_data_directory(self, data_dir: Optional[Union[str, Path]]) -> Path:
         """Set up and validate the data directory."""
         from ..core.security import secure_file_path
-        
+
         pipeline_data_dir = self.pipeline_config.get("data_dir") or self.pipeline_config.get("output_dir")
         base_data_dir = self.config.data_dir
         user_data_dir = data_dir or pipeline_data_dir or ""
@@ -130,7 +130,7 @@ class Pipeline:
             resolved_data_dir.resolve().relative_to(safe_root_dir)
         except ValueError as e:
             raise ValueError(f"Final data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}") from e
-        
+
         return resolved_data_dir
 
     def _initialize_scraper(self, resolved_config: Dict[str, Any]) -> MarkdownScraper:
@@ -148,12 +148,12 @@ class Pipeline:
 
     def _initialize_embedding_service(self, resolved_config: Dict[str, Any]):
         """Initialize the embedding service with resolved configuration."""
-        from ..core.config import EmbeddingModelType
-        
+
+
         model_type = resolved_config['embedding_model_type']
         if model_type and isinstance(model_type, str):
             model_type = EmbeddingModelType(model_type)
-            
+
         return get_embedding_service(model_type, resolved_config['embedding_model_name'])
 
     def _load_pipeline_config(
@@ -327,9 +327,7 @@ class Pipeline:
 
                 # Generate embeddings and store
                 for chunk in chunks:
-                    embedding = self.embedding_service.generate_embeddings(
-                        [chunk["content"]]
-                    )[0]
+                    embedding = self.embedding_service.model.embed(chunk["content"])
                     self.vector_store.store_documents(
                         [
                             {
@@ -1106,7 +1104,7 @@ Always cite your sources by referencing the document numbers.
         # Skip step if it depends on a previous step that failed
         if depends_on_previous and not previous_successful:
             logger.error(f"No input data for {step_name} step")
-            return self._extracted_from__execute_pipeline_step_27(result, step_name)
+            return self._handle_pipeline_step_failure(result, step_name)
         try:
             # Execute the step function
             output_data = step_fn(input_data)

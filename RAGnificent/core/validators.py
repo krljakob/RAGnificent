@@ -17,11 +17,11 @@ def _validate_with_logging(value: Any, validation_func: Callable, error_msg: str
     """Helper function to validate with consistent error logging."""
     if not value:
         return False
-    
+
     try:
         return validation_func(value)
     except Exception as e:
-        logger.warning(f"{error_msg}: {e}")
+        logger.warning(f"{error_msg}: {e.__class__.__name__}: {e}")
         return False
 
 
@@ -128,7 +128,7 @@ def validate_regex_pattern(pattern: str) -> bool:
             logger.warning(f"Potentially catastrophic regex pattern: {p}")
             return False
         return True
-    
+
     return _validate_with_logging(pattern, _validate_regex, f"Invalid regex pattern: {pattern}")
 
 

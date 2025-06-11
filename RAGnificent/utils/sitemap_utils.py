@@ -27,9 +27,10 @@ except ImportError:
     try:
         from RAGnificent.core.throttle import RequestThrottler
     except ImportError:
-        import sys
         from pathlib import Path
-        sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
+        core_path = str(Path(__file__).parent.parent / "core")
+        if core_path not in sys.path:
+            sys.path.insert(0, core_path)
         from throttle import RequestThrottler
 
 logger = logging.getLogger("sitemap_parser")

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from dotenv import load_dotenv
+# from dotenv import load_dotenv  # Removed to avoid side effects at import time
 
 # Import configuration with fallback
 try:
@@ -29,12 +29,12 @@ except ImportError:
         from core.config import EmbeddingModelType, get_config
 
 logger = logging.getLogger(__name__)
-load_dotenv()  # Load environment variables for API keys
+# load_dotenv()  # Removed to avoid side effects at import time
 
 
 class EmbeddingError(Exception):
     """Base exception for embedding-related errors."""
-    
+
     def __init__(self, message: str, error_type: str = "general"):
         super().__init__(message)
         self.error_type = error_type
@@ -64,14 +64,14 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
     """Get path for cached embeddings."""
     config = get_config()
     cache_dir = config.embedding.cache_dir
-    
+
     safe_model_name = _sanitize_model_name(model_name)
     validated_hash = _validate_text_hash(text_hash)
-    
+
     model_cache_dir = cache_dir / safe_model_name
     os.makedirs(model_cache_dir, exist_ok=True)
-    
-    return model_cache_dir / f"{validated_hash}.pkl"
+
+    return model_cache_dir / f"{validated_hash}.npy"
 
 
 def compute_text_hash(text: str) -> str:
@@ -83,8 +83,8 @@ def _get_cache_path_if_enabled(model_name: str, text: str) -> Optional[Path]:
     """Get cache path if caching is enabled, None otherwise."""
     config = get_config()
     if not config.embedding.use_cache:
-        return None
-    
+        # Unreachable – let the raised exception propagate
+
     text_hash = compute_text_hash(text)
     return get_embedding_cache_path(model_name, text_hash)
 
@@ -94,7 +94,7 @@ def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
     cache_path = _get_cache_path_if_enabled(model_name, text)
     if not cache_path or not cache_path.exists():
         return None
-    
+
     try:
         return np.load(cache_path)
     except Exception as e:
@@ -107,7 +107,7 @@ def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -
     cache_path = _get_cache_path_if_enabled(model_name, text)
     if not cache_path:
         return False
-    
+
     try:
         np.save(cache_path, embedding)
         return True

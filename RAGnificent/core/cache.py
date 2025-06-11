@@ -210,7 +210,7 @@ class RequestCache(StatsMixin):
     def _get_cache_paths(self, url: str) -> Tuple[Path, Path]:
         """Get cache and metadata paths for a URL."""
         key = self._get_cache_key(url)
-        return self.cache_dir / key, self.metadata_dir / f"{key}.meta"
+        return (self.cache_dir / key, self.metadata_dir / f"{key}.meta")
 
     def _compress_content(self, content: str) -> Tuple[bytes, bool]:
         """
