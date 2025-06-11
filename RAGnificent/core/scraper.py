@@ -247,10 +247,17 @@ class MarkdownScraper:
     def _fetch_with_retries(self, url: str) -> str:
         """Fetch URL content with retry logic."""
         for attempt in range(self.max_retries):
+            response = None
+            start_time = time.time()
+            error = None
+            
             try:
-                self.throttler.throttle()
+                self.throttler.throttle(url)
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
+
+                response_time = time.time() - start_time
+                self.throttler.release(url, response.status_code, response_time)
 
                 logger.info(
                     f"Successfully retrieved the website content (status code: {response.status_code})."
@@ -262,6 +269,13 @@ class MarkdownScraper:
                 return response.text
 
             except requests.exceptions.HTTPError as http_err:
+                error = http_err
+                if response:
+                    response_time = time.time() - start_time
+                    self.throttler.release(url, response.status_code, response_time, http_err)
+                else:
+                    self.throttler.release(url, error=http_err)
+                    
                 self._handle_request_error(
                     url,
                     attempt,
@@ -270,6 +284,8 @@ class MarkdownScraper:
                     f"Failed to retrieve {url} after {self.max_retries} attempts.",
                 )
             except requests.exceptions.ConnectionError as conn_err:
+                error = conn_err
+                self.throttler.release(url, error=conn_err)
                 self._handle_request_error(
                     url,
                     attempt,
@@ -278,6 +294,8 @@ class MarkdownScraper:
                     f"Connection error persisted for {url} after {self.max_retries} attempts.",
                 )
             except requests.exceptions.Timeout as timeout_err:
+                error = timeout_err
+                self.throttler.release(url, error=timeout_err)
                 self._handle_request_error(
                     url,
                     attempt,
@@ -286,6 +304,8 @@ class MarkdownScraper:
                     f"Request to {url} timed out after {self.max_retries} attempts.",
                 )
             except Exception as err:
+                error = err
+                self.throttler.release(url, error=err)
                 logger.error(f"An unexpected error occurred: {err}")
                 raise
 
