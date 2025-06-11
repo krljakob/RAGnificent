@@ -38,7 +38,10 @@ class DomainStats:
 try:
     from .stats import StatsMixin
 except ImportError:
-    from stats import StatsMixin
+    try:
+        from RAGnificent.core.stats import StatsMixin
+    except ImportError:
+        from stats import StatsMixin
 
 
 class RequestThrottler(StatsMixin):

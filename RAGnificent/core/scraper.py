@@ -26,12 +26,20 @@ try:
     from .throttle import RequestThrottler
     from .cache import RequestCache
 except ImportError:
-    # Fallback for direct module execution
-    sys.path.extend([str(Path(__file__).parent), str(Path(__file__).parent.parent / "utils")])
-    from chunk_utils import ContentChunker, create_semantic_chunks
-    from sitemap_utils import SitemapParser
-    from throttle import RequestThrottler
-    from cache import RequestCache
+    # Fallback for direct module execution or testing
+    try:
+        from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
+        from RAGnificent.utils.sitemap_utils import SitemapParser
+        from RAGnificent.core.throttle import RequestThrottler
+        from RAGnificent.core.cache import RequestCache
+    except ImportError:
+        import sys
+        from pathlib import Path
+        sys.path.extend([str(Path(__file__).parent), str(Path(__file__).parent.parent / "utils")])
+        from chunk_utils import ContentChunker, create_semantic_chunks
+        from sitemap_utils import SitemapParser
+        from throttle import RequestThrottler
+        from cache import RequestCache
 
 # Use centralized logging configuration
 try:
@@ -671,90 +679,10 @@ class MarkdownScraper:
 
         if parallel:
             try:
-
-                def process_url(args):
-                    url, idx = args
-                    try:
-                        self._process_single_url(
-                            url,
-                            idx,
-                            len(urls),
-                            output_path,
-                            output_format,
-                            save_chunks,
-                            chunk_directory,
-                            chunk_format,
-                        )
-                        return (True, url, None)
-                    except Exception as e:
-                        return (False, url, str(e))
-
-                # Use the enhanced throttler's parallel execution capabilities
-                if hasattr(self.throttler, "execute_parallel"):
-                    logger.info(
-                        f"Processing {len(urls)} URLs in parallel with enhanced throttling"
-                    )
-
-                    # Create a wrapper function that doesn't require the URL parameter
-                    def throttled_process(url):
-                        idx = urls.index(url) if url in urls else 0
-                        return process_url((url, idx))
-
-                    results = self.throttler.execute_parallel(throttled_process, urls)
-                else:
-                    # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
-                    logger.info(
-                        f"Processing {len(urls)} URLs in parallel with {max_workers} workers"
-                    )
-                    with concurrent.futures.ThreadPoolExecutor(
-                        max_workers=max_workers
-                    ) as executor:
-                        if worker_timeout is not None:
-                            # Use submit and as_completed with timeout
-                            futures = [
-                                executor.submit(process_url, (url, i))
-                                for i, url in enumerate(urls)
-                            ]
-                            results = []
-
-                            for future in concurrent.futures.as_completed(
-                                futures, timeout=None
-                            ):
-                                try:
-                                    result = future.result(timeout=worker_timeout)
-                                    results.append(result)
-                                except concurrent.futures.TimeoutError:
-                                    # This worker timed out
-                                    idx = futures.index(future)
-                                    if idx < len(urls):
-                                        url = urls[idx]
-                                        logger.error(
-                                            f"Worker timed out after {worker_timeout}s while processing {url}"
-                                        )
-                                        results.append(
-                                            (
-                                                False,
-                                                url,
-                                                f"Timed out after {worker_timeout}s",
-                                            )
-                                        )
-                        else:
-                            # Use map without timeout
-                            results = list(
-                                executor.map(
-                                    process_url,
-                                    [(url, i) for i, url in enumerate(urls)],
-                                )
-                            )
-
-                # Process results
-                for success, url, error in results:
-                    if success:
-                        successfully_scraped.append(url)
-                    else:
-                        failed_urls.append((url, error))
-                        logger.error(f"Error processing URL {url}: {error}")
-
+                successfully_scraped, failed_urls = self._process_urls_concurrently(
+                    urls, output_path, output_format, save_chunks, 
+                    chunk_directory, chunk_format, max_workers, worker_timeout
+                )
             except Exception as e:
                 logger.error(f"Error in parallel processing: {e}")
                 logger.warning("Falling back to sequential processing")
@@ -1011,90 +939,10 @@ class MarkdownScraper:
 
         if parallel:
             try:
-
-                def process_url(args):
-                    url, idx = args
-                    try:
-                        self._process_single_url(
-                            url,
-                            idx,
-                            len(links),
-                            output_path,
-                            output_format,
-                            save_chunks,
-                            chunk_directory,
-                            chunk_format,
-                        )
-                        return (True, url, None)
-                    except Exception as e:
-                        return (False, url, str(e))
-
-                # Use the enhanced throttler's parallel execution capabilities if available
-                if hasattr(self.throttler, "execute_parallel"):
-                    logger.info(
-                        f"Processing {len(links)} URLs in parallel with enhanced throttling"
-                    )
-
-                    # Create a wrapper function that doesn't require the URL parameter
-                    def throttled_process(url):
-                        idx = links.index(url) if url in links else 0
-                        return process_url((url, idx))
-
-                    results = self.throttler.execute_parallel(throttled_process, links)
-                else:
-                    # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
-                    logger.info(
-                        f"Processing {len(links)} URLs in parallel with {max_workers} workers"
-                    )
-                    with concurrent.futures.ThreadPoolExecutor(
-                        max_workers=max_workers
-                    ) as executor:
-                        if worker_timeout is not None:
-                            # Use submit and as_completed with timeout
-                            futures = [
-                                executor.submit(process_url, (url, i))
-                                for i, url in enumerate(links)
-                            ]
-                            results = []
-
-                            for future in concurrent.futures.as_completed(
-                                futures, timeout=None
-                            ):
-                                try:
-                                    result = future.result(timeout=worker_timeout)
-                                    results.append(result)
-                                except concurrent.futures.TimeoutError:
-                                    # This worker timed out
-                                    idx = futures.index(future)
-                                    if idx < len(links):
-                                        url = links[idx]
-                                        logger.error(
-                                            f"Worker timed out after {worker_timeout}s while processing {url}"
-                                        )
-                                        results.append(
-                                            (
-                                                False,
-                                                url,
-                                                f"Timed out after {worker_timeout}s",
-                                            )
-                                        )
-                        else:
-                            # Use map without timeout
-                            results = list(
-                                executor.map(
-                                    process_url,
-                                    [(url, i) for i, url in enumerate(links)],
-                                )
-                            )
-
-                # Process results
-                for success, url, error in results:
-                    if success:
-                        successfully_scraped.append(url)
-                    else:
-                        failed_urls.append((url, error))
-                        logger.error(f"Error processing URL {url}: {error}")
-
+                successfully_scraped, failed_urls = self._process_urls_concurrently(
+                    links, output_path, output_format, save_chunks, 
+                    chunk_directory, chunk_format, max_workers, worker_timeout
+                )
             except Exception as e:
                 logger.error(f"Error in parallel processing: {e}")
                 logger.warning("Falling back to sequential processing")
@@ -1135,6 +983,126 @@ class MarkdownScraper:
                 logger.warning(f"  - ... and {len(failed_urls) - 5} more")
 
         return successfully_scraped
+
+    def _process_urls_concurrently(
+        self,
+        urls: List[str],
+        output_path: str,
+        output_format: str,
+        save_chunks: bool,
+        chunk_directory: str,
+        chunk_format: str,
+        max_workers: int = 4,
+        worker_timeout: Optional[int] = None,
+    ) -> Tuple[List[str], List[Tuple[str, str]]]:
+        """
+        Process multiple URLs concurrently with unified parallel logic.
+        
+        Args:
+            urls: List of URLs to process
+            output_path: Output directory path
+            output_format: Format for output (markdown, json, xml)
+            save_chunks: Whether to save chunks
+            chunk_directory: Directory for chunks
+            chunk_format: Format for chunks
+            max_workers: Maximum number of parallel workers
+            worker_timeout: Timeout for individual workers
+            
+        Returns:
+            Tuple of (successfully_scraped, failed_urls)
+        """
+        successfully_scraped = []
+        failed_urls = []
+
+        def process_url(args):
+            url, idx = args
+            try:
+                self._process_single_url(
+                    url,
+                    idx,
+                    len(urls),
+                    output_path,
+                    output_format,
+                    save_chunks,
+                    chunk_directory,
+                    chunk_format,
+                )
+                return (True, url, None)
+            except Exception as e:
+                return (False, url, str(e))
+
+        try:
+            # Use the enhanced throttler's parallel execution capabilities if available
+            if hasattr(self.throttler, "execute_parallel"):
+                logger.info(
+                    f"Processing {len(urls)} URLs in parallel with enhanced throttling"
+                )
+
+                # Create a wrapper function that doesn't require the URL parameter
+                def throttled_process(url):
+                    idx = urls.index(url) if url in urls else 0
+                    return process_url((url, idx))
+
+                results = self.throttler.execute_parallel(throttled_process, urls)
+            else:
+                # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
+                logger.info(
+                    f"Processing {len(urls)} URLs in parallel with {max_workers} workers"
+                )
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=max_workers
+                ) as executor:
+                    if worker_timeout is not None:
+                        # Use submit and as_completed with timeout
+                        futures = [
+                            executor.submit(process_url, (url, i))
+                            for i, url in enumerate(urls)
+                        ]
+                        results = []
+
+                        for future in concurrent.futures.as_completed(
+                            futures, timeout=None
+                        ):
+                            try:
+                                result = future.result(timeout=worker_timeout)
+                                results.append(result)
+                            except concurrent.futures.TimeoutError:
+                                # This worker timed out
+                                idx = futures.index(future)
+                                if idx < len(urls):
+                                    url = urls[idx]
+                                    logger.error(
+                                        f"Worker timed out after {worker_timeout}s while processing {url}"
+                                    )
+                                    results.append(
+                                        (
+                                            False,
+                                            url,
+                                            f"Timed out after {worker_timeout}s",
+                                        )
+                                    )
+                    else:
+                        # Use map without timeout
+                        results = list(
+                            executor.map(
+                                process_url,
+                                [(url, i) for i, url in enumerate(urls)],
+                            )
+                        )
+
+            # Process results
+            for success, url, error in results:
+                if success:
+                    successfully_scraped.append(url)
+                else:
+                    failed_urls.append((url, error))
+                    logger.error(f"Error processing URL {url}: {error}")
+
+        except Exception as e:
+            logger.error(f"Error in parallel processing: {e}")
+            raise
+
+        return successfully_scraped, failed_urls
 
 
 def main(

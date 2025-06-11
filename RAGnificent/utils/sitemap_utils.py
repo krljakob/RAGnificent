@@ -19,15 +19,18 @@ from xml.etree.ElementTree import ParseError
 import requests
 from bs4 import BeautifulSoup
 
-# Import local modules with unified fallback handling
+# Import local modules
 try:
-    from ..core._imports import setup_core_imports
-    setup_core_imports()
     from ..core.throttle import RequestThrottler
 except ImportError:
-    # Fallback for direct execution
-    sys.path.extend([str(Path(__file__).parent.parent / "core")])
-    from throttle import RequestThrottler
+    # Fallback for direct execution or testing
+    try:
+        from RAGnificent.core.throttle import RequestThrottler
+    except ImportError:
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
+        from throttle import RequestThrottler
 
 logger = logging.getLogger("sitemap_parser")
 

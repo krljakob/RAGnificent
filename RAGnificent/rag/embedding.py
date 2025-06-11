@@ -20,8 +20,13 @@ from dotenv import load_dotenv
 try:
     from ..core.config import EmbeddingModelType, get_config
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from core.config import EmbeddingModelType, get_config
+    try:
+        from RAGnificent.core.config import EmbeddingModelType, get_config
+    except ImportError:
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from core.config import EmbeddingModelType, get_config
 
 logger = logging.getLogger(__name__)
 load_dotenv()  # Load environment variables for API keys
