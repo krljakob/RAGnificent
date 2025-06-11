@@ -9,100 +9,12 @@ and its users.
 import logging
 import re
 import time
-from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import bleach
 
 logger = logging.getLogger(__name__)
 
-
-class RateLimiter:
-    """Rate limiter for controlling request frequency."""
-
-    def __init__(self, max_calls: int, time_frame: float):
-        """
-        Initialize rate limiter.
-
-        Args:
-            max_calls: Maximum number of calls allowed in the time frame
-            time_frame: Time frame in seconds
-        """
-        self.max_calls = max_calls
-        self.time_frame = time_frame
-        self.calls = []
-
-    def __call__(self, func: Callable) -> Callable:
-        """
-        Decorator for rate-limiting function calls.
-
-        Args:
-            func: Function to rate limit
-
-        Returns:
-            Callable: Rate-limited function
-        """
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            current_time = time.time()
-            self.calls = [
-                call_time
-                for call_time in self.calls
-                if current_time - call_time <= self.time_frame
-            ]
-
-            if len(self.calls) >= self.max_calls:
-                sleep_time = self.time_frame - (current_time - self.calls[0])
-                if sleep_time > 0:
-                    logger.info(
-                        f"Rate limit reached. Sleeping for {sleep_time:.2f} seconds"
-                    )
-                    time.sleep(sleep_time)
-
-            self.calls.append(time.time())
-            return func(*args, **kwargs)
-
-        return wrapper
-
-
-class ThrottledSession:
-    """Session with built-in throttling for HTTP requests."""
-
-    def __init__(self, requests_per_second: float = 1.0):
-        """
-        Initialize throttled session.
-
-        Args:
-            requests_per_second: Maximum number of requests per second
-        """
-        self.min_interval = 1.0 / requests_per_second
-        self.last_request_time = 0
-
-    def request(self, method: str, url: str, **kwargs) -> Any:
-        """
-        Make a throttled HTTP request.
-
-        Args:
-            method: HTTP method
-            url: URL to request
-            **kwargs: Additional arguments for requests
-
-        Returns:
-            Response from the request
-        """
-        import requests
-
-        current_time = time.time()
-        elapsed = current_time - self.last_request_time
-        wait_time = max(0, self.min_interval - elapsed)
-
-        if wait_time > 0:
-            logger.debug(f"Throttling request to {url}. Waiting {wait_time:.2f}s")
-            time.sleep(wait_time)
-
-        self.last_request_time = time.time()
-        return requests.request(method, url, **kwargs)
 
 
 def redact_sensitive_data(
