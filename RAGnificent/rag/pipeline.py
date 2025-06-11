@@ -240,9 +240,7 @@ class Pipeline:
 
         # Additional validation
         if not validate_file_access(config_path):
-            raise ValueError(
-                f"Access denied to configuration file: {config_path}"
-            )
+            raise ValueError(f"Access denied to configuration file: {config_path}")
 
         with open(config_path, "r") as f:
             config_path_obj = Path(config_path)

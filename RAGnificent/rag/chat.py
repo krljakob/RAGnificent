@@ -15,6 +15,7 @@ except ImportError:
     # Fallback for direct execution
     import sys
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from rag.pipeline import Pipeline as RAGPipeline
 
@@ -84,13 +85,11 @@ class RAGChat:
                 score = result.get("score", 0)
             else:
                 # Handle SearchResult objects
-                content = getattr(result, 'content', '')
-                source_url = getattr(result, 'source_url', '')
-                score = getattr(result, 'score', 0)
+                content = getattr(result, "content", "")
+                source_url = getattr(result, "source_url", "")
+                score = getattr(result, "score", 0)
 
-            context.append(
-                {"content": content, "url": source_url, "score": score}
-            )
+            context.append({"content": content, "url": source_url, "score": score})
 
         # Combine with chat history if requested
         chat_context = ""
@@ -105,12 +104,14 @@ class RAGChat:
         # Generate response using built-in RAG functionality
         if context:
             response = self.pipeline.query_with_context(
-                query, limit=limit, threshold=threshold,
-                system_prompt=chat_context or None
+                query,
+                limit=limit,
+                threshold=threshold,
+                system_prompt=chat_context or None,
             )
             # Extract the response text if it's a dict
             if isinstance(response, dict):
-                response = response.get('response', str(response))
+                response = response.get("response", str(response))
         else:
             # No context found
             response = "I couldn't find relevant information to answer your query. Could you rephrase or ask something else?"

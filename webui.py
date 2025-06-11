@@ -43,7 +43,7 @@ class RAGHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Handle GET requests."""
-        if self.path == "/" or self.path == "/index.html":
+        if self.path in {"/", "/index.html"}:
             self.serve_home_page()
         elif self.path == "/api/status":
             self.serve_status()
@@ -247,7 +247,7 @@ class RAGHandler(BaseHTTPRequestHandler):
         """
 
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
+        self.send_header("Content-type", "text/html")
         self.end_headers()
         self.wfile.write(html_content.encode())
 
@@ -255,15 +255,9 @@ class RAGHandler(BaseHTTPRequestHandler):
         """Serve status information."""
         if initialize_pipeline():
             config = get_config()
-            response = {
-                "status": "online",
-                "collection": config.qdrant.collection
-            }
+            response = {"status": "online", "collection": config.qdrant.collection}
         else:
-            response = {
-                "status": "offline",
-                "error": "Pipeline initialization failed"
-            }
+            response = {"status": "offline", "error": "Pipeline initialization failed"}
 
         self.send_json_response(response)
 
@@ -274,14 +268,14 @@ class RAGHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+            data = json.loads(post_data.decode("utf-8"))
 
-query = data.get('query', '').strip()
-             if not query:
-                 self.send_json_response({"error": "Query is required"}, 400)
-                 return
+            query = data.get("query", "").strip()
+            if not query:
+                self.send_json_response({"error": "Query is required"}, 400)
+                return
 
             # Validate query length and content
             if len(query) > 1000:
@@ -290,15 +284,13 @@ query = data.get('query', '').strip()
 
             # Basic sanitization
             import html
+
             query = html.escape(query)
 
             # Search documents
             results = pipeline.search_documents(query, limit=5, as_dict=True)
 
-            response = {
-                "query": query,
-                "results": results
-            }
+            response = {"query": query, "results": results}
 
             self.send_json_response(response)
 
@@ -313,20 +305,21 @@ query = data.get('query', '').strip()
             return
 
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+            data = json.loads(post_data.decode("utf-8"))
 
-url = data.get('url', '').strip()
-             if not url:
-                 self.send_json_response({"error": "URL is required"}, 400)
-                 return
+            url = data.get("url", "").strip()
+            if not url:
+                self.send_json_response({"error": "URL is required"}, 400)
+                return
 
             # Validate URL format and scheme
             from urllib.parse import urlparse
+
             try:
                 parsed = urlparse(url)
-                if parsed.scheme not in ['http', 'https']:
+                if parsed.scheme not in ["http", "https"]:
                     self.send_json_response({"error": "Invalid URL scheme"}, 400)
                     return
                 if not parsed.netloc:
@@ -342,7 +335,7 @@ url = data.get('url', '').strip()
                 run_extract=True,
                 run_chunk=True,
                 run_embed=True,
-                run_store=True
+                run_store=True,
             )
 
             self.send_json_response(result)
@@ -354,7 +347,7 @@ url = data.get('url', '').strip()
     def send_json_response(self, data, status_code=200):
         """Send a JSON response."""
         self.send_response(status_code)
-        self.send_header('Content-type', 'application/json')
+        self.send_header("Content-type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
@@ -365,10 +358,7 @@ url = data.get('url', '').strip()
 
 def main():
     """Run the web server."""
-    port = int(os.environ.get('PORT', 8080))
-
-    print(f"🔥 Starting RAGnificent Web UI on port {port}")
-    print(f"📖 Open your browser to: http://localhost:{port}")
+    port = int(os.environ.get("PORT", 8080))
 
     # Try to open browser automatically
     try:
@@ -376,12 +366,11 @@ def main():
     except Exception:
         pass  # Ignore if we can't open browser
 
-    server = HTTPServer(('localhost', port), RAGHandler)
+    server = HTTPServer(("localhost", port), RAGHandler)
 
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n🛑 Shutting down server...")
         server.shutdown()
 
 

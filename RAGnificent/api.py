@@ -35,9 +35,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://localhost:8000", 
+        "http://localhost:8000",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000"
+        "http://127.0.0.1:8000",
     ],  # Restrict to specific origins for security
     allow_credentials=True,
     allow_methods=["GET", "POST"],  # Only allow necessary methods
@@ -421,7 +421,6 @@ async def pipeline_endpoint(
         pipeline = Pipeline(
             config=request.config,
             continue_on_error=request.continue_on_error,
-            data_dir=self.config.data_dir_root,  # Pass the safe root directory
         )
 
         # Execute pipeline steps

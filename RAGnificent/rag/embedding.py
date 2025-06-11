@@ -20,6 +20,7 @@ except ImportError:
     # Fallback for direct execution
     import sys
     from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from core.config import EmbeddingModelType, get_config
 
@@ -67,20 +68,20 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
     cache_dir = config.embedding.cache_dir
 
     # Sanitize model name to prevent path traversal
-    safe_model_name = re.sub(r'[^\w\-_.]', '_', model_name)
-    safe_model_name = safe_model_name.replace('..', '_')
-    safe_model_name = safe_model_name.strip('.')
+    safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
+    safe_model_name = safe_model_name.replace("..", "_")
+    safe_model_name = safe_model_name.strip(".")
 
     # Ensure we don't have empty name
     if not safe_model_name:
-        safe_model_name = 'default_model'
+        safe_model_name = "default_model"
 
     # Create model-specific cache directory safely
     model_cache_dir = cache_dir / safe_model_name
     os.makedirs(model_cache_dir, exist_ok=True)
 
     # Validate that text_hash is safe (should be hex only)
-    if not re.match(r'^[a-f0-9]+$', text_hash):
+    if not re.match(r"^[a-f0-9]+$", text_hash):
         raise ValueError(f"Invalid text hash format: {text_hash}")
 
     # Return path to specific cache file

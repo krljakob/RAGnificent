@@ -193,7 +193,20 @@ def secure_file_path(base_dir: str, user_path: str) -> str:
 
     base = os.path.abspath(base_dir)
 
-    clean_path = os.path.normpath(user_path.replace("..", "").replace("~", ""))
+    # Use pathlib for more secure path handling
+    from pathlib import Path
+
+    # Normalize and resolve the user path while preventing traversal
+    try:
+        user_path_obj = Path(user_path)
+        # Remove any path traversal components
+        clean_parts = [
+            part for part in user_path_obj.parts if part not in ("..", ".", "~")
+        ]
+        clean_path = str(Path(*clean_parts)) if clean_parts else ""
+    except (ValueError, OSError):
+        logger.warning(f"Invalid path format: {user_path}")
+        return base
 
     full_path = os.path.abspath(os.path.join(base, clean_path))
 

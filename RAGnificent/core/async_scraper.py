@@ -349,8 +349,12 @@ class AsyncMarkdownScraper:
                     )
                     normalized_chunk_file = Path(os.path.normpath(chunk_file))
 
-                    if not str(normalized_chunk_file).startswith(str(chunks_output_dir)):
-                        raise ValueError("Attempted to write chunk outside the allowed directory.")
+                    if not str(normalized_chunk_file).startswith(
+                        str(chunks_output_dir)
+                    ):
+                        raise ValueError(
+                            "Attempted to write chunk outside the allowed directory."
+                        )
 
                     with open(normalized_chunk_file, "w", encoding="utf-8") as f:
                         f.write(chunk["content"])
