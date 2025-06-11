@@ -130,13 +130,11 @@ class MarkdownScraper:
 
             self.OutputFormat = FallbackOutputFormat
 
-            # Define fallback convert_html function
+            # Define fallback convert_html function that delegates to _convert_content
             def fallback_convert_html(html_content, url, output_format):
-                # This is a simple implementation that always converts to markdown
-                # For other formats, the _convert_content method handles conversion
-                from markdownify import markdownify
-
-                return markdownify(html_content, heading_style="ATX")
+                # Use our internal conversion logic for consistency
+                content, _ = self._convert_content_fallback(html_content, url, output_format.lower())
+                return content
 
             self.convert_html = fallback_convert_html
 
@@ -589,36 +587,60 @@ class MarkdownScraper:
                 if output_format != "markdown"
                 else content
             )
-        elif output_format == "markdown":
-            content = self.convert_to_markdown(html_content, url)
-            markdown_content = content
+            return content, markdown_content
         else:
-            # For JSON and XML, first convert to markdown
+            # Use consolidated fallback logic
+            return self._convert_content_fallback(html_content, url, output_format)
+
+    def _convert_content_fallback(
+        self, html_content: str, url: str, output_format: str
+    ) -> tuple:
+        """
+        Fallback conversion logic when Rust is not available.
+        
+        Args:
+            html_content: The HTML content to convert
+            url: The source URL for resolving relative links
+            output_format: The output format (markdown, json, or xml)
+            
+        Returns:
+            Tuple of (converted_content, markdown_content)
+        """
+        # Always start with markdown conversion
+        if output_format == "markdown":
+            # Use our custom converter for better structure
             markdown_content = self.convert_to_markdown(html_content, url)
-
-            # Then convert to the requested format
+            return markdown_content, markdown_content
+        else:
+            # For other formats, try markdownify as a simpler fallback
             try:
-                # Try to use functions from ragnificent_rs for conversion
+                from markdownify import markdownify
+                markdown_content = markdownify(html_content, heading_style="ATX")
+            except ImportError:
+                # If markdownify isn't available, use our converter
+                markdown_content = self.convert_to_markdown(html_content, url)
+            
+            # Try to convert to requested format
+            try:
                 from ragnificent_rs import document_to_xml, parse_markdown_to_document
-
+                
                 document = parse_markdown_to_document(markdown_content, url)
-
+                
                 if output_format == "json":
-                    # Using json that was already imported at the top level
                     content = json.dumps(document, indent=2)
                 elif output_format == "xml":
                     content = document_to_xml(document)
                 else:
-                    # Fallback to markdown if format not supported
                     content = markdown_content
+                    
+                return content, markdown_content
+                
             except ImportError:
-                # Fallback to markdown if conversion functions are not available
+                # If Rust helpers aren't available, return markdown
                 logger.warning(
                     f"Could not convert to {output_format}, using markdown instead"
                 )
-                content = markdown_content
-
-        return content, markdown_content
+                return markdown_content, markdown_content
 
     def scrape_by_sitemap(
         self,
