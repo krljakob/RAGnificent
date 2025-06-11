@@ -16,42 +16,29 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import requests
 from bs4 import BeautifulSoup, Tag
 
-# Import directly using a system-level import approach
-# First, ensure all required paths are in sys.path
-core_path = Path(__file__).parent
-utils_path = Path(__file__).parent.parent / "utils"
+# Import local modules with fallback for compatibility
+try:
+    from ..utils.chunk_utils import ContentChunker, create_semantic_chunks
+    from ..utils.sitemap_utils import SitemapParser
+    from .throttle import RequestThrottler
+    from .cache import RequestCache
+except ImportError:
+    # Fallback for direct module execution
+    sys.path.extend([str(Path(__file__).parent), str(Path(__file__).parent.parent / "utils")])
+    from chunk_utils import ContentChunker, create_semantic_chunks
+    from sitemap_utils import SitemapParser
+    from throttle import RequestThrottler
+    from cache import RequestCache
 
-# Add paths if needed
-if str(core_path) not in sys.path:
-    sys.path.append(str(core_path))
-if str(utils_path) not in sys.path:
-    sys.path.append(str(utils_path))
-
-# Now import directly from modules
-from chunk_utils import ContentChunker, create_semantic_chunks
-from sitemap_utils import SitemapParser
-from throttle import RequestThrottler
-
-from cache import RequestCache
-
-# Configure logging with more detailed formatting
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("markdown_scraper.log", mode="a"),
-    ],
-)
-
-logger = logging.getLogger("markdown_scraper")
+# Use centralized logging configuration
+try:
+    from .logging import setup_logger
+    logger = setup_logger("markdown_scraper")
+except ImportError:
+    logger = logging.getLogger("markdown_scraper")
 
 
 class MarkdownScraper:

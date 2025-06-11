@@ -61,61 +61,54 @@ class Pipeline:
             data_dir: Directory to save data files
             continue_on_error: Whether to continue pipeline execution on errors
         """
-        # Load pipeline configuration
+        # Load configurations
         self.pipeline_config = self._load_pipeline_config(config)
         self.continue_on_error = continue_on_error
-
-        # Load system configuration
         self.config = get_config()
 
-        # Resolve configuration parameters (CLI args override pipeline config override system config)
-        self.collection_name = (
-            collection_name
-            or self.pipeline_config.get("collection_name")
-            or self.config.qdrant.collection
-        )
+        # Resolve all configuration parameters using helper method
+        config_params = {
+            'collection_name': (collection_name, 'collection_name', self.config.qdrant.collection),
+            'chunk_size': (chunk_size, 'chunk_size', self.config.chunking.chunk_size),
+            'chunk_overlap': (chunk_overlap, 'chunk_overlap', self.config.chunking.chunk_overlap),
+            'requests_per_second': (requests_per_second, 'requests_per_second', self.config.scraper.rate_limit),
+            'cache_enabled': (cache_enabled, 'cache_enabled', self.config.scraper.cache_enabled),
+            'embedding_model_type': (embedding_model_type, 'embedding_model_type', None),
+            'embedding_model_name': (embedding_model_name, 'embedding_model_name', None),
+        }
+        
+        resolved_config = self._resolve_config_params(config_params)
+        self.collection_name = resolved_config['collection_name']
 
-        resolved_chunk_size = (
-            chunk_size
-            or self.pipeline_config.get("chunk_size")
-            or self.config.chunking.chunk_size
-        )
+        # Set up data directory using helper method
+        self.data_dir = self._setup_data_directory(data_dir)
 
-        resolved_chunk_overlap = (
-            chunk_overlap
-            or self.pipeline_config.get("chunk_overlap")
-            or self.config.chunking.chunk_overlap
-        )
+        # Initialize components using resolved configuration
+        self.scraper = self._initialize_scraper(resolved_config)
+        self.chunker = ContentChunker(resolved_config['chunk_size'], resolved_config['chunk_overlap'])
+        self.embedding_service = self._initialize_embedding_service(resolved_config)
+        self.vector_store = get_vector_store(self.collection_name)
+        self.search = get_search(self.collection_name, resolved_config['embedding_model_type'], resolved_config['embedding_model_name'])
 
-        resolved_requests_per_second = (
-            requests_per_second
-            or self.pipeline_config.get("requests_per_second")
-            or self.config.scraper.rate_limit
-        )
+        logger.info(f"Initialized RAG pipeline with collection: {self.collection_name}")
 
-        resolved_cache_enabled = (
-            cache_enabled
-            if cache_enabled is not None
-            else self.pipeline_config.get(
-                "cache_enabled", self.config.scraper.cache_enabled
-            )
-        )
+    def _resolve_config_params(self, config_params: Dict[str, Tuple]) -> Dict[str, Any]:
+        """Resolve configuration parameters from CLI args, pipeline config, and system config."""
+        resolved = {}
+        for key, (cli_value, config_key, system_default) in config_params.items():
+            if cli_value is not None:
+                resolved[key] = cli_value
+            elif config_key in self.pipeline_config:
+                resolved[key] = self.pipeline_config[config_key]
+            else:
+                resolved[key] = system_default
+        return resolved
 
-        resolved_embedding_model_type = (
-            embedding_model_type or self.pipeline_config.get("embedding_model_type")
-        )
-
-        resolved_embedding_model_name = (
-            embedding_model_name or self.pipeline_config.get("embedding_model_name")
-        )
-
-        # Set up data directory
-        pipeline_data_dir = self.pipeline_config.get(
-            "data_dir"
-        ) or self.pipeline_config.get("output_dir")
+    def _setup_data_directory(self, data_dir: Optional[Union[str, Path]]) -> Path:
+        """Set up and validate the data directory."""
         from ..core.security import secure_file_path
-
-        # Secure the data directory path
+        
+        pipeline_data_dir = self.pipeline_config.get("data_dir") or self.pipeline_config.get("output_dir")
         base_data_dir = self.config.data_dir
         user_data_dir = data_dir or pipeline_data_dir or ""
 
@@ -124,82 +117,44 @@ class Pipeline:
         else:
             resolved_data_dir = Path(base_data_dir).resolve()
 
-        # Additional validation - ensure path is within allowed directory
+        # Validate path is within allowed directory
         safe_root_dir = Path(base_data_dir).resolve()
         try:
             resolved_data_dir.resolve().relative_to(safe_root_dir)
         except ValueError as e:
-            raise ValueError(
-                f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
-            ) from e
+            raise ValueError(f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}") from e
 
-        # Create directory safely
-        self.data_dir = resolved_data_dir
-        os.makedirs(self.data_dir, exist_ok=True)
-
-        # Final validation after directory creation
+        # Create directory safely and perform final validation
+        os.makedirs(resolved_data_dir, exist_ok=True)
         try:
-            self.data_dir.resolve().relative_to(safe_root_dir)
+            resolved_data_dir.resolve().relative_to(safe_root_dir)
         except ValueError as e:
-            raise ValueError(
-                f"Final data directory {self.data_dir} is outside the allowed root directory {safe_root_dir}"
-            ) from e
+            raise ValueError(f"Final data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}") from e
+        
+        return resolved_data_dir
 
-        # Initialize scraper with enhanced throttling and parallel processing
-        self.scraper = MarkdownScraper(
-            requests_per_second=resolved_requests_per_second,
-            chunk_size=resolved_chunk_size,
-            chunk_overlap=resolved_chunk_overlap,
-            cache_enabled=resolved_cache_enabled,
-            domain_specific_limits=(
-                self.config.scraper.domain_rate_limits
-                if hasattr(self.config.scraper, "domain_rate_limits")
-                else None
-            ),
-            max_workers=(
-                self.config.scraper.max_workers
-                if hasattr(self.config.scraper, "max_workers")
-                else 10
-            ),
-            adaptive_throttling=(
-                self.config.scraper.adaptive_throttling
-                if hasattr(self.config.scraper, "adaptive_throttling")
-                else True
-            ),
+    def _initialize_scraper(self, resolved_config: Dict[str, Any]) -> MarkdownScraper:
+        """Initialize the scraper with resolved configuration."""
+        scraper_config = self.config.scraper
+        return MarkdownScraper(
+            requests_per_second=resolved_config['requests_per_second'],
+            chunk_size=resolved_config['chunk_size'],
+            chunk_overlap=resolved_config['chunk_overlap'],
+            cache_enabled=resolved_config['cache_enabled'],
+            domain_specific_limits=getattr(scraper_config, 'domain_rate_limits', None),
+            max_workers=getattr(scraper_config, 'max_workers', 10),
+            adaptive_throttling=getattr(scraper_config, 'adaptive_throttling', True),
         )
 
-        # Initialize chunker
-        self.chunker = ContentChunker(
-            resolved_chunk_size,
-            resolved_chunk_overlap,
-        )
-
-        # Initialize embedding service
+    def _initialize_embedding_service(self, resolved_config: Dict[str, Any]):
+        """Initialize the embedding service with resolved configuration."""
         from ..core.config import EmbeddingModelType
-
-        # Convert string to EmbeddingModelType enum if provided
-        model_type_enum = None
-        if resolved_embedding_model_type:
-            if isinstance(resolved_embedding_model_type, str):
-                model_type_enum = EmbeddingModelType(resolved_embedding_model_type)
-            else:
-                model_type_enum = resolved_embedding_model_type
-
-        self.embedding_service = get_embedding_service(
-            model_type_enum, resolved_embedding_model_name
-        )
-
-        # Initialize vector store
-        self.vector_store = get_vector_store(self.collection_name)
-
-        # Initialize search
-        self.search = get_search(
-            self.collection_name,
-            resolved_embedding_model_type,
-            resolved_embedding_model_name,
-        )
-
-        logger.info(f"Initialized RAG pipeline with collection: {self.collection_name}")
+        
+        model_type = resolved_config['embedding_model_type']
+        if model_type and isinstance(model_type, str):
+            model_type = EmbeddingModelType(model_type)
+            
+        return get_embedding_service(model_type, resolved_config['embedding_model_name'])
 
     def _load_pipeline_config(
         self, config: Optional[Union[Dict[str, Any], str, Path]]

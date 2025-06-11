@@ -207,15 +207,10 @@ class RequestCache(StatsMixin):
         """Generate a cache key from a URL."""
         return hashlib.blake2b(url.encode(), digest_size=16).hexdigest()
 
-    def _get_cache_path(self, url: str) -> Path:
-        """Get the path to the cache file for a URL."""
+    def _get_cache_paths(self, url: str) -> Tuple[Path, Path]:
+        """Get cache and metadata paths for a URL."""
         key = self._get_cache_key(url)
-        return self.cache_dir / key
-
-    def _get_metadata_path(self, url: str) -> Path:
-        """Get the path to the metadata file for a URL."""
-        key = self._get_cache_key(url)
-        return self.metadata_dir / f"{key}.meta"
+        return self.cache_dir / key, self.metadata_dir / f"{key}.meta"
 
     def _compress_content(self, content: str) -> Tuple[bytes, bool]:
         """
@@ -288,8 +283,7 @@ class RequestCache(StatsMixin):
             return cached_content
 
         # Legacy filesystem check for backward compatibility
-        cache_path = self._get_cache_path(url)
-        metadata_path = self._get_metadata_path(url)
+        cache_path, metadata_path = self._get_cache_paths(url)
 
         if cache_path.exists():
             # Check metadata for TTL if available
@@ -430,9 +424,6 @@ class RequestCache(StatsMixin):
         # Manage memory cache size
         self._check_memory_limits()
 
-    def _get_cache_key(self, url: str) -> str:
-        """Generate a cache key for the given URL."""
-        return hashlib.sha256(url.encode("utf-8")).hexdigest()
 
     def set(self, url: str, content: str, ttl: Optional[int] = None) -> None:
         """
@@ -480,8 +471,7 @@ class RequestCache(StatsMixin):
             self.memory_cache[url] = (content, current_time, ttl, False)
 
         # Update disk cache
-        cache_path = self._get_cache_path(url)
-        metadata_path = self._get_metadata_path(url)
+        cache_path, metadata_path = self._get_cache_paths(url)
 
         try:
             if is_compressed:

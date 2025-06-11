@@ -13,142 +13,96 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# Use relative imports for internal modules
-try:
-    from ..core.config import EmbeddingModelType, get_config
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from core.config import EmbeddingModelType, get_config
-
 import numpy as np
 from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+# Import configuration with fallback
+try:
+    from ..core.config import EmbeddingModelType, get_config
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from core.config import EmbeddingModelType, get_config
 
-# Load environment variables for API keys
-load_dotenv()
+logger = logging.getLogger(__name__)
+load_dotenv()  # Load environment variables for API keys
 
 
 class EmbeddingError(Exception):
-    """Base exception for embedding generation"""
-
-    pass
-
-
-class EmbeddingModelError(EmbeddingError):
-    """Exception when embedding model fails"""
-
-    pass
+    """Base exception for embedding-related errors."""
+    
+    def __init__(self, message: str, error_type: str = "general"):
+        super().__init__(message)
+        self.error_type = error_type
 
 
-class EmbeddingAPIError(EmbeddingError):
-    """Exception for API errors during embedding"""
+# Convenience aliases for specific error types
+EmbeddingModelError = lambda msg: EmbeddingError(msg, "model")
+EmbeddingAPIError = lambda msg: EmbeddingError(msg, "api")
 
-    pass
+
+def _sanitize_model_name(model_name: str) -> str:
+    """Sanitize model name for safe file system usage."""
+    import re
+    safe_name = re.sub(r"[^\w\-_.]", "_", model_name).replace("..", "_").strip(".")
+    return safe_name or "default_model"
+
+
+def _validate_text_hash(text_hash: str) -> str:
+    """Validate and return text hash."""
+    import re
+    if not re.match(r"^[a-f0-9]+$", text_hash):
+        raise ValueError(f"Invalid text hash format: {text_hash}")
+    return text_hash
 
 
 def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
-    """
-    Get path for cached embeddings
-
-    Args:
-        model_name: Name of the embedding model
-        text_hash: Hash of the text content
-
-    Returns:
-        Path to the cache file
-    """
-    import re
-
+    """Get path for cached embeddings."""
     config = get_config()
     cache_dir = config.embedding.cache_dir
-
-    # Sanitize model name to prevent path traversal
-    safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
-    safe_model_name = safe_model_name.replace("..", "_")
-    safe_model_name = safe_model_name.strip(".")
-
-    # Ensure we don't have empty name
-    if not safe_model_name:
-        safe_model_name = "default_model"
-
-    # Create model-specific cache directory safely
+    
+    safe_model_name = _sanitize_model_name(model_name)
+    validated_hash = _validate_text_hash(text_hash)
+    
     model_cache_dir = cache_dir / safe_model_name
     os.makedirs(model_cache_dir, exist_ok=True)
-
-    # Validate that text_hash is safe (should be hex only)
-    if not re.match(r"^[a-f0-9]+$", text_hash):
-        raise ValueError(f"Invalid text hash format: {text_hash}")
-
-    # Return path to specific cache file
-    return model_cache_dir / f"{text_hash}.pkl"
+    
+    return model_cache_dir / f"{validated_hash}.pkl"
 
 
 def compute_text_hash(text: str) -> str:
-    """
-    Compute deterministic hash for text content
-
-    Args:
-        text: Text to hash
-
-    Returns:
-        Hash string
-    """
+    """Compute deterministic hash for text content."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
-    """
-    Get embedding from cache if available
-
-    Args:
-        model_name: Name of the embedding model
-        text: Text content
-
-    Returns:
-        Cached embedding if available, None otherwise
-    """
+def _get_cache_path_if_enabled(model_name: str, text: str) -> Optional[Path]:
+    """Get cache path if caching is enabled, None otherwise."""
     config = get_config()
-
     if not config.embedding.use_cache:
         return None
-
+    
     text_hash = compute_text_hash(text)
-    cache_path = get_embedding_cache_path(model_name, text_hash)
+    return get_embedding_cache_path(model_name, text_hash)
 
-    if cache_path.exists():
-        try:
-            return np.load(cache_path)
-        except Exception as e:
-            logger.warning(f"Failed to load cached embedding: {e}")
 
-    return None
+def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
+    """Get embedding from cache if available."""
+    cache_path = _get_cache_path_if_enabled(model_name, text)
+    if not cache_path or not cache_path.exists():
+        return None
+    
+    try:
+        return np.load(cache_path)
+    except Exception as e:
+        logger.warning(f"Failed to load cached embedding: {e}")
+        return None
 
 
 def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -> bool:
-    """
-    Save embedding to cache
-
-    Args:
-        model_name: Name of the embedding model
-        text: Text content
-        embedding: The embedding vector
-
-    Returns:
-        True if saved successfully, False otherwise
-    """
-    config = get_config()
-
-    if not config.embedding.use_cache:
+    """Save embedding to cache."""
+    cache_path = _get_cache_path_if_enabled(model_name, text)
+    if not cache_path:
         return False
-
-    text_hash = compute_text_hash(text)
-    cache_path = get_embedding_cache_path(model_name, text_hash)
-
+    
     try:
         np.save(cache_path, embedding)
         return True
