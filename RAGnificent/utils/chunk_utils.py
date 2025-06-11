@@ -168,7 +168,7 @@ class ContentChunker:
 
         for line in lines:
             # Check if line is a header by matching up to three leading spaces followed by #
-            header_match = re.match(r"^ {0,3}(#+)\s+(.*?)$", line)
+            header_match = re.match(r"^ {0,3}(#{1,6}) +(.*)$", line)
             if header_match:
                 # This is a header line
                 level = len(header_match[1])
