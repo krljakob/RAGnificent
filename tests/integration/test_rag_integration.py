@@ -4,11 +4,12 @@ Integration tests for the RAG pipeline.
 Tests the end-to-end workflow from content extraction to search.
 """
 
-import pytest
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+import pytest
 
 try:
     from RAGnificent.core.config import ChunkingStrategy

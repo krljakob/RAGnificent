@@ -324,7 +324,11 @@ class TestScraperErrorHandling(unittest.TestCase):
 
             # Should handle worker timeouts gracefully by falling back to sequential processing
             # Both URLs should still be processed successfully in sequential mode
-            self.assertEqual(len(result), 2, "Should fall back to sequential processing and handle all URLs")
+            self.assertEqual(
+                len(result),
+                2,
+                "Should fall back to sequential processing and handle all URLs",
+            )
 
     def test_memory_cache_limits(self):
         """Test that memory cache limits are enforced."""

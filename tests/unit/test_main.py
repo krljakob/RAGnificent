@@ -207,10 +207,10 @@ def test_scrape_website_with_cache():
         # Create scraper with cache enabled
         scraper = MarkdownScraper(cache_enabled=True)
         scraper.request_cache.cache_dir = Path(temp_dir)  # Override cache directory
-        
+
         # Clear any existing cache first
         scraper.request_cache.clear()
-        
+
         # Patch the session's get method directly
         scraper.session.get = mock_get
 

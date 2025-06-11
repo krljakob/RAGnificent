@@ -171,33 +171,39 @@ class ContentChunker:
 
         for line in lines:
             # Manual header detection: up to 3 leading spaces, 1-6 '#'s, at least one space, then text
-            stripped = line.lstrip(' ')
+            stripped = line.lstrip(" ")
             leading_spaces = len(line) - len(stripped)
-            if 0 <= leading_spaces <= 3 and stripped.startswith('#'):
+            if 0 <= leading_spaces <= 3 and stripped.startswith("#"):
                 # Count number of consecutive '#' at the start
                 i = 0
-                while i < len(stripped) and stripped[i] == '#':
+                while i < len(stripped) and stripped[i] == "#":
                     i += 1
                 if 1 <= i <= 6:
                     # There must be at least one space after the #'s
-                    if i < len(stripped) and stripped[i] == ' ':
-                        heading_text = stripped[i+1:].strip()
+                    if i < len(stripped) and stripped[i] == " ":
+                        heading_text = stripped[i + 1 :].strip()
                         level = i
                         # This is a header line
                         # If we have a current section, finalize it and add to sections list
                         if current_section:
                             sections.append(current_section)
                         # Update header stack based on new header level
-                        while header_stack and int(header_stack[-1]["level"]) >= int(level):
+                        while header_stack and int(header_stack[-1]["level"]) >= int(
+                            level
+                        ):
                             header_stack.pop()
                         # Create path representation of current location in hierarchy
-                        path_elements = [str(h["text"]) for h in header_stack] + [str(heading_text)]
+                        path_elements = [str(h["text"]) for h in header_stack] + [
+                            str(heading_text)
+                        ]
                         path = " > ".join(path_elements)
                         parent_headers = [
                             {
                                 "text": str(header["text"]),
                                 "level": int(header["level"]),
-                                "markdown": "#" * int(header["level"]) + " " + str(header["text"]),
+                                "markdown": "#" * int(header["level"])
+                                + " "
+                                + str(header["text"]),
                             }
                             for header in header_stack
                         ]
