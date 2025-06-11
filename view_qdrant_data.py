@@ -1,291 +1,179 @@
+#!/usr/bin/env python3
 """
-View data stored in Qdrant vector database.
+Utility script to view and inspect data stored in Qdrant vector database.
 
-Simple utility to view documents and metadata stored in a Qdrant collection.
-First loads data into the in-memory database, then allows viewing and searching.
+This script helps visualize what's in your RAGnificent vector collections.
 """
 
+import contextlib
 import json
 import logging
-from typing import Optional
+from typing import Dict, List, Optional
 
 from RAGnificent.core.config import get_config
-from RAGnificent.rag.pipeline import Pipeline
-from RAGnificent.rag.vector_store import QdrantConnectionError, get_qdrant_client
+from RAGnificent.rag.vector_store import get_vector_store
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
-def load_data(
-    url: str = "https://www.rust-lang.org/learn",
-    collection_name: str = "demo_collection",
-):
-    """
-    Load data into the in-memory Qdrant database
+def format_metadata(metadata: Dict) -> str:
+    """Format metadata for display."""
+    if not metadata:
+        return "No metadata"
 
-    Args:
-        url: URL to process
-        collection_name: Name of the collection to create
-    """
-
-    # Initialize the pipeline
-    pipeline = Pipeline(collection_name=collection_name)
-
-    # Run the complete pipeline
-    result = pipeline.run_pipeline(
-        url=url,
-        limit=10,
-        run_extract=True,
-        run_chunk=True,
-        run_embed=True,
-        run_store=True,
-    )
-
-    # Display results
-    if result["success"]:
-        for _key, _count in result["document_counts"].items():
-            pass
-    else:
-        for _step, _status in result["steps"].items():
-            pass
-
-    return result["success"]
+    lines = [
+        f"  {key}: {value}"
+        for key, value in metadata.items()
+        if key in ["title", "document_url", "chunk_type", "chunk_index"]
+    ]
+    return "\n".join(lines) if lines else "No relevant metadata"
 
 
 def view_collection_info(collection_name: Optional[str] = None):
-    """
-    Display information about a specific collection
+    """View basic information about a collection."""
+    config = get_config()
+    collection = collection_name or config.qdrant.collection
 
-    Args:
-        collection_name: Name of the collection (or None for default)
-    """
     try:
-        config = get_config()
-        if collection_name is None:
-            collection_name = config.qdrant.collection
-
-        # Default to 'demo_collection' which was used in the simple_demo.py
-        if collection_name is None:
-            collection_name = "demo_collection"
-
-        # Get client
-        client = get_qdrant_client()
+        # Get vector store
+        vector_store = get_vector_store(collection)
 
         # Get collection info
-        client.get_collection(collection_name=collection_name)
+        count = vector_store.count_documents()
 
-    except QdrantConnectionError as e:
-        logger.error(f"Connection error: {e}")
-    except Exception as e:
-        logger.error(f"Error viewing collection info: {e}")
+        if count == 0:
+            return
 
+        # Get sample documents
 
-def list_points(collection_name: Optional[str] = None, limit: int = 10):
-    """
-    List points/documents stored in a collection
+        # Use search with a broad query to get sample results
+        from RAGnificent.rag.search import get_search
 
-    Args:
-        collection_name: Name of the collection (or None for default)
-        limit: Maximum number of points to retrieve
-    """
-    try:
-        config = get_config()
-        if collection_name is None:
-            collection_name = config.qdrant.collection
+        search = get_search(collection)
 
-        # Default to 'demo_collection' which was used in the simple_demo.py
-        if collection_name is None:
-            collection_name = "demo_collection"
+        # Get some sample results by searching for common terms
+        sample_queries = ["the", "a", "and", "is", "of"]
+        sample_results = []
 
-        # Get client
-        client = get_qdrant_client()
+        for query in sample_queries:
+            try:
+                results = search.search(query, limit=2, threshold=0.0)
+                sample_results.extend(results)
+                if len(sample_results) >= 5:
+                    break
+            except Exception as e:
+                logger.debug(f"Query '{query}' failed: {e}")
+                continue
 
-        # Scroll through points
-        points = client.scroll(
-            collection_name=collection_name,
-            limit=limit,
-            with_payload=True,
-            with_vectors=False,  # Set to True if you want to see the actual vectors
-        )[0]
-
-        for point in points:
-            # Print metadata and content
-            if hasattr(point, "payload") and point.payload:
-                if "content" in point.payload:
-                    point.payload["content"]
-                if other_fields := [
-                    k for k in point.payload if k not in ("metadata", "content")
-                ]:
-                    pass
-        return points
-
-    except QdrantConnectionError as e:
-        logger.error(f"Connection error: {e}")
-    except Exception as e:
-        logger.error(f"Error listing points: {e}")
-        return []
-
-
-def search_similar(query: str, collection_name: Optional[str] = None, limit: int = 5):
-    """
-    Search for similar documents based on a query
-
-    Args:
-        query: The search query text
-        collection_name: Name of the collection (or None for default)
-        limit: Maximum number of results to return
-    """
-    try:
-        from RAGnificent.rag.embedding import embed_text, get_embedding_model
-
-        config = get_config()
-        if collection_name is None:
-            collection_name = config.qdrant.collection
-
-        # Default to 'demo_collection' which was used in the simple_demo.py
-        if collection_name is None:
-            collection_name = "demo_collection"
-
-        # Get client
-        client = get_qdrant_client()
-
-        # Get embedding model
-        embedding_model = get_embedding_model()
-
-        # Embed the query
-        query_embedding = embed_text(query, model=embedding_model)
-
-        # Search for similar documents
-        search_results = client.search(
-            collection_name=collection_name,
-            query_vector=query_embedding,
-            limit=limit,
-            with_payload=True,
-        )
-
-        for result in search_results:
-            # Print metadata and content
-            if (
-                hasattr(result, "payload")
-                and result.payload
-                and "content" in result.payload
+        # Remove duplicates by ID
+        seen_ids = set()
+        unique_results = []
+        for result in sample_results:
+            if hasattr(result, "id") and result.id not in seen_ids:
+                seen_ids.add(result.id)
+                unique_results.append(result)
+            elif (
+                hasattr(result, "metadata")
+                and result.metadata.get("id") not in seen_ids
             ):
-                result.payload["content"]
-        return search_results
+                seen_ids.add(result.metadata.get("id"))
+                unique_results.append(result)
 
-    except QdrantConnectionError as e:
-        logger.error(f"Connection error: {e}")
+        # Display sample documents
+        for i, result in enumerate(unique_results[:5], 1):
+            content = result.content if hasattr(result, "content") else str(result)
+            content_preview = f"{content[:200]}..." if len(content) > 200 else content
+
+            metadata = result.metadata if hasattr(result, "metadata") else {}
+
     except Exception as e:
-        logger.error(f"Error searching: {e}")
-        return []
+        logger.error(f"Error viewing collection: {e}")
 
 
-def interactive_search(collection_name: Optional[str] = None):
-    """
-    Interactive search interface
-
-    Args:
-        collection_name: Name of the collection (or None for default)
-    """
-
-    while True:
-        query = input("\nEnter search query: ")
-        if query.lower() in ["exit", "quit"]:
-            break
-
-        search_similar(query, collection_name)
-
-
-def export_collection(
-    collection_name: Optional[str] = None, output_file: str = "qdrant_export.json"
+def search_collection(
+    query: str, collection_name: Optional[str] = None, limit: int = 5
 ):
-    """
-    Export all documents from a collection to a JSON file
+    """Search the collection with a query."""
+    config = get_config()
+    collection = collection_name or config.qdrant.collection
 
-    Args:
-        collection_name: Name of the collection (or None for default)
-        output_file: Path to output JSON file
-    """
+    try:
+        from RAGnificent.rag.search import get_search
+
+        search = get_search(collection)
+
+        results = search.search(query, limit=limit, threshold=0.5)
+
+        if not results:
+            return
+
+        for i, result in enumerate(results, 1):
+            score = getattr(result, "score", 0.0)
+            content = result.content if hasattr(result, "content") else str(result)
+            content_preview = f"{content[:300]}..." if len(content) > 300 else content
+
+            metadata = result.metadata if hasattr(result, "metadata") else {}
+            source_url = metadata.get("document_url", "Unknown source")
+
+    except Exception as e:
+        logger.error(f"Error searching collection: {e}")
+
+
+def list_collections():
+    """List all available collections."""
+
     try:
         config = get_config()
-        if collection_name is None:
-            collection_name = config.qdrant.collection
+        vector_store = get_vector_store()
 
-        # Default to 'demo_collection' which was used in the simple_demo.py
-        if collection_name is None:
-            collection_name = "demo_collection"
+        # This is a basic implementation - Qdrant client may have methods to list collections
 
-        # Get client
-        client = get_qdrant_client()
+        # Try to get info about the default collection
+        with contextlib.suppress(Exception):
+            count = vector_store.count_documents()
 
-        # Get collection info
-        collection_info = client.get_collection(collection_name=collection_name)
-        total_points = collection_info.vectors_count
-
-        # Scroll through all points
-        points = client.scroll(
-            collection_name=collection_name,
-            limit=total_points,
-            with_payload=True,
-            with_vectors=False,  # Set to True if you want to include vectors
-        )[0]
-
-        # Convert to serializable format
-        export_data = []
-        for point in points:
-            point_data = {"id": point.id, "payload": point.payload}
-            export_data.append(point_data)
-
-        # Write to file
-        with open(output_file, "w") as f:
-            json.dump(export_data, f, indent=2)
-
-    except QdrantConnectionError as e:
-        logger.error(f"Connection error: {e}")
     except Exception as e:
-        logger.error(f"Error exporting collection: {e}")
+        logger.error(f"Error listing collections: {e}")
 
 
 def main():
-    """Main entry point with interactive menu."""
+    """Main entry point."""
+    import argparse
 
-    # Default collection name
-    collection_name = "demo_collection"
+    parser = argparse.ArgumentParser(
+        description="View and inspect RAGnificent Qdrant data"
+    )
+    parser.add_argument("--collection", "-c", help="Collection name (optional)")
 
-    # Always load data first because we're using in-memory database
-    if not load_data(
-        url="https://www.rust-lang.org/learn", collection_name=collection_name
-    ):
-        return
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Show collection info
-    view_collection_info(collection_name)
+    # Info command
+    info_parser = subparsers.add_parser("info", help="View collection information")
 
-    # List documents
-    list_points(collection_name, limit=5)
+    # Search command
+    search_parser = subparsers.add_parser("search", help="Search the collection")
+    search_parser.add_argument("query", help="Search query")
+    search_parser.add_argument(
+        "--limit", "-l", type=int, default=5, help="Number of results"
+    )
 
-    # Interactive menu
-    while True:
+    # List command
+    list_parser = subparsers.add_parser("list", help="List collections")
 
-        choice = input("\nEnter choice (1-4): ")
+    args = parser.parse_args()
 
-        if choice == "1":
-            try:
-                limit = int(input("Number of documents to list: "))
-                list_points(collection_name, limit=limit)
-            except ValueError:
-                pass
-        elif choice == "2":
-            interactive_search(collection_name)
-        elif choice == "3":
-            output_file = (
-                input("Output file name [qdrant_export.json]: ") or "qdrant_export.json"
-            )
-            export_collection(collection_name, output_file)
-        elif choice == "4":
-            break
+    if args.command == "info" or args.command is None:
+        view_collection_info(args.collection)
+    elif args.command == "search":
+        search_collection(args.query, args.collection, args.limit)
+    elif args.command == "list":
+        list_collections()
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

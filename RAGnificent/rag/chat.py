@@ -9,13 +9,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
+try:
+    from .pipeline import Pipeline as RAGPipeline
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    from pathlib import Path
 
-from rag.pipeline import RAGPipeline
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from rag.pipeline import Pipeline as RAGPipeline
 
-# Use v1_implementation's agent functionality
-from v1_implementation.agent import query_with_context
+# Use built-in RAG functionality instead of v1_implementation
+try:
+    from ..core.config import get_config
+except ImportError:
+    from core.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +78,18 @@ class RAGChat:
         # Format context for the agent
         context = []
         for result in results:
-            payload = result.get("payload", {})
-            content = payload.get("content", "")
-            source_url = payload.get("source_url", "")
+            if isinstance(result, dict):
+                payload = result.get("payload", {})
+                content = payload.get("content", "")
+                source_url = payload.get("source_url", "")
+                score = result.get("score", 0)
+            else:
+                # Handle SearchResult objects
+                content = getattr(result, "content", "")
+                source_url = getattr(result, "source_url", "")
+                score = getattr(result, "score", 0)
 
-            context.append(
-                {"content": content, "url": source_url, "score": result.get("score", 0)}
-            )
+            context.append({"content": content, "url": source_url, "score": score})
 
         # Combine with chat history if requested
         chat_context = ""
@@ -88,11 +101,17 @@ class RAGChat:
             )
             chat_context = f"PREVIOUS CONVERSATION:\n{history_text}\n\n"
 
-        # Generate response using agent
+        # Generate response using built-in RAG functionality
         if context:
-            response = query_with_context(
-                query, context, system_prompt=chat_context or None
+            response = self.pipeline.query_with_context(
+                query,
+                limit=limit,
+                threshold=threshold,
+                system_prompt=chat_context or None,
             )
+            # Extract the response text if it's a dict
+            if isinstance(response, dict):
+                response = response.get("response", str(response))
         else:
             # No context found
             response = "I couldn't find relevant information to answer your query. Could you rephrase or ask something else?"

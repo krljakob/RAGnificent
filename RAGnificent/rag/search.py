@@ -12,13 +12,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
+try:
+    from ..core.config import get_config
+    from ..rag.embedding import embed_text, get_embedding_model
+    from ..rag.vector_store import get_vector_store
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from core.config import get_config
+    from rag.embedding import embed_text, get_embedding_model
+    from rag.vector_store import get_vector_store
 
 import numpy as np
-from core.config import get_config
-from rag.embedding import embed_text, get_embedding_model
-from rag.vector_store import get_vector_store
 
 logger = logging.getLogger(__name__)
 

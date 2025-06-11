@@ -32,6 +32,9 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmarks")
 
+# Mark all tests in this module as benchmarks
+pytestmark = pytest.mark.benchmark
+
 
 class PerformanceTimer:
     """Utility class for timing operations."""
@@ -337,10 +340,11 @@ def test_throttler_performance():
     with PerformanceTimer("Execute (5 requests)"):
         for i in range(5):
             url = f"https://example.com/page{i}"
-            throttler.execute(mock_request, url, url)
+            throttler.execute(mock_request, url)
 
     with PerformanceTimer("Execute parallel (20 requests)"):
         urls = [f"https://example.com/page{i}" for i in range(20)]
+
         # Create a wrapper function that doesn't need URL parameter
         def mock_request_wrapper():
             time.sleep(0.05)

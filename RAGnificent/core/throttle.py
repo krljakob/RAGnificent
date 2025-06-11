@@ -5,6 +5,7 @@ Provides domain-specific rate limiting, adaptive throttling,
 parallel request management, and backpressure mechanisms.
 """
 
+import asyncio
 import logging
 import random
 import threading
@@ -227,7 +228,7 @@ class RequestThrottler(StatsMixin):
             start_time = time.time()
 
             try:
-                result = func(*args, **kwargs)
+                result = func(url, *args, **kwargs)
                 response_time = time.time() - start_time
 
                 status_code = getattr(result, "status_code", None)
@@ -400,3 +401,163 @@ class RequestThrottler(StatsMixin):
                 }
 
             return stats
+
+
+class AsyncRequestThrottler:
+    """
+    Async version of RequestThrottler using asyncio primitives.
+
+    Features:
+    - Domain-specific rate limiting with asyncio.Semaphore
+    - Adaptive throttling based on server response
+    - Async backoff and retry logic
+    """
+
+    def __init__(
+        self,
+        requests_per_second: float = 1.0,
+        domain_specific_limits: Optional[Dict[str, float]] = None,
+        max_workers: int = 10,
+        adaptive_throttling: bool = True,
+    ):
+        """Initialize async throttler."""
+        self.base_rate_limit = requests_per_second
+        self.domain_specific_limits = domain_specific_limits or {}
+        self.max_workers = max_workers
+        self.adaptive_throttling = adaptive_throttling
+
+        # Async synchronization primitives
+        self._domain_locks = defaultdict(lambda: asyncio.Lock())
+        self._domain_stats = defaultdict(DomainStats)
+        self._last_request_times = defaultdict(float)
+
+        # Global semaphore to limit concurrent requests
+        self._global_semaphore = asyncio.Semaphore(max_workers)
+
+    async def throttle(self, url: str) -> None:
+        """
+        Apply rate limiting for the given URL's domain.
+
+        Args:
+            url: The URL being requested
+        """
+        import asyncio
+
+        domain = urlparse(url).netloc
+
+        async with self._global_semaphore:
+            async with self._domain_locks[domain]:
+                await self._apply_domain_throttling(domain)
+
+    async def _apply_domain_throttling(self, domain: str) -> None:
+        """Apply throttling for a specific domain."""
+        import asyncio
+
+        domain_stats = self._domain_stats[domain]
+
+        # Check if we're in a backoff period
+        if domain_stats.backoff_until and time.time() < domain_stats.backoff_until:
+            backoff_time = domain_stats.backoff_until - time.time()
+            logger.info(
+                f"Backing off for domain {domain} for {backoff_time:.2f} seconds"
+            )
+            await asyncio.sleep(backoff_time)
+            domain_stats.backoff_until = None
+
+        # Calculate rate limit for this domain
+        rate_limit = self._get_domain_rate_limit(domain)
+        min_interval = 1.0 / rate_limit
+
+        # Calculate time since last request
+        current_time = time.time()
+        last_request_time = self._last_request_times[domain]
+        time_since_last = current_time - last_request_time
+
+        # Apply throttling if needed
+        if time_since_last < min_interval:
+            sleep_time = min_interval - time_since_last
+            logger.debug(f"Throttling domain {domain} for {sleep_time:.2f} seconds")
+            await asyncio.sleep(sleep_time)
+
+        # Update last request time
+        self._last_request_times[domain] = time.time()
+
+    def _get_domain_rate_limit(self, domain: str) -> float:
+        """Get rate limit for a specific domain."""
+        if domain in self.domain_specific_limits:
+            return self.domain_specific_limits[domain]
+
+        if self.adaptive_throttling:
+            domain_stats = self._domain_stats[domain]
+
+            # Adjust rate based on error rate
+            if domain_stats.success_count + domain_stats.error_count > 10:
+                error_rate = domain_stats.error_count / (
+                    domain_stats.success_count + domain_stats.error_count
+                )
+
+                if error_rate > 0.2:  # High error rate
+                    return self.base_rate_limit * 0.5
+                if error_rate > 0.1:  # Moderate error rate
+                    return self.base_rate_limit * 0.75
+
+        return self.base_rate_limit
+
+    async def record_response(
+        self, url: str, status_code: int, response_time: float
+    ) -> None:
+        """Record response statistics for adaptive throttling."""
+        domain = urlparse(url).netloc
+        domain_stats = self._domain_stats[domain]
+
+        if 200 <= status_code < 300:
+            domain_stats.success_count += 1
+            domain_stats.consecutive_errors = 0
+        else:
+            domain_stats.error_count += 1
+            domain_stats.consecutive_errors += 1
+            domain_stats.last_error_time = time.time()
+
+            # Apply exponential backoff for consecutive errors
+            if domain_stats.consecutive_errors >= 3:
+                backoff_time = min(60.0, 2 ** (domain_stats.consecutive_errors - 2))
+                domain_stats.backoff_until = time.time() + backoff_time
+                logger.warning(
+                    f"Applying {backoff_time:.2f}s backoff for domain {domain} after {domain_stats.consecutive_errors} consecutive errors"
+                )
+
+        domain_stats.total_response_time += response_time
+        domain_stats.request_times.append(time.time())
+        domain_stats.status_codes[status_code] += 1
+
+    def get_stats(self) -> Dict[str, Any]:
+        """Get throttling statistics."""
+        stats = {
+            "total_domains": len(self._domain_stats),
+            "base_rate_limit": self.base_rate_limit,
+            "max_workers": self.max_workers,
+            "domains": {},
+        }
+
+        for domain, domain_stats in self._domain_stats.items():
+            total_requests = domain_stats.success_count + domain_stats.error_count
+            success_rate = (
+                domain_stats.success_count / total_requests if total_requests > 0 else 0
+            )
+            avg_response_time = (
+                domain_stats.total_response_time / total_requests
+                if total_requests > 0
+                else 0
+            )
+
+            stats["domains"][domain] = {
+                "rate_limit": self._get_domain_rate_limit(domain),
+                "success_count": domain_stats.success_count,
+                "error_count": domain_stats.error_count,
+                "success_rate": success_rate,
+                "avg_response_time": avg_response_time,
+                "consecutive_errors": domain_stats.consecutive_errors,
+                "status_codes": dict(domain_stats.status_codes),
+            }
+
+        return stats

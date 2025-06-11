@@ -1,0 +1,97 @@
+# RAGnificent Pipeline Configuration Example
+#
+# This file demonstrates how to configure a complete RAG pipeline
+# that scrapes content, processes it, and makes it searchable.
+
+name: "Example RAG Pipeline"
+version: "1.0"
+description: "Scrape documentation sites and create a searchable knowledge base"
+
+# Pipeline-wide configuration
+collection_name: "example_docs"
+output_dir: "./pipeline_output"
+data_dir: "./pipeline_data"
+
+# Scraping configuration
+requests_per_second: 2.0
+cache_enabled: true
+chunk_size: 1500
+chunk_overlap: 300
+
+# Embedding configuration
+embedding_model_type: "sentence_transformer"
+embedding_model_name: "all-MiniLM-L6-v2"
+
+# Pipeline steps (executed in order)
+steps:
+  - name: "Scrape Python Documentation"
+    type: "scrape"
+    config:
+      urls:
+        - "https://docs.python.org/3/tutorial/"
+        - "https://docs.python.org/3/library/"
+      format: "markdown"
+      save_to_disk: true
+      use_sitemap: true
+      min_priority: 0.5
+
+  - name: "Scrape FastAPI Documentation"
+    type: "scrape"
+    config:
+      urls:
+        - "https://fastapi.tiangolo.com/"
+      format: "markdown"
+      save_to_disk: true
+      use_sitemap: true
+
+  - name: "Index Scraped Content"
+    type: "index"
+    config:
+      input_dir: "./pipeline_output"
+      # Embedding and chunking config inherited from pipeline-wide settings
+
+  - name: "Test Search"
+    type: "search"
+    config:
+      query: "How to create API endpoints"
+      top_k: 10
+      threshold: 0.6
+
+# Alternative pipeline configuration for batch processing
+---
+name: "Batch Processing Pipeline"
+version: "1.0"
+description: "Process multiple input sources in parallel"
+
+collection_name: "batch_docs"
+output_dir: "./batch_output"
+
+# Enable parallel processing
+parallel: true
+max_workers: 8
+
+steps:
+  - name: "Scrape Multiple Sites"
+    type: "scrape"
+    config:
+      urls:
+        - "https://httpbin.org/html"
+        - "https://httpbin.org/json"
+        - "https://httpbin.org/xml"
+      format: "markdown"
+      parallel: true
+
+  - name: "Create Vector Index"
+    type: "index"
+    config:
+      input_dir: "./batch_output"
+      batch_size: 50
+
+  - name: "Search Test Queries"
+    type: "search"
+    config:
+      queries:
+        - "HTTP methods"
+        - "JSON response"
+        - "XML format"
+      top_k: 5

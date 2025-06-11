@@ -7,15 +7,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Test Commands
 
 ### Environment Setup
+
 - `uv venv` - Create virtual environment
 - `uv pip install -r requirements.txt` - Install Python dependencies
 - `uv pip install -e .` - Install package in editable mode
 - `export PATH=".venv/bin:$PATH"` - Activate virtual environment (Unix/macOS)
 
 ### Building & Testing
+
 - `cargo build` - Build Rust components
 - `cargo build --release --features real_rendering` - Build with JS rendering support
 - `pytest` - Run all Python tests (requires proper environment setup)
+- `./run_tests.sh fast` - Run only fast unit tests (recommended for development)
+- `./run_tests.sh unit` - Run all unit tests
+- `./run_tests.sh integration` - Run integration tests
+- `./run_tests.sh benchmark` - Run performance benchmarks
+- `./run_tests.sh profile` - Run tests with duration profiling
+- `pytest -m "not benchmark"` - Run tests excluding benchmarks
 - `pytest tests/rust/test_python_bindings.py -v` - Run Python binding tests
 - `pytest tests/unit/test_chunk_utils.py -v` - Run chunk utilities tests
 - `pytest test_main.py::test_convert_to_markdown -v` - Run specific Python test
@@ -48,13 +56,19 @@ RAGnificent is a hybrid Python/Rust project for web scraping and content process
    - `core/scraper.py`: Main scraper implementation with request handling
    - `core/cache.py`: Two-level caching system (memory/disk) for HTTP requests
    - `core/throttle.py`: Rate limiting for respectful web scraping
-   - `core/config.py`: Configuration management
+   - `core/config.py`: Configuration management with environment support
+   - `core/feature_flags.py`: Feature toggle system for gradual rollouts
+   - `core/resource_manager.py`: Connection pooling and memory management
+   - `core/security.py`: Rate limiting and HTML sanitization
+   - `core/stats.py`: Statistics mixin for performance tracking
+   - `core/validators.py`: Input validation utilities
 
 2. **Rust Components**:
    - `src/lib.rs`: Main entry point and PyO3 bindings
    - `src/markdown_converter.rs`: HTML to Markdown/JSON/XML conversion
    - `src/chunker.rs`: Semantic chunking implementation
    - `src/js_renderer.rs`: JavaScript page rendering (optional feature)
+   - `src/html_parser.rs`: HTML parsing utilities
 
 3. **Utility Modules**:
    - `utils/chunk_utils.py`: Semantic chunking utilities for RAG
@@ -148,18 +162,36 @@ This project includes a comprehensive `justfile` for common development tasks:
 - **mypy**: Static type checker for Python
 - **cargo**: Rust package manager and build tool
 
+## Key Runtime Dependencies
+
+- **Python 3.12+**: Required Python version
+- **sentence-transformers>=4.1.0**: For text embeddings
+- **torch>=2.7.0**: PyTorch for ML operations
+- **transformers==4.51.3**: Hugging Face transformers
+- **sentry-sdk[fastapi]>=2.29.1**: Error tracking and monitoring
+- **bleach==6.2.0**: HTML sanitization for security
+- **qdrant-client>=1.4.0**: Vector database client
+- **beautifulsoup4**: HTML parsing
+- **requests**: HTTP client for web scraping
+
 ## Configuration System
 
 The project uses a hierarchical configuration system with Pydantic settings:
+
 - `config/environments/` - Environment-specific configs (development, production, testing)
 - `config/examples/` - Example configuration files
 - Configuration can be loaded from YAML or JSON files
 - Environment variables override file-based settings
+- Supports chunking strategies: `recursive`, `semantic`, `sliding_window`
+- Feature flags for enabling/disabling functionality
+- Resource limits and connection pooling configuration
 
 ## Module Import Strategy & Test Environment
 
 ### Package Installation (Recommended)
+
 The preferred approach is to install the package in editable mode:
+
 ```bash
 uv pip install -e .
 export PATH=".venv/bin:$PATH"
@@ -167,19 +199,33 @@ pytest
 ```
 
 This allows imports like:
+
 ```python
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.utils.chunk_utils import ContentChunker
 ```
 
 ### Current Test Status
-- **90+ tests** currently working and collected (significantly improved from previous 64)
-- **Major test fixes completed**: Fixed 22 failing tests including performance benchmarks, config tests, embedding edge cases, and nested header chunking
-- **Working test categories**: chunk utils, main functionality, Rust bindings, benchmarks, sitemap utils, embedding service, scraper error handling, pipeline tests, search tests
-- **Recent improvements**: Fixed method signatures, parameter passing, mock configurations, and test expectations to match actual implementation
+
+- **48 tests** currently collected with comprehensive coverage
+- **Test Performance Optimized**: Separated slow tests (benchmarks, integration, ML model loading) from fast unit tests
+- **Fast test execution**: ~15 seconds without benchmarks vs ~22 seconds with all tests
+- **Test Categories**:
+  - Unit tests: Core functionality testing (fast)
+  - Integration tests: External service integration (slower)
+  - Benchmark tests: Performance measurements with intentional delays
+  - ML tests: Tests requiring model loading (marked with `requires_model`)
+- **Test Markers Available**:
+  - `@pytest.mark.benchmark` - Performance benchmarks
+  - `@pytest.mark.slow` - Tests with intentional delays
+  - `@pytest.mark.integration` - Integration tests
+  - `@pytest.mark.requires_model` - Tests loading ML models
+  - `@pytest.mark.unit` - Fast unit tests
 
 ### Fallback Import Strategy
+
 Some modules use fallback imports for compatibility:
+
 ```python
 try:
     from .stats import StatsMixin
@@ -188,31 +234,45 @@ except ImportError:
 ```
 
 ### For New Tests
+
 Follow the package-based import pattern and ensure the virtual environment is properly activated with the package installed in editable mode.
+
+### Test Performance Guidelines
+
+- **Default Configuration**: Tests run without benchmarks by default (via `pytest.ini`)
+- **Quick Development Cycle**: Use `./run_tests.sh fast` or `pytest -m "not benchmark and not slow"`
+- **Test Organization**: Place slow/integration tests in appropriate directories and mark them
+- **Benchmarks**: Keep benchmarks separate and run only when needed
+- **Mock Heavy Resources**: Mock ML models and external services in unit tests
 
 ## Test Fixes Applied
 
 ### Performance Test Fixes
+
 - **Throttler tests**: Fixed URL parameter passing in execute methods and mock functions
 - **Chunker tests**: Added missing `source_url` parameter to `create_chunks_from_markdown` calls
 - **Pipeline tests**: Updated `MockVectorStore.store_documents` to accept required keyword arguments
 - **Parallel scraping tests**: Fixed lambda function signatures and sitemap URL object creation
 
 ### Configuration Test Fixes
+
 - **ChunkingStrategy enum**: Changed invalid `SENTENCE` value to correct `SEMANTIC` value
 - **Test expectations**: Updated assertions to match available enum values
 
 ### Embedding Test Fixes
+
 - **Mock patching**: Updated mock decorator paths from module-level to actual import paths
 - **OpenAI mocks**: Changed from `RAGnificent.rag.embedding.openai` to `openai.embeddings.create`
 - **SentenceTransformer mocks**: Changed from module-level to `sentence_transformers.SentenceTransformer`
 
 ### Nested Header Chunking Fixes
+
 - **Test expectations**: Updated tests to check for content patterns rather than non-existent header hierarchy
 - **Section parsing**: Adjusted expected section counts and header levels to match actual test data
 - **Content matching**: Changed from heading_path checks to content-based chunk identification
 
 ### Best Practices for Test Development
+
 - Use package-based imports (`from RAGnificent.module import Class`)
 - Match mock paths to actual import locations
 - Verify test data contains expected content before writing assertions

@@ -1,6 +1,5 @@
 Output Format Demo
 
-
 # RAGnificent Output Formats
 
 This demo shows the three output formats supported by RAGnificent:

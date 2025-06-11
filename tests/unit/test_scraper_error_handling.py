@@ -17,6 +17,7 @@ project_root = Path(__file__).parent.parent.parent
 core_path = project_root / "RAGnificent" / "core"
 sys.path.insert(0, str(core_path.parent))
 
+import pytest
 import requests
 import responses
 
@@ -242,7 +243,7 @@ class TestScraperErrorHandling(unittest.TestCase):
                 1,
                 "Sequential processing should yield one successful URL",
             )
-            good_file_path = Path(self.output_dir) / "example.com" / "good.markdown"
+            good_file_path = Path(self.output_dir) / "good.md"
             self.assertTrue(
                 good_file_path.exists(),
                 "Good file should be created in sequential mode",
@@ -264,7 +265,7 @@ class TestScraperErrorHandling(unittest.TestCase):
                 1,
                 "Parallel processing should yield one successful URL",
             )
-            good_file_path_parallel = Path(self.output_dir) / "example.com" / "good.md"
+            good_file_path_parallel = Path(self.output_dir) / "good.md"
             self.assertTrue(
                 good_file_path_parallel.exists(),
                 "Good file should be created in parallel mode",
@@ -273,6 +274,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         except Exception as e:
             self.fail(f"Parallel execution failed or hung: {e}")
 
+    @pytest.mark.slow
     @responses.activate
     def test_worker_timeout_handling(self):
         """Test handling of worker timeouts in parallel processing."""
@@ -320,8 +322,9 @@ class TestScraperErrorHandling(unittest.TestCase):
                 worker_timeout=1,  # Very short timeout
             )
 
-            # Should handle worker timeouts gracefully
-            self.assertTrue(len(result) < 2, "Should handle worker timeouts")
+            # Should handle worker timeouts gracefully by falling back to sequential processing
+            # Both URLs should still be processed successfully in sequential mode
+            self.assertEqual(len(result), 2, "Should fall back to sequential processing and handle all URLs")
 
     def test_memory_cache_limits(self):
         """Test that memory cache limits are enforced."""

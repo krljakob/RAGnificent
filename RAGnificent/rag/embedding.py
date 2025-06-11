@@ -8,18 +8,23 @@ Supports multiple embedding strategies including SentenceTransformers, OpenAI, a
 import hashlib
 import logging
 import os
-import pickle
 import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 # Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
+try:
+    from ..core.config import EmbeddingModelType, get_config
+except ImportError:
+    # Fallback for direct execution
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from core.config import EmbeddingModelType, get_config
 
 import numpy as np
-from core.config import EmbeddingModelType, get_config
 from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
@@ -57,12 +62,27 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
     Returns:
         Path to the cache file
     """
+    import re
+
     config = get_config()
     cache_dir = config.embedding.cache_dir
 
-    # Create model-specific cache directory
-    model_cache_dir = cache_dir / model_name.replace("/", "_")
+    # Sanitize model name to prevent path traversal
+    safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
+    safe_model_name = safe_model_name.replace("..", "_")
+    safe_model_name = safe_model_name.strip(".")
+
+    # Ensure we don't have empty name
+    if not safe_model_name:
+        safe_model_name = "default_model"
+
+    # Create model-specific cache directory safely
+    model_cache_dir = cache_dir / safe_model_name
     os.makedirs(model_cache_dir, exist_ok=True)
+
+    # Validate that text_hash is safe (should be hex only)
+    if not re.match(r"^[a-f0-9]+$", text_hash):
+        raise ValueError(f"Invalid text hash format: {text_hash}")
 
     # Return path to specific cache file
     return model_cache_dir / f"{text_hash}.pkl"
@@ -78,7 +98,7 @@ def compute_text_hash(text: str) -> str:
     Returns:
         Hash string
     """
-    return hashlib.md5(text.encode("utf-8")).hexdigest()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
@@ -102,8 +122,7 @@ def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
 
     if cache_path.exists():
         try:
-            with open(cache_path, "rb") as f:
-                return pickle.load(f)
+            return np.load(cache_path)
         except Exception as e:
             logger.warning(f"Failed to load cached embedding: {e}")
 
@@ -131,8 +150,7 @@ def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -
     cache_path = get_embedding_cache_path(model_name, text_hash)
 
     try:
-        with open(cache_path, "wb") as f:
-            pickle.dump(embedding, f)
+        np.save(cache_path, embedding)
         return True
     except Exception as e:
         logger.warning(f"Failed to save embedding to cache: {e}")
