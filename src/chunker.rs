@@ -189,7 +189,6 @@ fn find_good_split_point(text: &str, approximate_position: usize) -> usize {
                 // If we reach the end and all are whitespace, set end_pos to text.len()
                 end_pos = text.len();
             }
-            }
             return end_pos;
         }
     }
