@@ -20,6 +20,8 @@ regex = "1.10.3"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.140"
 quick-xml = { version = "0.37.3", features = ["serialize"] }
+tokei = "12.1.2"
+rayon = "1.8"
 
 [features]
 default = []
@@ -36,6 +38,8 @@ harness = false
 [profile.release]
 lto = true
 codegen-units = 1
+# For best performance on your hardware, build with:
+#   cargo build --release --target-cpu=native
 opt-level = 3
 debug = false
 

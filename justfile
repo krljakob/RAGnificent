@@ -125,6 +125,7 @@ clean-build: clean setup
 # Clean build artifacts
 clean:
     cargo clean
+    rm -rf output/
     find . -type d -name "__pycache__" -exec rm -rf {} +
     find . -type f -name "*.pyc" -delete
     find . -type f -name "*.pyo" -delete
@@ -258,3 +259,11 @@ workflow-list links=links_file collection=collection:
     just store {{embedded_chunks}} {{collection}}
     @echo "Workflow complete! You can now search the collection:"
     @echo "just search \"your query\" {{collection}}"
+
+# Update README.md with latest code/test metrics and badges
+update-metrics:
+    #!/usr/bin/env bash
+    if [ -d ".venv" ]; then
+        source .venv/bin/activate
+    fi
+    python3 scripts/update_readme_metrics.py

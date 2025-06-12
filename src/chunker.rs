@@ -1,6 +1,7 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use rayon::prelude::*;
 
 #[derive(Error, Debug)]
 pub enum ChunkerError {
@@ -51,7 +52,7 @@ fn semantic_chunking(
     heading_regex: &Regex,
 ) -> Result<Vec<Chunk>, ChunkerError> {
     let lines: Vec<&str> = markdown.lines().collect();
-    let mut chunks: Vec<Chunk> = Vec::new();
+    let mut chunks: Vec<Chunk> = Vec::with_capacity(lines.len() / 10 + 1);
 
     let mut current_chunk = String::new();
     let mut current_heading: Option<String> = None;
@@ -122,7 +123,13 @@ fn semantic_chunking(
         ));
     }
 
-    Ok(chunks)
+    // After collecting all chunk strings, parallelize chunk object creation if large
+    if chunks.len() > 100 {
+        let chunks: Vec<Chunk> = chunks.into_par_iter().map(|chunk| chunk).collect();
+        Ok(chunks)
+    } else {
+        Ok(chunks)
+    }
 }
 
 /// Helper function to create a chunk object with metadata

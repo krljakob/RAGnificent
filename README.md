@@ -2,9 +2,15 @@
 
 # RAGnificent 🔄📝
 
+[![Lines of Code](https://img.shields.io/badge/lines%20of%20code-9,779-blue?logo=github)](https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)
+[![Test Coverage](https://img.shields.io/badge/coverage-unknown-brightgreen?logo=pytest)](https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)
+[![Test Count](https://img.shields.io/badge/tests-unknown-yellow?logo=pytest)](https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)(https://github.com/krljakob/RAGnificent)
+
 RAGnificent combines Python and Rust components to scrape websites and convert HTML content to markdown, JSON, or XML formats. It supports sitemap parsing, semantic chunking for RAG (Retrieval-Augmented Generation), and includes performance optimizations through Rust integration.
 
 Key features include HTML-to-markdown/JSON/XML conversion with support for various elements, intelligent content chunking that preserves document structure, and systematic content discovery through sitemap parsing. The hybrid architecture uses Python for high-level operations and Rust for performance-critical tasks.
+
+> **Note:** Codebase metrics (lines of code, test count, coverage) are updated automatically via CI or scripts. See the [Automation section](#automation--metrics) below for details.
 
 Check out the [deepwiki](https://deepwiki.com/krljakob/RAGnificent/) for a granular breakdown of the repository contents, purpose and structure.
 
@@ -77,7 +83,12 @@ pytest tests/rust/test_python_bindings.py -v
 
 **Test Performance**: Tests are organized by speed - fast unit tests run in ~15 seconds, while full suite including benchmarks takes ~22 seconds. Benchmarks are skipped by default for rapid development cycles.
 
-**Current Status**: 48 tests with comprehensive coverage across core functionality.
+## Automation & Metrics
+
+- **Lines of Code**: Calculated automatically using [`cloc`](https://github.com/AlDanial/cloc) or [`tokei`](https://github.com/XAMPPRocky/tokei). See the badge above for the latest count.
+- **Test Coverage & Count**: Updated via [`pytest-cov`](https://pytest-cov.readthedocs.io/) and CI. See the badges above for live stats.
+- **How to Update**: Run `just update-metrics` or use the provided CI workflow. See `scripts/update_readme_metrics.py` for details.
+- **Performance Best Practices**: See [docs/OPTIMIZATION.md](docs/OPTIMIZATION.md) for up-to-date performance strategies and benchmarking results.
 
 ## Development
 

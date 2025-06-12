@@ -53,8 +53,18 @@
 * [ ] Document all CLI commands with examples
 * [ ] Write `CHANGELOG.md`, `RELEASE_NOTES.md`
 
+### Milestone 7: Automation & Performance Metrics
+
+* [ ] Add CI workflow to update README badges for lines of code, test count, and coverage
+* [ ] Add `scripts/update_readme_metrics.py` to automate metric updates
+* [ ] Add `just update-metrics` and Makefile targets for metrics update
+* [ ] Integrate `cloc`/`tokei` and `pytest-cov` in CI for metrics
+* [ ] Add performance profiling to CI (e.g., pytest-benchmark, cargo bench)
+* [ ] Regularly review and update [docs/OPTIMIZATION.md](OPTIMIZATION.md) with new performance strategies
+* [ ] Add checklist for profiling and optimizing slowest code paths
+
 ## Integration Timeline (3 Weeks)
 
 * **Week 1**: Milestone 1 + 2
 * **Week 2**: Milestone 3 + 4
-* **Week 3**: Milestone 5 + 6
+* **Week 3**: Milestone 5 + 6 + 7

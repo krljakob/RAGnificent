@@ -70,11 +70,7 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
     # Sanitize model name to prevent path traversal
     safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
     safe_model_name = safe_model_name.replace("..", "_")
-    safe_model_name = safe_model_name.strip(".")
-
-    # Ensure we don't have empty name
-    if not safe_model_name:
-        safe_model_name = "default_model"
+    safe_model_name = safe_model_name.strip(".") or "default_model"
 
     # Create model-specific cache directory safely
     model_cache_dir = cache_dir / safe_model_name
@@ -122,7 +118,10 @@ def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
 
     if cache_path.exists():
         try:
-            return np.load(cache_path)
+            result = np.load(cache_path, allow_pickle=False)
+            if not isinstance(result, np.ndarray):
+                raise ValueError(f"Expected numpy array but got {type(result)}")
+            return result
         except Exception as e:
             logger.warning(f"Failed to load cached embedding: {e}")
 
@@ -346,11 +345,15 @@ class OpenAIEmbedding:
 
         Returns:
             List of embedding vectors
+
+        Raises:
+            EmbeddingAPIError: If API call fails after max retries
         """
         import openai
 
         # Retry logic for API calls
         retry_count = 0
+        last_error = None
         while retry_count <= self.max_retries:
             try:
                 response = openai.embeddings.create(
@@ -359,14 +362,18 @@ class OpenAIEmbedding:
                 # Process response
                 return [np.array(item.embedding) for item in response.data]
             except Exception as e:
+                last_error = e
                 retry_count += 1
                 if retry_count > self.max_retries:
-                    raise
+                    break
                 logger.warning(
                     f"Retrying OpenAI embedding request ({retry_count}/{self.max_retries}): {e}"
                 )
                 time.sleep(2**retry_count)  # Exponential backoff
-        return None
+
+        raise EmbeddingAPIError(
+            f"Failed to get embeddings after {self.max_retries} retries: {last_error}"
+        )
 
     def _cache_embeddings(
         self,
@@ -553,7 +560,7 @@ class SimpleCountEmbedding:
             model_name: Name identifier for this model
         """
         self.model_name = model_name
-        self.vocab = {}
+        self.vocab: Dict[str, int] = {}
         self.next_index = 0
         self.max_features = 512
         logger.info("Initialized simple count embedding model")
@@ -689,7 +696,7 @@ def embed_texts(texts: List[str], model=None) -> List[np.ndarray]:
 
 
 def embed_texts_batched(
-    texts: List[str], model=None, batch_size: int = None
+    texts: List[str], model=None, batch_size: Optional[int] = None
 ) -> List[np.ndarray]:
     """
     Generate embeddings for multiple text strings in batches for efficiency.
@@ -697,7 +704,7 @@ def embed_texts_batched(
     Args:
         texts: List of texts to embed
         model: Optional pre-initialized embedding model
-        batch_size: Size of batches to process (uses config if None)
+        batch_size: Optional size of batches to process (uses config if None)
 
     Returns:
         List of embedding vectors

@@ -98,7 +98,7 @@ fn extract_title(document_html: &Html) -> Result<String, MarkdownError> {
 
 /// Extract headings from HTML
 fn extract_headings(document_html: &Html) -> Result<Vec<Heading>, MarkdownError> {
-    let mut headings = Vec::new();
+    let mut headings = Vec::with_capacity(16);
 
     for i in 1..=6 {
         let heading_selector = create_selector(&format!("h{}", i))?;
@@ -119,7 +119,7 @@ fn extract_headings(document_html: &Html) -> Result<Vec<Heading>, MarkdownError>
 
 /// Extract paragraphs from HTML
 fn extract_paragraphs(document_html: &Html) -> Result<Vec<String>, MarkdownError> {
-    let mut paragraphs = Vec::new();
+    let mut paragraphs = Vec::with_capacity(32);
     let p_selector = create_selector("p")?;
 
     for element in document_html.select(&p_selector) {
@@ -134,7 +134,7 @@ fn extract_paragraphs(document_html: &Html) -> Result<Vec<String>, MarkdownError
 
 /// Extract links from HTML
 fn extract_links(document_html: &Html, base_url: &Url) -> Result<Vec<Link>, MarkdownError> {
-    let mut links = Vec::new();
+    let mut links = Vec::with_capacity(32);
     let a_selector = create_selector("a[href]")?;
 
     for element in document_html.select(&a_selector) {
@@ -156,7 +156,7 @@ fn extract_links(document_html: &Html, base_url: &Url) -> Result<Vec<Link>, Mark
 
 /// Extract images from HTML
 fn extract_images(document_html: &Html, base_url: &Url) -> Result<Vec<Image>, MarkdownError> {
-    let mut images = Vec::new();
+    let mut images = Vec::with_capacity(16);
     let img_selector = create_selector("img[src]")?;
 
     for element in document_html.select(&img_selector) {
@@ -191,7 +191,7 @@ fn extract_list_items(list_element: &scraper::ElementRef, li_selector: &Selector
 
 /// Extract lists from HTML
 fn extract_lists(document_html: &Html) -> Result<Vec<List>, MarkdownError> {
-    let mut lists = Vec::new();
+    let mut lists = Vec::with_capacity(8);
     let ul_selector = create_selector("ul")?;
     let ol_selector = create_selector("ol")?;
     let li_selector = create_selector("li")?;
@@ -223,7 +223,7 @@ fn extract_lists(document_html: &Html) -> Result<Vec<List>, MarkdownError> {
 
 /// Extract code blocks from HTML
 fn extract_code_blocks(document_html: &Html) -> Result<Vec<CodeBlock>, MarkdownError> {
-    let mut code_blocks = Vec::new();
+    let mut code_blocks = Vec::with_capacity(8);
     let pre_selector = create_selector("pre, code")?;
 
     for element in document_html.select(&pre_selector) {
@@ -249,7 +249,7 @@ fn extract_code_blocks(document_html: &Html) -> Result<Vec<CodeBlock>, MarkdownE
 
 /// Extract blockquotes from HTML
 fn extract_blockquotes(document_html: &Html) -> Result<Vec<String>, MarkdownError> {
-    let mut blockquotes = Vec::new();
+    let mut blockquotes = Vec::with_capacity(8);
     let blockquote_selector = create_selector("blockquote")?;
 
     for element in document_html.select(&blockquote_selector) {

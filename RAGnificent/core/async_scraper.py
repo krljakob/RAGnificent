@@ -328,7 +328,7 @@ class AsyncMarkdownScraper:
             output_file = Path(output_dir) / f"{base_name}.{extension}"
             normalized_output_file = Path(os.path.normpath(output_file))
 
-            if not str(normalized_output_file).startswith(str(output_dir)):
+            if not str(normalized_output_file).startswith(output_dir):
                 raise ValueError("Attempted to write outside the allowed directory.")
 
             with open(normalized_output_file, "w", encoding="utf-8") as f:

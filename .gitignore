@@ -188,3 +188,6 @@ dmypy.json
 **/.claude/settings.local.json
 dev/
 ai-reviews/
+.windsurf
+.cursor
+output/

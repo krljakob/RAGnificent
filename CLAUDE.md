@@ -100,6 +100,42 @@ RAGnificent is a hybrid Python/Rust project for web scraping and content process
 - **Rust**: Follow Rust 2024 edition idioms and use thiserror for errors
 - **Type annotations**: Required for all new code
 
+### Library-Specific Best Practices
+
+The project includes comprehensive best practices rules in `.cursor/rules/` for all major dependencies:
+
+**Python Libraries:**
+
+- `requests-best-practices.mdc` - HTTP requests with sessions, timeouts, error handling
+- `beautifulsoup4-best-practices.mdc` - HTML parsing with lxml, CSS selectors, encoding
+- `pydantic-best-practices.mdc` - Data validation with BaseModel, Field, custom validators
+- `fastapi-best-practices.mdc` - API development with dependency injection, error handling
+- `rich-best-practices.mdc` - Terminal output with console objects, progress bars
+- `numpy-best-practices.mdc` - Numerical computing with vectorization, broadcasting
+- `pandas-best-practices.mdc` - Data manipulation with DataFrames, method chaining
+- `pytest-best-practices.mdc` - Testing with fixtures, parameterization, assertions
+- `typer-best-practices.mdc` - CLI development with type hints, help messages
+- `diskcache-best-practices.mdc` - Caching with context managers, expiration
+
+**Rust Libraries:**
+
+- `pyo3-best-practices.mdc` - Python bindings with pyfunction, pyclass, PyResult
+- `maturin-best-practices.mdc` - Building Python-Rust extensions with proper configuration
+- `tokio-best-practices.mdc` - Async programming with tokio::main, spawn, error handling
+- `reqwest-best-practices.mdc` - HTTP clients with connection reuse, JSON features
+- `serde-best-practices.mdc` - Serialization with derive macros, custom logic
+- `regex-best-practices.mdc` - Pattern matching with compiled regex, captures
+- `scraper-best-practices.mdc` - Web scraping with Selector, rate limiting, robots.txt
+- `thiserror-best-practices.mdc` - Error handling with derive(Error), From traits
+- `quick-xml-best-practices.mdc` - XML processing with namespaces, validation
+- `criterion-best-practices.mdc` - Benchmarking with isolated tests, result analysis
+
+**Documentation:**
+
+- `mkdocs-best-practices.mdc` - Documentation structure, Material theme, code examples
+
+These rules are automatically applied by Cursor IDE to ensure consistent code quality across the project.
+
 ## Output Format Features
 
 - **Markdown**: Human-readable plain text format (default)

@@ -4,29 +4,12 @@ Provides a chat interface with RAG-enhanced responses.
 """
 
 import logging
-import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Use relative imports for internal modules
-try:
-    from .pipeline import Pipeline as RAGPipeline
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from rag.pipeline import Pipeline as RAGPipeline
-
-# Use built-in RAG functionality instead of v1_implementation
-try:
-    from ..core.config import get_config
-except ImportError:
-    from core.config import get_config
+from .pipeline import Pipeline as RAGPipeline
+from ..core.config import get_config
 
 logger = logging.getLogger(__name__)
-
 
 class RAGChat:
     """Chat interface with RAG-enhanced responses."""
@@ -44,9 +27,9 @@ class RAGChat:
             embedding_model: Name of embedding model
         """
         self.pipeline = RAGPipeline(
-            collection_name=collection_name, embedding_model=embedding_model
+            collection_name=collection_name, embedding_model_name=embedding_model
         )
-        self.history = []
+        self.history: List[Dict[str, str]] = []
 
     def chat(
         self,
@@ -103,15 +86,17 @@ class RAGChat:
 
         # Generate response using built-in RAG functionality
         if context:
-            response = self.pipeline.query_with_context(
+            response_obj = self.pipeline.query_with_context(
                 query,
                 limit=limit,
                 threshold=threshold,
                 system_prompt=chat_context or None,
             )
             # Extract the response text if it's a dict
-            if isinstance(response, dict):
-                response = response.get("response", str(response))
+            if isinstance(response_obj, dict):
+                response = response_obj.get("response", str(response_obj))
+            else:
+                response = str(response_obj)
         else:
             # No context found
             response = "I couldn't find relevant information to answer your query. Could you rephrase or ask something else?"
@@ -133,3 +118,5 @@ class RAGChat:
     def get_history(self) -> List[Dict[str, str]]:
         """Get chat history."""
         return self.history
+
+ChatSession = RAGChat
