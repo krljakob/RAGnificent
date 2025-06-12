@@ -86,7 +86,7 @@ def get_pytest_metrics():
         match = re.search(r"(\d+) passed", output)
         test_count = match[1] if match else "unknown"
         # Parse coverage
-        cov_match = re.search(r"TOTAL\s+\d+\s+\d+\s+\d+\s+(\d+%)", output)
+        cov_match = re.search(r"TOTAL\s+\d+\s+\d+\s+\d+\s+(\d+(?:\.\d+)?%)", output)
         coverage = cov_match[1] if cov_match else "unknown"
         return test_count, coverage
     except Exception:
