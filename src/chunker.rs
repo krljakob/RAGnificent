@@ -1,7 +1,7 @@
+use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use rayon::prelude::*;
 
 #[derive(Error, Debug)]
 pub enum ChunkerError {

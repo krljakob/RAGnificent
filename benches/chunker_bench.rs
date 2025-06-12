@@ -2,7 +2,7 @@
 // Criterion benchmark for semantic chunking
 // Run with: cargo bench --bench chunker_bench
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use ragnificent_rs::chunker::create_semantic_chunks;
 
 fn bench_semantic_chunking(c: &mut Criterion) {
