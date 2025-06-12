@@ -20,8 +20,7 @@ HEADER = """# This file is auto-synced with pyproject.toml. For dev/test/typing/
 def extract_dependencies(pyproject_path):
     with open(pyproject_path, "rb") as f:
         data = tomllib.load(f)
-    deps = data.get("project", {}).get("dependencies", [])
-    return deps
+    return data.get("project", {}).get("dependencies", [])
 
 def write_requirements(requirements_path, dependencies):
     with open(requirements_path, "w", encoding="utf-8") as f:
