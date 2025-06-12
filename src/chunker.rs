@@ -180,10 +180,15 @@ fn find_good_split_point(text: &str, approximate_position: usize) -> usize {
         if c == '.' || c == '!' || c == '?' {
             // Find next non-whitespace or end of string
             let mut end_pos = approximate_position + i + 1;
-            while end_pos < text.len()
-                && text.chars().nth(end_pos).is_some_and(|c| c.is_whitespace())
-            {
-                end_pos += 1;
+            // Use char_indices to avoid O(n^2) complexity
+            for (idx, c) in text.char_indices().skip(end_pos) {
+                if !c.is_whitespace() {
+                    end_pos = idx;
+                    break;
+                }
+                // If we reach the end and all are whitespace, set end_pos to text.len()
+                end_pos = text.len();
+            }
             }
             return end_pos;
         }
