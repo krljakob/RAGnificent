@@ -367,7 +367,7 @@ class OpenAIEmbedding:
                 if retry_count > self.max_retries:
                     break
                 logger.warning(
-                    f"Retrying OpenAI embedding request ({retry_count}/{self.max_retries}): {e}"
+                    f"Retrying OpenAI embedding request ({retry_count}/{self.max_retries}): {last_error}"
                 )
                 time.sleep(2**retry_count)  # Exponential backoff
 
