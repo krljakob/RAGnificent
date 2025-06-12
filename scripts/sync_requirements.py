@@ -22,11 +22,17 @@ def extract_dependencies(pyproject_path):
         data = tomllib.load(f)
     return data.get("project", {}).get("dependencies", [])
 
+import os
+import tempfile
+
 def write_requirements(requirements_path, dependencies):
-    with open(requirements_path, "w", encoding="utf-8") as f:
-        f.write(HEADER)
+    dir_name = os.path.dirname(requirements_path)
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=dir_name, delete=False) as tmp_file:
+        tmp_file.write(HEADER)
         for dep in dependencies:
-            f.write(f"{dep}\n")
+            tmp_file.write(f"{dep}\n")
+        temp_path = tmp_file.name
+    os.replace(temp_path, requirements_path)
 
 def main():
     if not PYPROJECT_PATH.exists():
