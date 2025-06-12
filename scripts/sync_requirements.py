@@ -38,7 +38,9 @@ def main():
         print("No dependencies found in pyproject.toml", file=sys.stderr)
         sys.exit(1)
     write_requirements(REQUIREMENTS_PATH, deps)
-    print(f"requirements.txt synced with [project.dependencies] from pyproject.toml.")
+    print(
+        "requirements.txt synced with [project.dependencies] from pyproject.toml."
+    )
 
 if __name__ == "__main__":
     main()
