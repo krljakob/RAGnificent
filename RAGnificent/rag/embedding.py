@@ -373,7 +373,7 @@ class OpenAIEmbedding:
 
         raise EmbeddingAPIError(
             f"Failed to get embeddings after {self.max_retries} retries: {last_error}"
-        )
+        ) from last_error
 
     def _cache_embeddings(
         self,
