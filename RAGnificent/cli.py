@@ -5,30 +5,30 @@ This module provides a modern, user-friendly CLI for RAGnificent using Typer.
 """
 
 import os
+import sys
+import threading
+import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 import typer
+from rich.box import ROUNDED
 from rich.console import Console
+from rich.layout import Layout
+from rich.live import Live
 from rich.panel import Panel
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
     TextColumn,
-    BarColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
-    TransferSpeedColumn
+    TransferSpeedColumn,
 )
 from rich.table import Table
-from rich.layout import Layout
-from rich.live import Live
 from rich.text import Text
-from rich.box import ROUNDED
-import threading
-import sys
-import time
-from typing import Callable
+
 
 class KeyboardListener:
     """Listen for keyboard input in a separate thread."""
@@ -61,7 +61,7 @@ def keyboard_listener(callback: Callable[[str], None]):
     return KeyboardListener(callback)
 from typing_extensions import Annotated
 
-from RAGnificent.core.logging import get_logger, setup_logger
+from RAGnificent.core.logger import get_logger, setup_logger
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -246,7 +246,7 @@ def scrape(
             if key == "q":
                 console.print("\n[red]Scraping cancelled by user[/red]")
                 raise typer.Exit(0)
-            elif key == " ":
+            if key == " ":
                 if progress.tasks[task].finished:
                     return
                 if progress.tasks[task].paused:
@@ -283,7 +283,6 @@ def scrape(
                 from RAGnificent.core.async_scraper import AsyncMarkdownScraper
 
                 async def run_async_scrape():
-                    from RAGnificent.core.async_scraper import AsyncMarkdownScraper
 
                     scraper = AsyncMarkdownScraper(
                         max_workers=workers,
@@ -443,7 +442,7 @@ def convert(
     ),
 ):
     """Convert documents between different formats."""
-    from RAGnificent.ragnificent_rs import convert_html, OutputFormat
+    from RAGnificent.ragnificent_rs import OutputFormat, convert_html
     from RAGnificent.utils.chunk_utils import ContentChunker
 
     console.print(f"📄 Converting {input_file} to {to_format}...")
@@ -637,8 +636,8 @@ def embed(
     ),
 ):
     """Generate embeddings for text content."""
-    from RAGnificent.rag.embedding import EmbeddingService, embed_texts_batched
     from RAGnificent.core.config import EmbeddingModelType
+    from RAGnificent.rag.embedding import EmbeddingService, embed_texts_batched
 
     console.print("🔍 Generating embeddings...")
 
@@ -658,8 +657,8 @@ def embed(
                 json.dump(embedding, f)
         else:
             # Process directory
-            import json
             import glob
+            import json
 
             files = list(input_path.glob("**/*.md")) + list(input_path.glob("**/*.txt"))
 

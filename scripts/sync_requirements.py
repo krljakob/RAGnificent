@@ -3,8 +3,8 @@
 Sync requirements.txt with [project.dependencies] from pyproject.toml.
 Usage: python scripts/sync_requirements.py
 """
-import sys
 import os
+import sys
 from pathlib import Path
 
 try:
@@ -22,8 +22,8 @@ def extract_dependencies(pyproject_path):
         data = tomllib.load(f)
     return data.get("project", {}).get("dependencies", [])
 
-import os
 import tempfile
+
 
 def write_requirements(requirements_path, dependencies):
     dir_name = os.path.dirname(requirements_path)
@@ -36,16 +36,11 @@ def write_requirements(requirements_path, dependencies):
 
 def main():
     if not PYPROJECT_PATH.exists():
-        print(f"pyproject.toml not found at {PYPROJECT_PATH}", file=sys.stderr)
         sys.exit(1)
     deps = extract_dependencies(PYPROJECT_PATH)
     if not deps:
-        print("No dependencies found in pyproject.toml", file=sys.stderr)
         sys.exit(1)
     write_requirements(REQUIREMENTS_PATH, deps)
-    print(
-        "requirements.txt synced with [project.dependencies] from pyproject.toml."
-    )
 
 if __name__ == "__main__":
     main()

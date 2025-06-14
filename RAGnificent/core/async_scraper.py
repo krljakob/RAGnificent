@@ -15,7 +15,7 @@ import httpx
 from bs4 import BeautifulSoup, Tag
 
 from RAGnificent.core.cache import RequestCache
-from RAGnificent.core.logging import get_logger
+from RAGnificent.core.logger import get_logger
 from RAGnificent.core.throttle import AsyncRequestThrottler
 from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
 from RAGnificent.utils.sitemap_utils import SitemapParser

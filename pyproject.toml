@@ -42,6 +42,8 @@ dependencies = [
     "plotly>=6.1.2",
     "ty>=0.0.1a9",
     "pyyaml>=6.0.2",
+    "pydot>=4.0.0",
+    "sourcery>=1.37.0",
 ]
 
 [project.optional-dependencies]

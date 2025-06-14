@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from RAGnificent.core.async_scraper import AsyncMarkdownScraper
-from RAGnificent.core.logging import get_logger
+from RAGnificent.core.logger import get_logger
 from RAGnificent.rag.pipeline import Pipeline
 from RAGnificent.rag.search import SearchResult
 

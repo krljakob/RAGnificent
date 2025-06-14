@@ -6,8 +6,8 @@ Provides a chat interface with RAG-enhanced responses.
 import logging
 from typing import Any, Dict, List, Optional
 
-from .pipeline import Pipeline as RAGPipeline
 from ..core.config import get_config
+from .pipeline import Pipeline as RAGPipeline
 
 logger = logging.getLogger(__name__)
 
