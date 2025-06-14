@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -51,7 +52,7 @@ fn semantic_chunking(
     heading_regex: &Regex,
 ) -> Result<Vec<Chunk>, ChunkerError> {
     let lines: Vec<&str> = markdown.lines().collect();
-    let mut chunks: Vec<Chunk> = Vec::new();
+    let mut chunks: Vec<Chunk> = Vec::with_capacity(lines.len() / 10 + 1);
 
     let mut current_chunk = String::new();
     let mut current_heading: Option<String> = None;
@@ -122,7 +123,13 @@ fn semantic_chunking(
         ));
     }
 
-    Ok(chunks)
+    // After collecting all chunk strings, parallelize chunk object creation if large
+    if chunks.len() > 100 {
+        let chunks: Vec<Chunk> = chunks.into_par_iter().map(|chunk| chunk).collect();
+        Ok(chunks)
+    } else {
+        Ok(chunks)
+    }
 }
 
 /// Helper function to create a chunk object with metadata
@@ -173,10 +180,14 @@ fn find_good_split_point(text: &str, approximate_position: usize) -> usize {
         if c == '.' || c == '!' || c == '?' {
             // Find next non-whitespace or end of string
             let mut end_pos = approximate_position + i + 1;
-            while end_pos < text.len()
-                && text.chars().nth(end_pos).is_some_and(|c| c.is_whitespace())
-            {
-                end_pos += 1;
+            // Use char_indices to avoid O(n^2) complexity
+            for (idx, c) in text.char_indices().skip(end_pos) {
+                if !c.is_whitespace() {
+                    end_pos = idx;
+                    break;
+                }
+                // If we reach the end and all are whitespace, set end_pos to text.len()
+                end_pos = text.len();
             }
             return end_pos;
         }

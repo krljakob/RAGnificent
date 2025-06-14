@@ -2,5 +2,13 @@
     "github-actions.workflows.pinned.workflows": [
         ".github/workflows/CI.yml",
         ".github/workflows/rust.yml"
-    ]
+    ],
+    "files.exclude": {
+        ".mypy_cache": false,
+        ".request_cache": false,
+        ".ruff_cache": false,
+        ".benchmarks": false,
+        "benches": false,
+        "cache/embeddings": false
+    }
 }

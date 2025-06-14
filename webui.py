@@ -68,21 +68,147 @@ class RAGHandler(BaseHTTPRequestHandler):
     <title>RAGnificent Web UI</title>
     <meta charset="utf-8">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .container { margin: 20px 0; }
-        .section { border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 5px; }
-        input[type="text"], textarea { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 3px; }
-        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; margin: 5px; }
-        button:hover { background: #005a87; }
-        .result { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 3px; border-left: 4px solid #007cba; }
-        .error { border-left-color: #d73027; background: #ffeaea; }
-        .success { border-left-color: #2ca02c; background: #eafaea; }
-        .loading { color: #666; font-style: italic; }
-        h1 { color: #333; }
-        h2 { color: #007cba; }
-        .status { padding: 10px; margin: 10px 0; border-radius: 3px; }
-        .status.online { background: #eafaea; border: 1px solid #2ca02c; }
-        .status.offline { background: #ffeaea; border: 1px solid #d73027; }
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --primary-color: #646cff;
+            --primary-hover: #535bf2;
+            --card-bg: #2a2a2a;
+            --border-color: #404040;
+            --success-color: #4caf50;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --transition-speed: 0.2s;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .container {
+            margin: 2rem 0;
+        }
+
+        .section {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform var(--transition-speed) ease;
+        }
+
+        .section:hover {
+            transform: translateY(-2px);
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: border-color var(--transition-speed) ease;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(100, 108, 255, 0.1);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.5rem;
+            font-weight: 500;
+            transition: all var(--transition-speed) ease;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result {
+            background-color: var(--card-bg);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .error {
+            border-left-color: var(--error-color);
+            background-color: rgba(244, 67, 54, 0.1);
+        }
+
+        .success {
+            border-left-color: var(--success-color);
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        .loading {
+            color: #888;
+            font-style: italic;
+        }
+
+        h1 {
+            color: var(--text-color);
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .status.online {
+            background-color: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .status.offline {
+            background-color: rgba(244, 67, 54, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-color: #ffffff;
+                --text-color: #213547;
+                --card-bg: #f9f9f9;
+                --border-color: #e0e0e0;
+            }
+        }
     </style>
 </head>
 <body>

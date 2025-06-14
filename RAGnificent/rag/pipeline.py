@@ -117,9 +117,7 @@ class Pipeline:
 
         # Secure the data directory path
         base_data_dir = self.config.data_dir
-        user_data_dir = data_dir or pipeline_data_dir or ""
-
-        if user_data_dir:
+        if user_data_dir := data_dir or pipeline_data_dir or "":
             resolved_data_dir = Path(secure_file_path(base_data_dir, user_data_dir))
         else:
             resolved_data_dir = Path(base_data_dir).resolve()
@@ -349,9 +347,7 @@ class Pipeline:
         """Execute an indexing step."""
         from ..core.security import secure_file_path
 
-        # Secure the input directory path
-        user_input_dir = config.get("input_dir", "")
-        if user_input_dir:
+        if user_input_dir := config.get("input_dir", ""):
             input_dir = secure_file_path(str(self.data_dir), user_input_dir)
         else:
             input_dir = str(self.data_dir)
