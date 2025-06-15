@@ -562,7 +562,7 @@ async def get_status():
         logger.error(f"Failed to get status: {e}")
         return {
             "api_status": "degraded",
-            "error": str(e),
+            "error": "An internal error has occurred.",
             "components": {"fastapi": True}
         }
 
