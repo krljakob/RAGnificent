@@ -1,45 +1,182 @@
 #[cfg(test)]
 mod html_parser_tests {
-    use crate::html_parser::{clean_html, extract_links, extract_main_content};
+    use crate::html_parser::{clean_html, extract_links, extract_main_content, ParserError};
+use crate::markdown_converter::{convert_to_markdown};
+
+    // Test data
+    const TEST_HTML: &str = r###"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test Page</title>
+        <script>console.log('tracking');</script>
+        <style>.ad { display: none; }</style>
+    </head>
+    <body>
+        <header>Header</header>
+        <main>
+            <h1>Main Content</h1>
+            <p>This is a test paragraph.</p>
+            <div class="content">
+                <p>More content here.</p>
+                <a href="https://example.com">Example</a>
+                <a href="/relative/path">Relative</a>
+                <a href="#section">Section</a>
+                <a href="javascript:void(0)">JS Link</a>
+            </div>
+            <div class="ad">Advertisement</div>
+            <!-- Comment -->
+            <script>console.log('another tracker');</script>
+        </main>
+        <footer>Footer content</footer>
+    </body>
+    </html>
+    "###;
 
     #[test]
     fn test_extract_main_content() {
-        let html = "<html><head><title>Test</title></head><body><main><h1>Main Content</h1><p>Test paragraph</p></main><footer>Footer content</footer></body></html>";
-
-        let result = extract_main_content(html).unwrap();
+        // Test basic extraction
+        let result = extract_main_content(TEST_HTML).unwrap();
         let content = result.root_element().html();
+
+        // Should contain main content
         assert!(content.contains("Main Content"));
-        assert!(content.contains("Test paragraph"));
-        assert!(!content.contains("Footer content"));
+        assert!(content.contains("test paragraph"));
+        assert!(content.contains("More content here"));
+
+        // Should not contain header/footer
+        assert!(!content.contains("Header"));
+        assert!(!content.contains("Footer"));
+    }
+
+    #[test]
+    fn test_extract_main_content_fallback() {
+        // Test fallback behavior with no main content
+        let html = "<html><head><title>No Main</title></head><body><div>Content</div></body></html>";
+        let result = extract_main_content(html).unwrap();
+        assert!(!result.root_element().html().is_empty());
+    }
+
+    #[test]
+    fn test_extract_main_content_empty() {
+        // Test with empty HTML
+        let result = extract_main_content("").unwrap();
+        // The function still returns an HTML structure even for empty input
+        assert!(!result.root_element().html().is_empty());
+    }
+
+    #[test]
+    fn test_extract_main_content_malformed() {
+        // Test with malformed HTML
+        let result = extract_main_content("<html><div>Unclosed").unwrap();
+        assert!(!result.root_element().html().is_empty());
     }
 
     #[test]
     fn test_clean_html() {
-        let html = "<div><script>alert('test');</script><p>Keep this content</p><style>.test{color:red;}</style><div class=\"ad\">Remove this ad</div></div>";
+        let result = clean_html(TEST_HTML).unwrap();
 
-        let result = clean_html(html).unwrap();
-        assert!(result.contains("Keep this content"));
-        assert!(!result.contains("alert('test')"));
-        assert!(!result.contains("Remove this ad"));
-        assert!(!result.contains(".test{color:red;}"));
+        // Should keep main content
+        assert!(result.contains("Main Content"));
+        assert!(result.contains("test paragraph"));
+
+        // Should remove scripts and styles based on selectors
+        assert!(!result.contains("console.log"));
+        assert!(!result.contains("<style>"));
+
+        // The current implementation removes elements with class "ad"
+        assert!(!result.contains("Advertisement"));
+
+        // Comments are not removed by the current implementation
+        assert!(result.contains("<!--"));
+
+        // Verify that header and footer are removed (based on selectors)
+        assert!(!result.contains("<header>"));
+        assert!(!result.contains("<footer>"));
+    }
+
+    #[test]
+    fn test_clean_html_empty() {
+        let result = clean_html("").unwrap();
+        // The clean_html function wraps empty content in HTML tags
+        assert_eq!(result, "<html><head></head><body></body></html>");
+    }
+
+    #[test]
+    fn test_clean_html_malformed() {
+        let result = clean_html("<div>Unclosed").unwrap();
+        assert!(!result.is_empty());
     }
 
     #[test]
     fn test_extract_links() {
-        let html = "<div><a href=\"https://example.com\">Example</a><a href=\"/relative/path\">Relative</a><a href=\"javascript:void(0)\">JS Link</a><a href=\"#section\">Hash Link</a></div>";
-
         let base_url = "https://test.com";
-        let links = extract_links(html, base_url).unwrap();
+        let links = extract_links(TEST_HTML, base_url).unwrap();
 
-        assert!(links.contains(&"https://example.com".to_string()));
+        // Should extract all valid links
+        assert_eq!(links.len(), 2);
+        assert!(links.contains(&"https://example.com/".to_string()));
         assert!(links.contains(&"https://test.com/relative/path".to_string()));
-        assert_eq!(links.len(), 2); // Only valid URLs should be included
-    }
-}
 
-#[cfg(test)]
-mod markdown_converter_tests {
-    use crate::markdown_converter::convert_to_markdown;
+        // Should not include JavaScript or fragment links
+        assert!(!links.iter().any(|l| l.starts_with("javascript:")));
+        assert!(!links.iter().any(|l| l.starts_with('#')));
+    }
+
+    #[test]
+    fn test_extract_links_empty() {
+        let links = extract_links("<div>No links</div>", "https://test.com").unwrap();
+        assert!(links.is_empty());
+    }
+
+    #[test]
+    fn test_extract_links_invalid_base() {
+        let links = extract_links(
+            "<a href=\"valid\">Valid</a>",
+            "not a valid url"
+        );
+        assert!(matches!(links, Err(ParserError::Other(_))));
+    }
+
+    #[test]
+    fn test_extract_links_duplicates() {
+        let html = r#"
+            <a href="/same">Link 1</a>
+            <a href="/same">Link 2</a>
+            <a href="/different">Link 3</a>
+        "#;
+        let links = extract_links(html, "https://test.com").unwrap();
+        assert_eq!(links.len(), 2);  // Should deduplicate /same
+    }
+
+    #[test]
+    fn test_extract_links_malformed() {
+        // Should handle malformed HTML gracefully
+        let links = extract_links(
+            "<a href='unclosed>Link",
+            "https://test.com"
+        ).unwrap();
+        assert_eq!(links.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_links_base_url_handling() {
+        let html = r#"
+            <base href="https://base.example.com/path/" />
+            <a href="relative">Relative</a>
+            <a href="/absolute">Absolute</a>
+            <a href="https://example.com/external">External</a>
+        "#;
+
+        let links = extract_links(html, "https://test.com/original").unwrap();
+
+        // The implementation resolves relative URLs against the provided base_url
+        // and leaves absolute URLs as-is
+        // Note: The base URL is used as-is without appending the current path
+        assert!(links.contains(&"https://test.com/relative".to_string()));
+        assert!(links.contains(&"https://test.com/absolute".to_string()));
+        assert!(links.contains(&"https://example.com/external".to_string()));
+    }
 
     #[test]
     fn test_convert_basic_html() {
@@ -57,11 +194,86 @@ mod markdown_converter_tests {
 
     #[test]
     fn test_convert_links_and_images() {
-        let html =
-            "<div><a href=\"/test\">Test Link</a><img src=\"/image.jpg\" alt=\"Test Image\"></div>";
+        let html = "<div><a href=\"/test\">Test Link</a><img src=\"/image.jpg\" alt=\"Test Image\"></div>";
+        let markdown = convert_to_markdown(html, "https://example.com").unwrap();
 
-        let base_url = "https://example.com";
-        let markdown = convert_to_markdown(html, base_url).unwrap();
+        assert!(markdown.contains("[Test Link](https://example.com/test)"));
+    }
+}
+
+#[cfg(test)]
+mod markdown_converter_tests {
+    use crate::markdown_converter::{
+        convert_to_markdown, convert_html, document_to_markdown, OutputFormat,
+        CodeBlock, Document, Heading, Image, Link, List,
+    };
+    use serde_json;
+
+    // Test HTML content
+    const TEST_HTML: &str = r#"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test Page</title>
+    </head>
+    <body>
+        <h1>Main Title</h1>
+        <h2>Section 1</h2>
+        <p>This is a test paragraph with a <a href="/link">link</a>.</p>
+        <img src="/image.jpg" alt="Test Image">
+        <ul>
+            <li>Item 1</li>
+            <li>Item 2</li>
+        </ul>
+        <ol>
+            <li>First</li>
+            <li>Second</li>
+        </ol>
+        <pre><code class="language-rust">fn main() { println!("Hello"); }</code></pre>
+        <blockquote>This is a quote</blockquote>
+    </body>
+    </html>
+    "#;
+
+    const BASE_URL: &str = "https://example.com";
+
+    // Helper function to create a test document
+    fn create_test_document() -> Document {
+        Document {
+            title: "Test Document".to_string(),
+            base_url: BASE_URL.to_string(),
+            headings: vec![
+                Heading { level: 1, text: "Heading 1".to_string() },
+                Heading { level: 2, text: "Heading 2".to_string() },
+            ],
+            paragraphs: vec!["Paragraph 1".to_string(), "Paragraph 2".to_string()],
+            links: vec![Link { text: "Link".to_string(), url: "https://example.com/link".to_string() }],
+            images: vec![Image { alt: "Image".to_string(), src: "https://example.com/image.jpg".to_string() }],
+            lists: vec![
+                List { ordered: false, items: vec!["Item 1".to_string(), "Item 2".to_string()] },
+                List { ordered: true, items: vec!["First".to_string(), "Second".to_string()] },
+            ],
+            code_blocks: vec![CodeBlock { language: "rust".to_string(), code: "fn main() {}".to_string() }],
+            blockquotes: vec!["Blockquote".to_string()],
+        }
+    }
+
+    #[test]
+    fn test_convert_basic_html() {
+        let html = "<html><head><title>Test Page</title></head><body><h1>Main Title</h1><p>This is a test paragraph.</p><ul><li>Item 1</li><li>Item 2</li></ul></body></html>";
+        let markdown = convert_to_markdown(html, "https://example.com").unwrap();
+
+        assert!(markdown.contains("# Test Page"));
+        assert!(markdown.contains("# Main Title"));
+        assert!(markdown.contains("This is a test paragraph."));
+        assert!(markdown.contains("- Item 1"));
+        assert!(markdown.contains("- Item 2"));
+    }
+
+    #[test]
+    fn test_convert_links_and_images() {
+        let html = "<div><a href=\"/test\">Test Link</a><img src=\"/image.jpg\" alt=\"Test Image\"></div>";
+        let markdown = convert_to_markdown(html, "https://example.com").unwrap();
 
         assert!(markdown.contains("[Test Link](https://example.com/test)"));
         assert!(markdown.contains("![Test Image](https://example.com/image.jpg)"));
@@ -70,13 +282,63 @@ mod markdown_converter_tests {
     #[test]
     fn test_convert_code_blocks() {
         let html = "<pre><code class=\"language-rust\">fn main() { println!(\"Hello, world!\"); }</code></pre>";
-
-        let base_url = "https://example.com";
-        let markdown = convert_to_markdown(html, base_url).unwrap();
+        let markdown = convert_to_markdown(html, "https://example.com").unwrap();
 
         assert!(markdown.contains("```rust"));
         assert!(markdown.contains("fn main()"));
         assert!(markdown.contains("```"));
+    }
+
+    #[test]
+    fn test_document_to_markdown() {
+        let doc = create_test_document();
+        let markdown = document_to_markdown(&doc);
+
+        assert!(markdown.contains("# Test Document"));
+        assert!(markdown.contains("# Heading 1"));
+        assert!(markdown.contains("## Heading 2"));
+        assert!(markdown.contains("Paragraph 1"));
+        assert!(markdown.contains("[Link](https://example.com/link)"));
+        assert!(markdown.contains("![Image](https://example.com/image.jpg)"));
+        assert!(markdown.contains("- Item 1"));
+        assert!(markdown.contains("1. First"));
+        assert!(markdown.contains("```rust"));
+        assert!(markdown.contains("fn main()"));
+        assert!(markdown.contains("> Blockquote"));
+    }
+
+    #[test]
+    fn test_parse_html_to_document() {
+        // Convert to JSON to get the full document structure
+        let json_str = convert_html(TEST_HTML, BASE_URL, OutputFormat::Json).unwrap();
+        let doc: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        
+        // Verify the document structure
+        assert_eq!(doc["title"].as_str().unwrap(), "Test Page");
+        assert_eq!(doc["base_url"].as_str().unwrap(), BASE_URL);
+        assert!(!doc["headings"].as_array().unwrap().is_empty());
+        assert!(!doc["paragraphs"].as_array().unwrap().is_empty());
+        assert!(!doc["links"].as_array().unwrap().is_empty());
+        assert!(!doc["images"].as_array().unwrap().is_empty());
+        assert!(!doc["lists"].as_array().unwrap().is_empty());
+        assert!(!doc["code_blocks"].as_array().unwrap().is_empty());
+        assert!(!doc["blockquotes"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_convert_html_different_formats() {
+        // Test markdown format
+        let markdown = convert_html(TEST_HTML, BASE_URL, OutputFormat::Markdown).unwrap();
+        assert!(markdown.contains("# Test Page"));
+
+        // Test JSON format
+        let json = convert_html(TEST_HTML, BASE_URL, OutputFormat::Json).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["title"], "Test Page");
+
+        // Test XML format
+        let xml = convert_html(TEST_HTML, BASE_URL, OutputFormat::Xml).unwrap();
+        assert!(xml.contains("<title>Test Page</title>"));
     }
 }
 

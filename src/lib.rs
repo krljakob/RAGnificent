@@ -7,6 +7,7 @@ pub mod chunker;
 pub mod html_parser;
 pub mod js_renderer;
 pub mod markdown_converter;
+pub mod simd_text;
 
 /// Python-friendly enumeration of output formats
 ///
@@ -74,6 +75,10 @@ fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(convert_html_to_format, py)?)?;
     m.add_function(wrap_pyfunction!(chunk_markdown, py)?)?;
     m.add_function(wrap_pyfunction!(render_js_page, py)?)?;
+    
+    // SIMD optimizations
+    m.add_function(wrap_pyfunction!(count_words_fast, py)?)?;
+    m.add_function(wrap_pyfunction!(calculate_text_metrics, py)?)?;
     Ok(())
 }
 
@@ -183,4 +188,50 @@ fn render_js_page(url: &str, wait_time: Option<u64>) -> PyResult<String> {
         .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e.to_string()))?;
 
     Ok(html)
+}
+
+/// Fast word counting using SIMD-optimized operations
+///
+/// Args:
+///     text (str): The text to count words in
+///
+/// Returns:
+///     int: Number of words in the text
+///
+/// Example:
+///     >>> count = count_words_fast("hello world test")
+///     >>> print(count)  # 3
+#[pyfunction]
+pub fn count_words_fast(text: &str) -> PyResult<usize> {
+    Ok(simd_text::count_words_simd(text))
+}
+
+/// Calculate comprehensive text metrics using SIMD optimizations
+///
+/// Args:
+///     text (str): The text to analyze
+///
+/// Returns:
+///     dict: Dictionary containing various text metrics
+///
+/// Example:
+///     >>> metrics = calculate_text_metrics("This is a test document.")
+///     >>> print(metrics['word_count'])
+///     >>> print(metrics['semantic_density'])
+#[pyfunction]
+pub fn calculate_text_metrics(py: Python<'_>, text: &str) -> PyResult<pyo3::Py<pyo3::types::PyDict>> {
+    let dict = pyo3::types::PyDict::new(py);
+    
+    // Calculate various metrics using SIMD optimizations
+    let word_count = simd_text::count_words_simd(text);
+    let char_count = simd_text::count_non_whitespace_chars_simd(text);
+    let line_count = simd_text::count_lines_simd(text);
+    let semantic_density = simd_text::calculate_semantic_density_simd(text);
+    
+    dict.set_item("word_count", word_count)?;
+    dict.set_item("char_count", char_count)?;
+    dict.set_item("line_count", line_count)?;
+    dict.set_item("semantic_density", semantic_density)?;
+    
+    Ok(dict.into())
 }

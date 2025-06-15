@@ -29,6 +29,12 @@ pub struct ChunkMetadata {
     pub word_count: usize,
     pub char_count: usize,
     pub semantic_density: f32, // A measure of the information density
+    pub sentence_count: usize, // Number of sentences in the chunk
+    pub avg_sentence_length: f32, // Average sentence length
+    pub entity_density: f32, // Density of named entities (uppercase words)
+    pub technical_terms: usize, // Count of technical/domain-specific terms
+    pub readability_score: f32, // Simple readability measure
+    pub topic_keywords: Vec<String>, // Key terms representing the topic
 }
 
 /// Creates semantically meaningful chunks from markdown content with improved handling of document structure
@@ -133,18 +139,22 @@ fn semantic_chunking(
 }
 
 /// Helper function to create a chunk object with metadata
+/// Uses SIMD-optimized operations and advanced NLP analysis for enhanced metadata
 fn create_chunk_object(
     content: &str,
     heading: Option<String>,
     level: usize,
     position: usize,
 ) -> Chunk {
-    let words = content.split_whitespace().count();
-    let chars = content.chars().count();
+    // Use SIMD-optimized counting operations
+    let words = crate::simd_text::count_words_simd(content);
+    let chars = crate::simd_text::count_non_whitespace_chars_simd(content);
 
-    // Calculate a very basic semantic density score
-    // Higher score = more semantic meaning relative to length
+    // Calculate semantic density score using optimized operations
     let semantic_density = calculate_semantic_density(content);
+
+    // Perform advanced NLP analysis
+    let nlp_analysis = analyze_text_nlp(content);
 
     Chunk {
         content: content.to_string(),
@@ -155,6 +165,12 @@ fn create_chunk_object(
             word_count: words,
             char_count: chars,
             semantic_density,
+            sentence_count: nlp_analysis.sentence_count,
+            avg_sentence_length: nlp_analysis.avg_sentence_length,
+            entity_density: nlp_analysis.entity_density,
+            technical_terms: nlp_analysis.technical_terms,
+            readability_score: nlp_analysis.readability_score,
+            topic_keywords: nlp_analysis.topic_keywords,
         },
     }
 }
@@ -204,53 +220,220 @@ fn find_good_split_point(text: &str, approximate_position: usize) -> usize {
     approximate_position
 }
 
-/// Calculate semantic density score
-/// This is a simple implementation that can be enhanced later
+/// Calculate semantic density score using SIMD-optimized operations
+/// Enhanced implementation with better performance for large texts
 fn calculate_semantic_density(text: &str) -> f32 {
-    let word_count = text.split_whitespace().count() as f32;
-    if word_count == 0.0 {
+    // Use SIMD-optimized semantic density calculation
+    crate::simd_text::calculate_semantic_density_simd(text)
+}
+
+/// Advanced NLP analysis for enhanced chunk metadata
+struct NlpAnalysis {
+    sentence_count: usize,
+    avg_sentence_length: f32,
+    entity_density: f32,
+    technical_terms: usize,
+    readability_score: f32,
+    topic_keywords: Vec<String>,
+}
+
+/// Perform advanced NLP analysis on text content
+fn analyze_text_nlp(text: &str) -> NlpAnalysis {
+    if text.is_empty() {
+        return NlpAnalysis {
+            sentence_count: 0,
+            avg_sentence_length: 0.0,
+            entity_density: 0.0,
+            technical_terms: 0,
+            readability_score: 0.0,
+            topic_keywords: Vec::new(),
+        };
+    }
+
+    // Count sentences using multiple delimiters
+    let sentence_count = count_sentences(text);
+    
+    // Calculate average sentence length
+    let word_count = crate::simd_text::count_words_simd(text);
+    let avg_sentence_length = if sentence_count > 0 {
+        word_count as f32 / sentence_count as f32
+    } else {
+        0.0
+    };
+
+    // Calculate entity density (uppercase words, potential named entities)
+    let entity_density = calculate_entity_density(text);
+
+    // Count technical terms
+    let technical_terms = count_technical_terms(text);
+
+    // Calculate readability score (simplified Flesch-like measure)
+    let readability_score = calculate_readability_score(text, word_count, sentence_count);
+
+    // Extract topic keywords
+    let topic_keywords = extract_topic_keywords(text);
+
+    NlpAnalysis {
+        sentence_count,
+        avg_sentence_length,
+        entity_density,
+        technical_terms,
+        readability_score,
+        topic_keywords,
+    }
+}
+
+/// Count sentences in text using multiple sentence delimiters
+fn count_sentences(text: &str) -> usize {
+    if text.is_empty() {
+        return 0;
+    }
+
+    let mut count = 0;
+    let mut chars = text.chars().peekable();
+    
+    while let Some(ch) = chars.next() {
+        if matches!(ch, '.' | '!' | '?') {
+            // Check if it's not an abbreviation (simplified check)
+            if let Some(&next_ch) = chars.peek() {
+                if next_ch.is_whitespace() || next_ch == '\n' {
+                    count += 1;
+                }
+            } else {
+                // End of text
+                count += 1;
+            }
+        }
+    }
+
+    // Ensure at least 1 sentence if there's content
+    if count == 0 && !text.trim().is_empty() {
+        1
+    } else {
+        count
+    }
+}
+
+/// Calculate entity density (proportion of capitalized words)
+fn calculate_entity_density(text: &str) -> f32 {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.is_empty() {
         return 0.0;
     }
 
-    // Count semantic indicators like entity names, numbers, special terms
-    let mut semantic_indicators = 0.0;
+    let entity_count = words
+        .iter()
+        .filter(|word| {
+            // Count words that start with uppercase and are longer than 1 char
+            word.len() > 1 && word.chars().next().unwrap().is_uppercase()
+        })
+        .count();
 
-    // Check for specialized keywords
-    let keywords = [
-        "function",
-        "class",
-        "method",
-        "algorithm",
-        "process",
-        "system",
-        "data",
-        "model",
-        "analysis",
-        "implementation",
+    entity_count as f32 / words.len() as f32
+}
+
+/// Count technical/domain-specific terms
+fn count_technical_terms(text: &str) -> usize {
+    let technical_keywords = [
+        // Programming terms
+        "function", "method", "class", "interface", "algorithm", "implementation",
+        "optimization", "performance", "architecture", "framework", "library",
+        "database", "query", "index", "schema", "protocol", "API", "REST",
+        "JSON", "XML", "HTTP", "HTTPS", "TCP", "UDP", "SQL", "NoSQL",
+        
+        // Scientific terms
+        "analysis", "research", "study", "experiment", "hypothesis", "theory",
+        "model", "data", "statistics", "correlation", "regression", "variance",
+        "distribution", "probability", "algorithm", "computation", "process",
+        
+        // Business terms
+        "strategy", "optimization", "efficiency", "productivity", "methodology",
+        "framework", "implementation", "deployment", "scalability", "integration",
+        
+        // Technical concepts
+        "system", "network", "infrastructure", "security", "encryption",
+        "authentication", "authorization", "middleware", "pipeline", "workflow"
     ];
 
-    for word in text.split_whitespace() {
-        // Count words that start with uppercase (potential named entities)
-        if word.chars().next().is_some_and(|c| c.is_uppercase()) {
-            semantic_indicators += 0.5;
-        }
+    let text_lower = text.to_lowercase();
+    let mut count = 0;
 
-        // Count numbers (dates, quantities, etc.)
-        if word.chars().any(|c| c.is_numeric()) {
-            semantic_indicators += 0.3;
-        }
-
-        // Count domain keywords
-        if keywords.iter().any(|&k| word.to_lowercase().contains(k)) {
-            semantic_indicators += 0.7;
+    for keyword in &technical_keywords {
+        // Count occurrences of each keyword
+        let mut start = 0;
+        while let Some(pos) = text_lower[start..].find(keyword) {
+            count += 1;
+            start += pos + keyword.len();
         }
     }
 
-    // Calculate ratio (scale it between 0.0-1.0)
-    let density = (semantic_indicators / word_count).min(1.0);
+    count
+}
 
-    // Weight longer chunks slightly higher (they're more coherent if they stay together)
-    let length_bonus = (word_count / 100.0).min(0.2); // Max 0.2 bonus
+/// Calculate a simplified readability score
+/// Based on average sentence length and word complexity
+fn calculate_readability_score(text: &str, word_count: usize, sentence_count: usize) -> f32 {
+    if sentence_count == 0 || word_count == 0 {
+        return 0.0;
+    }
 
-    density + length_bonus
+    let avg_sentence_length = word_count as f32 / sentence_count as f32;
+    
+    // Count complex words (longer than 6 characters)
+    let complex_words = text
+        .split_whitespace()
+        .filter(|word| word.len() > 6)
+        .count();
+    
+    let complex_word_ratio = complex_words as f32 / word_count as f32;
+
+    // Simplified readability formula (higher = more readable)
+    // Based on shorter sentences and fewer complex words being more readable
+    let base_score = 100.0;
+    let sentence_penalty = avg_sentence_length * 2.0; // Penalty for long sentences
+    let complexity_penalty = complex_word_ratio * 50.0; // Penalty for complex words
+
+    (base_score - sentence_penalty - complexity_penalty).max(0.0).min(100.0)
+}
+
+/// Extract key topic words from text
+fn extract_topic_keywords(text: &str) -> Vec<String> {
+    if text.is_empty() {
+        return Vec::new();
+    }
+
+    // Common stop words to filter out
+    let stop_words = [
+        "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+        "of", "with", "by", "is", "are", "was", "were", "be", "been", "have",
+        "has", "had", "do", "does", "did", "will", "would", "could", "should",
+        "may", "might", "can", "this", "that", "these", "those", "i", "you",
+        "he", "she", "it", "we", "they", "me", "him", "her", "us", "them"
+    ];
+
+    // Extract words and count frequency
+    let mut word_counts = std::collections::HashMap::new();
+    
+    for word in text.split_whitespace() {
+        let clean_word = word
+            .to_lowercase()
+            .trim_matches(|c: char| !c.is_alphanumeric())
+            .to_string();
+        
+        // Filter out stop words and short words
+        if clean_word.len() > 3 && !stop_words.contains(&clean_word.as_str()) {
+            *word_counts.entry(clean_word).or_insert(0) += 1;
+        }
+    }
+
+    // Sort by frequency and take top keywords
+    let mut words_by_frequency: Vec<(String, usize)> = word_counts.into_iter().collect();
+    words_by_frequency.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // Return top 5 keywords
+    words_by_frequency
+        .into_iter()
+        .take(5)
+        .map(|(word, _)| word)
+        .collect()
 }
