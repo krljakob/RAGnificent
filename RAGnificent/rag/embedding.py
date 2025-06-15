@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -156,6 +157,125 @@ def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -
         return False
 
 
+def batch_get_cached_embeddings(model_name: str, texts: List[str]) -> Dict[str, Optional[np.ndarray]]:
+    """
+    Get cached embeddings for multiple texts in batch.
+    
+    This function reduces I/O overhead by:
+    1. Eliminating duplicate hash computation for repeated texts
+    2. Batching file existence checks
+    3. Minimizing function call overhead
+    
+    Args:
+        model_name: Name of the embedding model
+        texts: List of text strings to check in cache
+        
+    Returns:
+        Dictionary mapping text to cached embedding (None if not cached)
+    """
+    config = get_config()
+    
+    if not config.embedding.use_cache:
+        return {text: None for text in texts}
+    
+    # Deduplicate texts to avoid redundant work
+    unique_texts = list(dict.fromkeys(texts))  # Preserves order, removes duplicates
+    
+    # If we have significantly fewer unique texts, we've saved work
+    if len(unique_texts) < len(texts):
+        logger.debug(f"Deduplicated {len(texts)} texts to {len(unique_texts)} unique texts")
+    
+    # Pre-compute all hashes and cache paths in batch
+    text_cache_info = []
+    hash_cache = {}  # Cache computed hashes to avoid recomputation
+    
+    for text in unique_texts:
+        if text not in hash_cache:
+            hash_cache[text] = compute_text_hash(text)
+        text_hash = hash_cache[text]
+        cache_path = get_embedding_cache_path(model_name, text_hash)
+        text_cache_info.append((text, cache_path))
+    
+    # Sequential processing is often faster for file I/O due to OS caching
+    results = {}
+    for text, cache_path in text_cache_info:
+        if cache_path.exists():
+            try:
+                result = np.load(cache_path, allow_pickle=False)
+                if isinstance(result, np.ndarray):
+                    results[text] = result
+                else:
+                    results[text] = None
+            except Exception:
+                results[text] = None
+        else:
+            results[text] = None
+    
+    # Expand results back to include duplicates
+    if len(unique_texts) < len(texts):
+        full_results = {}
+        for text in texts:
+            full_results[text] = results[text]
+        return full_results
+    
+    return results
+
+
+def batch_save_embeddings_to_cache(
+    model_name: str, 
+    text_embedding_pairs: List[Tuple[str, np.ndarray]]
+) -> Dict[str, bool]:
+    """
+    Save multiple embeddings to cache in batch.
+    
+    Args:
+        model_name: Name of the embedding model
+        text_embedding_pairs: List of (text, embedding) tuples to cache
+        
+    Returns:
+        Dictionary mapping text to success status
+    """
+    config = get_config()
+    
+    if not config.embedding.use_cache:
+        return {text: False for text, _ in text_embedding_pairs}
+    
+    # Deduplicate texts to avoid redundant work
+    unique_pairs = {}
+    for text, embedding in text_embedding_pairs:
+        if text not in unique_pairs:
+            unique_pairs[text] = embedding
+    
+    if len(unique_pairs) < len(text_embedding_pairs):
+        logger.debug(f"Deduplicated {len(text_embedding_pairs)} pairs to {len(unique_pairs)} unique texts")
+    
+    # Batch save with optimized hash computation
+    results = {}
+    hash_cache = {}
+    
+    for text, embedding in unique_pairs.items():
+        try:
+            # Cache hash computation
+            if text not in hash_cache:
+                hash_cache[text] = compute_text_hash(text)
+            text_hash = hash_cache[text]
+            
+            cache_path = get_embedding_cache_path(model_name, text_hash)
+            np.save(cache_path, embedding)
+            results[text] = True
+        except Exception:
+            results[text] = False
+    
+    # Expand results back to include duplicates
+    if len(unique_pairs) < len(text_embedding_pairs):
+        full_results = {}
+        for text, _ in text_embedding_pairs:
+            full_results[text] = results[text]
+        return full_results
+    
+    return results
+
+
 class SentenceTransformerEmbedding:
     """Embedding generation using SentenceTransformers"""
 
@@ -195,7 +315,7 @@ class SentenceTransformerEmbedding:
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
         """
-        Generate embeddings for text input.
+        Generate embeddings for text input using batch cache operations for efficiency.
 
         Args:
             text: Single text string or list of text strings
@@ -217,23 +337,27 @@ class SentenceTransformerEmbedding:
                 save_embedding_to_cache(self.model_name, text, embedding)
                 return embedding
 
-            # For lists, check cache for each text
-            embeddings = []
+            # For lists, use batch cache operations
+            # Get all cached embeddings in one operation
+            cached_results = batch_get_cached_embeddings(self.model_name, text)
+            
+            # Separate cached vs non-cached texts
             texts_to_embed = []
-            text_indices = []
-
-            # Check cache first
+            cached_embeddings = []
+            result_order = []  # Track original order
+            
             for i, t in enumerate(text):
-                cached = get_cached_embedding(self.model_name, t)
-                if cached is not None:
-                    embeddings.append(cached)
+                cached_embedding = cached_results.get(t)
+                if cached_embedding is not None:
+                    cached_embeddings.append(cached_embedding)
+                    result_order.append(('cached', len(cached_embeddings) - 1))
                 else:
                     texts_to_embed.append(t)
-                    text_indices.append(i)
+                    result_order.append(('new', len(texts_to_embed) - 1))
 
             # If all were cached, return immediately
             if not texts_to_embed:
-                return embeddings
+                return [cached_results[t] for t in text]
 
             # Generate new embeddings in batches
             new_embeddings = []
@@ -246,17 +370,27 @@ class SentenceTransformerEmbedding:
                 )
                 new_embeddings.extend(batch_embeddings)
 
-            # Cache new embeddings
-            for i, embedding in enumerate(new_embeddings):
-                save_embedding_to_cache(self.model_name, texts_to_embed[i], embedding)
+            # Batch cache new embeddings
+            if new_embeddings:
+                text_embedding_pairs = list(zip(texts_to_embed, new_embeddings))
+                cache_results = batch_save_embeddings_to_cache(self.model_name, text_embedding_pairs)
+                
+                # Log cache performance
+                successful_caches = sum(1 for success in cache_results.values() if success)
+                logger.debug(f"Cached {successful_caches}/{len(text_embedding_pairs)} new embeddings")
 
-            # Merge cached and new embeddings
-            result = [None] * len(text)
-            for i, embed in zip(text_indices, new_embeddings, strict=False):
-                result[i] = embed
-            for embed in embeddings:
-                idx = result.index(None)
-                result[idx] = embed
+            # Reconstruct result in original order
+            result = []
+            new_idx = 0
+            cached_idx = 0
+            
+            for order_type, idx in result_order:
+                if order_type == 'cached':
+                    result.append(cached_embeddings[cached_idx])
+                    cached_idx += 1
+                else:
+                    result.append(new_embeddings[new_idx])
+                    new_idx += 1
 
             return result
 
@@ -309,7 +443,7 @@ class OpenAIEmbedding:
         self, texts: List[str], is_single_text: bool
     ) -> Tuple[List[np.ndarray], List[str], List[int]]:
         """
-        Check cache for embeddings and return cached ones plus texts that need embedding.
+        Check cache for embeddings using batch operations for efficiency.
 
         Args:
             texts: List of text strings to check in cache
@@ -321,13 +455,16 @@ class OpenAIEmbedding:
         if is_single_text:
             cached = get_cached_embedding(self.model_name, texts[0])
             return ([cached], [], []) if cached is not None else ([], texts, [])
-        # For list input, check cache for each text
+        
+        # Use batch cache operations for multiple texts
+        cached_results = batch_get_cached_embeddings(self.model_name, texts)
+        
         cached_embeddings = []
         texts_to_embed = []
         original_indices = []
 
         for i, t in enumerate(texts):
-            cached = get_cached_embedding(self.model_name, t)
+            cached = cached_results.get(t)
             if cached is not None:
                 cached_embeddings.append(cached)
             else:
@@ -382,18 +519,20 @@ class OpenAIEmbedding:
         original_text: Union[str, List[str]],
     ) -> None:
         """
-        Save embeddings to cache.
+        Save embeddings to cache using batch operations for efficiency.
 
         Args:
             texts: The texts that were embedded
             embeddings: The embedding vectors
             original_text: The original input text (single string or list)
         """
-        for i, t in enumerate(texts):
-            if isinstance(original_text, str) or t not in (
-                original_text if isinstance(original_text, list) else [original_text]
-            ):
-                save_embedding_to_cache(self.model_name, t, embeddings[i])
+        # Use batch cache operations for better performance
+        text_embedding_pairs = list(zip(texts, embeddings))
+        cache_results = batch_save_embeddings_to_cache(self.model_name, text_embedding_pairs)
+        
+        # Log cache performance
+        successful_caches = sum(1 for success in cache_results.values() if success)
+        logger.debug(f"Cached {successful_caches}/{len(text_embedding_pairs)} OpenAI embeddings")
 
     def _merge_embeddings(
         self,
