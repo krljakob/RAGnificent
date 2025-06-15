@@ -1,0 +1,76 @@
+{
+  "timestamp": "20250615_182548",
+  "date": "2025-06-15T18:25:48.313911",
+  "results": [
+    {
+      "group": "HTML Processing",
+      "benchmark": "clean_html",
+      "size": "small",
+      "mean_time_ms": 0.0060029652320657285,
+      "std_dev_ms": 6.470481099844671e-05,
+      "relative_std": 0.010778808221779526
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "clean_html",
+      "size": "medium",
+      "mean_time_ms": 0.028535939867644095,
+      "std_dev_ms": 0.0015940403356156526,
+      "relative_std": 0.05586079670090275
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "extract_links",
+      "size": "small",
+      "mean_time_ms": 0.00255050855490603,
+      "std_dev_ms": 4.20856051345512e-05,
+      "relative_std": 0.016500868053783802
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "extract_links",
+      "size": "medium",
+      "mean_time_ms": 0.015521777957226346,
+      "std_dev_ms": 0.0013221038685684054,
+      "relative_std": 0.0851773470933389
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "extract_main_content",
+      "size": "small",
+      "mean_time_ms": 0.0034319082542060182,
+      "std_dev_ms": 1.7195863480132645e-05,
+      "relative_std": 0.005010583677188351
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "extract_main_content",
+      "size": "medium",
+      "mean_time_ms": 0.030567327257162616,
+      "std_dev_ms": 0.00276797145547904,
+      "relative_std": 0.09055327056213074
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "convert_to_markdown",
+      "size": "small",
+      "mean_time_ms": 0.00561875874264463,
+      "std_dev_ms": 9.443063604637726e-05,
+      "relative_std": 0.01680631619394478
+    },
+    {
+      "group": "HTML Processing",
+      "benchmark": "convert_to_markdown",
+      "size": "medium",
+      "mean_time_ms": 0.021556227079963672,
+      "std_dev_ms": 0.0010005092231978538,
+      "relative_std": 0.046413930391734394
+    }
+  ],
+  "summary": {
+    "total_benchmarks": 8,
+    "fastest_time": 0.00255050855490603,
+    "slowest_time": 0.030567327257162616,
+    "average_time": 0.014223176618227392
+  }
+}
