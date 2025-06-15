@@ -41,8 +41,8 @@ ENV RAGNIFICENT_CACHE_DIR=/app/cache
 ENV RAGNIFICENT_LOG_DIR=/app/logs
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+USER non-root
+CMD curl -f http://localhost:8000/health || exit 1
 
 # Switch to non-root user
 USER ragnificent
