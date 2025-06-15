@@ -376,7 +376,7 @@ class SentenceTransformerEmbedding:
                 cache_results = batch_save_embeddings_to_cache(self.model_name, text_embedding_pairs)
                 
                 # Log cache performance
-                successful_caches = sum(1 for success in cache_results.values() if success)
+                successful_caches = sum(bool(success)
                 logger.debug(f"Cached {successful_caches}/{len(text_embedding_pairs)} new embeddings")
 
             # Reconstruct result in original order
