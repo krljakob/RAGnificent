@@ -1,0 +1,67 @@
+version: '3.8'
+
+# Development environment override
+services:
+  ragnificent:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: python-builder  # Use builder stage for development
+    volumes:
+      - ../RAGnificent:/app/RAGnificent:ro
+      - ../config:/app/config:ro
+      - ../data:/app/data
+      - ../cache:/app/cache
+      - ../logs:/app/logs
+      - ../tests:/app/tests:ro
+    environment:
+      - RAGNIFICENT_ENVIRONMENT=development
+      - PYTHONDONTWRITEBYTECODE=1
+      - RUST_LOG=debug
+      - RAGNIFICENT_LOG_LEVEL=DEBUG
+    command: python -m RAGnificent.api --reload --debug
+    stdin_open: true
+    tty: true
+
+  # Development tools
+  jupyter:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: ragnificent-jupyter
+    ports:
+      - "8888:8888"
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    volumes:
+      - ../notebooks:/app/notebooks
+      - ../RAGnificent:/app/RAGnificent:ro
+      - ../data:/app/data
+      - ../cache:/app/cache
+    command: jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --notebook-dir=/app/notebooks
+    networks:
+      - ragnificent-network
+    depends_on:
+      - ragnificent
+
+  # Development database with exposed ports for debugging
+  qdrant:
+    image: qdrant/qdrant:latest
+    networks:
+      - ragnificent-network
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__LOG_LEVEL=DEBUG
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - ragnificent-network
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass dev-password --loglevel debug
+
+networks:
+  ragnificent-network:
