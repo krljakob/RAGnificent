@@ -1,0 +1,14 @@
+name: default
+    orgId: 1
+folder: ""
+type: file
+folders:
+    - folder: ""
+        type: all
+    datasources:
+        - name: Prometheus
+            type: prometheus
+            access: proxy
+            url: http://prometheus:9090
+            isDefault: true
+            editable: true
