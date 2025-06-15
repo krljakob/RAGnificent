@@ -3,6 +3,7 @@ Main module for scraping websites and converting content to markdown, JSON, or X
 """
 
 import argparse
+import asyncio
 import concurrent.futures
 import contextlib
 import importlib.util
@@ -22,6 +23,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import requests
 from bs4 import BeautifulSoup, Tag
+
+# Import httpx for async requests
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
 
 # Import directly using a system-level import approach
 # First, ensure all required paths are in sys.path
@@ -1127,6 +1135,248 @@ class MarkdownScraper:
             if len(failed_urls) > 5:
                 logger.warning(f"  - ... and {len(failed_urls) - 5} more")
 
+        return successfully_scraped
+
+
+class AsyncMarkdownScraper(MarkdownScraper):
+    """Async version of MarkdownScraper for high-performance concurrent scraping."""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize AsyncMarkdownScraper with all parent class options."""
+        if not HTTPX_AVAILABLE:
+            raise ImportError("httpx is required for AsyncMarkdownScraper. Install with: pip install httpx")
+        
+        super().__init__(*args, **kwargs)
+        
+        # Configure async client settings
+        self.connection_limits = httpx.Limits(
+            max_keepalive_connections=100,
+            max_connections=200,
+            keepalive_expiry=30.0
+        )
+        
+        self.timeout_config = httpx.Timeout(
+            connect=10.0,
+            read=30.0,
+            write=10.0,
+            pool=60.0
+        )
+    
+    async def scrape_websites_async(self, urls: List[str], skip_cache: bool = False) -> List[Tuple[str, str]]:
+        """
+        Scrape multiple websites concurrently using async I/O.
+        
+        Args:
+            urls: List of URLs to scrape
+            skip_cache: Whether to skip cache lookup
+            
+        Returns:
+            List of tuples (url, html_content) for successfully scraped URLs
+        """
+        if not urls:
+            return []
+        
+        from core.security import redact_sensitive_data
+        from core.validators import validate_url, sanitize_url
+        
+        # Validate and sanitize URLs
+        valid_urls = []
+        for url in urls:
+            if validate_url(url):
+                sanitized_url = sanitize_url(url)
+                valid_urls.append(sanitized_url)
+            else:
+                logger.warning(f"Skipping invalid URL: {redact_sensitive_data(url)}")
+        
+        if not valid_urls:
+            logger.error("No valid URLs to scrape")
+            return []
+        
+        logger.info(f"Starting async scraping of {len(valid_urls)} URLs")
+        
+        # Create semaphore to limit concurrent connections
+        semaphore = asyncio.Semaphore(min(50, len(valid_urls)))
+        
+        async with httpx.AsyncClient(
+            limits=self.connection_limits,
+            timeout=self.timeout_config,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            },
+            follow_redirects=True
+        ) as client:
+            # Create tasks for concurrent execution
+            tasks = [
+                self._fetch_url_async(client, semaphore, url, skip_cache) 
+                for url in valid_urls
+            ]
+            
+            # Execute all tasks concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results and filter out failures
+        successful_results = []
+        failed_count = 0
+        
+        for url, result in zip(valid_urls, results):
+            if isinstance(result, Exception):
+                logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {result}")
+                failed_count += 1
+            elif result is not None:
+                successful_results.append((url, result))
+        
+        logger.info(f"Async scraping completed: {len(successful_results)} successful, {failed_count} failed")
+        return successful_results
+    
+    async def _fetch_url_async(self, client: httpx.AsyncClient, semaphore: asyncio.Semaphore, 
+                              url: str, skip_cache: bool) -> Optional[str]:
+        """
+        Fetch a single URL with async I/O, rate limiting, and caching.
+        
+        Args:
+            client: The httpx AsyncClient
+            semaphore: Semaphore for connection limiting
+            url: URL to fetch
+            skip_cache: Whether to skip cache
+            
+        Returns:
+            HTML content or None if failed
+        """
+        async with semaphore:
+            try:
+                # Check cache first
+                if not skip_cache:
+                    cached_content = self._check_cache(url, skip_cache)
+                    if cached_content is not None:
+                        logger.debug(f"Cache hit for {url}")
+                        return cached_content
+                
+                # Apply throttling (convert sync throttle to async-compatible)
+                await self._async_throttle()
+                
+                # Perform the HTTP request
+                response = await client.get(url)
+                response.raise_for_status()
+                
+                html_content = response.text
+                
+                # Cache the response
+                self._cache_response(url, html_content)
+                
+                logger.debug(f"Successfully fetched {url} ({len(html_content)} chars)")
+                return html_content
+                
+            except httpx.HTTPStatusError as e:
+                logger.warning(f"HTTP error for {url}: {e.response.status_code}")
+                return None
+            except httpx.ConnectError as e:
+                logger.warning(f"Connection error for {url}: {e}")
+                return None
+            except httpx.TimeoutException as e:
+                logger.warning(f"Timeout for {url}: {e}")
+                return None
+            except Exception as e:
+                logger.error(f"Unexpected error for {url}: {e}")
+                return None
+    
+    async def _async_throttle(self):
+        """Async-compatible throttling based on requests_per_second."""
+        if hasattr(self, '_last_request_time'):
+            time_since_last = time.time() - self._last_request_time
+            min_interval = 1.0 / self.requests_per_second
+            
+            if time_since_last < min_interval:
+                sleep_time = min_interval - time_since_last
+                await asyncio.sleep(sleep_time)
+        
+        self._last_request_time = time.time()
+    
+    async def scrape_and_convert_async(self, urls: List[str], output_format: str = "markdown") -> List[Tuple[str, str, str]]:
+        """
+        Scrape multiple URLs and convert them to the specified format concurrently.
+        
+        Args:
+            urls: List of URLs to scrape
+            output_format: Output format (markdown, json, xml)
+            
+        Returns:
+            List of tuples (url, converted_content, markdown_content)
+        """
+        # First scrape all URLs
+        scraped_results = await self.scrape_websites_async(urls)
+        
+        if not scraped_results:
+            return []
+        
+        # Convert content (this is CPU-bound, so we can do it synchronously)
+        converted_results = []
+        for url, html_content in scraped_results:
+            try:
+                content, markdown_content = self._convert_content(html_content, url, output_format)
+                converted_results.append((url, content, markdown_content))
+            except Exception as e:
+                logger.error(f"Failed to convert content for {url}: {e}")
+        
+        return converted_results
+    
+    def scrape_by_sitemap_async(self, base_url: str, **kwargs) -> List[str]:
+        """
+        Async wrapper for sitemap-based scraping.
+        
+        This method discovers URLs from sitemap and then uses async scraping.
+        """
+        # Get URLs from sitemap (this part is still synchronous)
+        filtered_urls = self._discover_urls_from_sitemap(
+            base_url,
+            kwargs.get('min_priority'),
+            kwargs.get('include_patterns'),
+            kwargs.get('exclude_patterns'),
+            kwargs.get('limit')
+        )
+        
+        if not filtered_urls:
+            return []
+        
+        # Extract URL strings from SitemapURL objects
+        urls = [url_info.loc for url_info in filtered_urls]
+        
+        # Use async event loop for scraping
+        return asyncio.run(self._process_urls_async(urls, **kwargs))
+    
+    async def _process_urls_async(self, urls: List[str], **kwargs) -> List[str]:
+        """Process multiple URLs asynchronously with all the standard options."""
+        output_dir = kwargs.get('output_dir', 'output')
+        output_format = kwargs.get('output_format', 'markdown')
+        save_chunks = kwargs.get('save_chunks', True)
+        chunk_dir = kwargs.get('chunk_dir', 'chunks')
+        chunk_format = kwargs.get('chunk_format', 'jsonl')
+        
+        # Prepare directories
+        output_path, chunk_directory = self._prepare_directories(output_dir, save_chunks, chunk_dir)
+        
+        # Scrape and convert all URLs concurrently
+        results = await self.scrape_and_convert_async(urls, output_format)
+        
+        # Process and save results
+        successfully_scraped = []
+        for i, (url, content, markdown_content) in enumerate(results):
+            try:
+                # Generate filename and save
+                filename = self._get_filename_from_url(url, output_format)
+                output_file = str(output_path / filename)
+                
+                self.save_content(content, output_file)
+                
+                # Process chunks if enabled
+                if save_chunks and chunk_directory:
+                    self._process_chunks(markdown_content, url, chunk_directory, filename, chunk_format)
+                
+                successfully_scraped.append(url)
+                logger.info(f"Processed {i+1}/{len(results)}: {url}")
+                
+            except Exception as e:
+                logger.error(f"Failed to save content for {url}: {e}")
+        
         return successfully_scraped
 
 

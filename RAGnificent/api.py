@@ -11,8 +11,24 @@ from typing import Dict, List, Optional, Union
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
+
+# Prometheus metrics (optional)
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    
+    # Define metrics
+    REQUEST_COUNT = Counter('ragnificent_requests_total', 'Total requests', ['method', 'endpoint', 'status'])
+    REQUEST_DURATION = Histogram('ragnificent_request_duration_seconds', 'Request duration')
+    ACTIVE_CONNECTIONS = Gauge('ragnificent_active_connections', 'Active connections')
+    SCRAPE_REQUESTS = Counter('ragnificent_scrape_requests_total', 'Total scrape requests', ['status'])
+    SEARCH_QUERIES = Counter('ragnificent_search_queries_total', 'Search queries performed')
+    
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    logger.warning("Prometheus client not available. Metrics will be disabled.")
 
 from RAGnificent.core.async_scraper import AsyncMarkdownScraper
 from RAGnificent.core.logger import get_logger
@@ -43,6 +59,33 @@ app.add_middleware(
     allow_methods=["GET", "POST"],  # Only allow necessary methods
     allow_headers=["Content-Type", "Authorization"],  # Only allow necessary headers
 )
+
+# Middleware for metrics
+if METRICS_AVAILABLE:
+    import time
+    
+    @app.middleware("http")
+    async def metrics_middleware(request, call_next):
+        start_time = time.time()
+        
+        # Track active connections
+        ACTIVE_CONNECTIONS.inc()
+        
+        try:
+            response = await call_next(request)
+            
+            # Record metrics
+            duration = time.time() - start_time
+            REQUEST_DURATION.observe(duration)
+            REQUEST_COUNT.labels(
+                method=request.method, 
+                endpoint=request.url.path,
+                status=response.status_code
+            ).inc()
+            
+            return response
+        finally:
+            ACTIVE_CONNECTIONS.dec()
 
 
 # Pydantic models
@@ -130,16 +173,19 @@ _pipeline = None
 
 
 def get_pipeline() -> Pipeline:
-    """Get or create pipeline instance."""
+    """Get or create pipeline instance with lazy initialization."""
     global _pipeline
     if _pipeline is None:
         try:
+            # Initialize with minimal configuration for Docker
             _pipeline = Pipeline()
             logger.info("Initialized pipeline instance")
         except Exception as e:
             logger.error(f"Failed to initialize pipeline: {e}")
+            # Don't raise immediately - let endpoints handle this gracefully
+            _pipeline = None
             raise HTTPException(
-                status_code=500, detail="Failed to initialize pipeline"
+                status_code=503, detail="RAG pipeline not available - ML models may not be loaded"
             ) from e
     return _pipeline
 
@@ -159,20 +205,32 @@ async def root():
     }
 
 
-@app.get("/health", response_model=Dict[str, str])
+@app.get("/health")
 async def health_check():
-    """Health check endpoint."""
+    """Lightweight health check endpoint for container orchestration."""
     try:
-        # Basic health checks
-        pipeline = get_pipeline()
-        return {
+        # Basic health checks without heavy model initialization
+        health_status = {
             "status": "healthy",
-            "pipeline": "initialized",
             "timestamp": str(asyncio.get_event_loop().time()),
+            "components": {
+                "fastapi": True,
+                "metrics": METRICS_AVAILABLE,
+            }
         }
+        
+        return health_status
+        
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail="Service unhealthy") from e
+
+# Metrics endpoint
+if METRICS_AVAILABLE:
+    @app.get("/metrics")
+    async def metrics():
+        """Prometheus metrics endpoint."""
+        return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.post("/scrape", response_model=ScrapeResponse)
@@ -465,9 +523,53 @@ async def list_collections():
         raise HTTPException(status_code=500, detail="Failed to list collections") from e
 
 
+@app.get("/status", response_model=Dict)
+async def get_status():
+    """Get detailed system status and component availability."""
+    try:
+        status = {
+            "api_status": "healthy",
+            "api_version": "2.0.0",
+            "python_version": "3.12+",
+            "components": {
+                "fastapi": True,
+                "metrics": METRICS_AVAILABLE,
+                "pipeline": False,
+                "embedding_models": False,
+                "vector_store": False,
+            },
+            "endpoints": {
+                "basic": ["/", "/health", "/status"],
+                "conversion": ["/convert"],
+                "advanced": []  # Will be populated if pipeline is available
+            }
+        }
+        
+        # Try to check pipeline availability without forcing initialization
+        try:
+            if _pipeline is not None:
+                status["components"]["pipeline"] = True
+                status["components"]["embedding_models"] = True  
+                status["components"]["vector_store"] = True
+                status["endpoints"]["advanced"] = ["/scrape", "/search", "/query", "/pipeline"]
+        except Exception:
+            # Pipeline not available - this is OK for basic functionality
+            pass
+
+        return status
+
+    except Exception as e:
+        logger.error(f"Failed to get status: {e}")
+        return {
+            "api_status": "degraded",
+            "error": str(e),
+            "components": {"fastapi": True}
+        }
+
+
 @app.get("/stats", response_model=Dict)
 async def get_stats():
-    """Get system statistics and health metrics."""
+    """Get system statistics and health metrics (requires pipeline)."""
     try:
         pipeline = get_pipeline()
 

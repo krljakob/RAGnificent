@@ -241,19 +241,24 @@ def scrape(
         # Add main scraping task
         task = progress.add_task("[cyan]Scraping...", total=100)
 
-        # Add keyboard handler
+        # Track pause state manually since we can't check it directly
+        is_paused = False
+
         def handle_key(key):
+            nonlocal is_paused
             if key == "q":
                 console.print("\n[red]Scraping cancelled by user[/red]")
                 raise typer.Exit(0)
             if key == " ":
                 if progress.tasks[task].finished:
                     return
-                if progress.tasks[task].paused:
+                if is_paused:
                     progress.start_task(task)
+                    is_paused = False
                     console.print("\n[green]Resumed scraping[/green]")
                 else:
                     progress.stop_task(task)
+                    is_paused = True
                     console.print("\n[yellow]Paused scraping[/yellow]")
             elif key == "h":
                 help_panel = Panel(
@@ -654,7 +659,11 @@ def embed(
 
             import json
             with open(output_dir / f"{input_path.stem}_embeddings.json", "w", encoding="utf-8") as f:
-                json.dump(embedding, f)
+                import json, numpy as np
+json.dump(
+    {**embedding, "embedding": np.asarray(embedding["embedding"]).tolist()},
+    f,
+)
         else:
             # Process directory
             import glob

@@ -4,7 +4,7 @@ Async version of the web scraper using httpx for improved performance.
 
 import asyncio
 import json
-import logging
+
 import re
 import time
 from pathlib import Path
