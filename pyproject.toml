@@ -44,6 +44,8 @@ dependencies = [
     "pyyaml>=6.0.2",
     "pydot>=4.0.0",
     "sourcery>=1.37.0",
+    "py-spy>=0.4.0",
+    "yappi>=1.6.10",
 ]
 
 [project.optional-dependencies]

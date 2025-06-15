@@ -1,0 +1,50 @@
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+ --> benches/RAGnificent_bench.rs:2:5
+  |
+2 |     black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput,
+  |     ^^^^^^^^^
+  |
+  = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:35:54
+   |
+35 |             |b, html| b.iter(|| extract_main_content(black_box(html))),
+   |                                                      ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:40:34
+   |
+40 |             b.iter(|| clean_html(black_box(html)))
+   |                                  ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:45:37
+   |
+45 |             b.iter(|| extract_links(black_box(html), "https://example.com"))
+   |                                     ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:52:53
+   |
+52 |             |b, html| b.iter(|| convert_to_markdown(black_box(html), "https://example.com")),
+   |                                                     ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:80:29
+   |
+80 | ...                   black_box(markdown),
+   |                       ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:81:29
+   |
+81 | ...                   black_box(chunk_size),
+   |                       ^^^^^^^^^
+
+warning: use of deprecated function `criterion::black_box`: use `std::hint::black_box()` instead
+  --> benches/RAGnificent_bench.rs:82:29
+   |
+82 | ...                   black_box(overlap),
+   |                       ^^^^^^^^^
+

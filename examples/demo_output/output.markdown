@@ -19,11 +19,11 @@ Having multiple output formats provides several advantages:
 
 > Format conversion is performed efficiently using Rust implementations.
 
-```
+```python
 
 # Sample Python code
 from RAGnificent.RAGnificent_rs import convert_html, OutputFormat
 
 result = convert_html(html_content, url, OutputFormat.JSON)
-    
+
 ```
