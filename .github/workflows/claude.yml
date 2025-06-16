@@ -1,0 +1,59 @@
+name: Claude AI Assistant
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+  issues:
+    types: [opened, edited]
+
+jobs:
+  claude-assistant:
+    # Only run on comments that mention the bot or specific triggers
+    if: |
+      (github.event_name == 'issue_comment' && 
+       (contains(github.event.comment.body, '@claude') || 
+        contains(github.event.comment.body, '/claude'))) ||
+      github.event_name == 'pull_request' ||
+      github.event_name == 'issues'
+    
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Claude AI Assistant
+        uses: anthropics/claude-github@v1
+        with:
+          # Your Anthropic API key
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Optional: Customize the assistant behavior
+          system_prompt: |
+            You are a helpful AI assistant for the RAGnificent project - a hybrid Python/Rust web scraping and content processing tool.
+            
+            Key project context:
+            - Primary languages: Python 3.12+ and Rust
+            - Main functionality: HTML to Markdown/JSON/XML conversion with RAG support
+            - Uses PyO3 for Python-Rust bindings
+            - Testing with pytest, building with maturin
+            - Dependencies: sentence-transformers, torch, requests, beautifulsoup4
+            
+            When helping users:
+            1. Provide accurate, helpful responses about code, issues, or features
+            2. Reference relevant documentation or examples when available
+            3. Suggest appropriate commands (uv, cargo, pytest) for the project
+            4. Consider both Python and Rust aspects of the codebase
+            5. Be concise but thorough in explanations
+          
+          # Optional: Maximum tokens for responses
+          max_tokens: 1500
