@@ -101,7 +101,7 @@ fn extract_headings(document_html: &Html) -> Result<Vec<Heading>, MarkdownError>
     let mut headings = Vec::new();
 
     for i in 1..=6 {
-        let heading_selector = create_selector(&format!("h{}", i))?;
+        let heading_selector = create_selector(&format!("h{i}"))?;
 
         for element in document_html.select(&heading_selector) {
             let text = element.text().collect::<String>().trim().to_string();
@@ -310,7 +310,7 @@ fn render_paragraphs_markdown(paragraphs: &[String]) -> String {
     let mut markdown = String::new();
 
     for paragraph in paragraphs {
-        markdown.push_str(&format!("{}\n\n", paragraph));
+        markdown.push_str(&format!("{paragraph}\n\n"));
     }
 
     markdown
@@ -349,7 +349,7 @@ fn render_lists_markdown(lists: &[List]) -> String {
             }
         } else {
             for item in &list.items {
-                markdown.push_str(&format!("- {}\n", item));
+                markdown.push_str(&format!("- {item}\n"));
             }
         }
         markdown.push('\n');
@@ -379,10 +379,10 @@ fn render_blockquotes_markdown(blockquotes: &[String]) -> String {
     for blockquote in blockquotes {
         let quoted = blockquote
             .lines()
-            .map(|line| format!("> {}", line))
+            .map(|line| format!("> {line}"))
             .collect::<Vec<String>>()
             .join("\n");
-        markdown.push_str(&format!("{}\n\n", quoted));
+        markdown.push_str(&format!("{quoted}\n\n"));
     }
 
     markdown
@@ -416,9 +416,8 @@ pub fn document_to_markdown(document: &Document) -> String {
 
 /// Convert document to JSON format
 pub fn document_to_json(document: &Document) -> Result<String, MarkdownError> {
-    serde_json::to_string_pretty(document).map_err(|e| {
-        MarkdownError::SerializationError(format!("Failed to serialize to JSON: {}", e))
-    })
+    serde_json::to_string_pretty(document)
+        .map_err(|e| MarkdownError::SerializationError(format!("Failed to serialize to JSON: {e}")))
 }
 
 /// Convert document to XML format
@@ -428,10 +427,9 @@ pub fn document_to_xml(document: &Document) -> Result<String, MarkdownError> {
     match to_string(document) {
         Ok(xml) => Ok(xml),
         Err(e) => {
-            eprintln!("Error serializing document to XML: {:?}", e);
+            eprintln!("Error serializing document to XML: {e:?}");
             Err(MarkdownError::SerializationError(format!(
-                "Failed to serialize to XML: {}",
-                e
+                "Failed to serialize to XML: {e}"
             )))
         }
     }
