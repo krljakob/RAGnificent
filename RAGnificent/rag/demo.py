@@ -82,7 +82,6 @@ def run_pipeline_mode(args):
     """Run the complete pipeline."""
     console.print("[bold green]Running Integrated RAG Pipeline[/bold green]")
 
-    # Initialize the pipeline
     pipeline = RAGPipeline(collection_name=args.collection)
 
     # Determine which steps to run
@@ -125,7 +124,6 @@ def run_chat_mode(args):
     console.print("[bold green]RAGnificent Chat Mode[/bold green]")
     console.print("[italic]Type 'exit' or 'quit' to end the session[/italic]")
 
-    # Initialize the chat
     chat = RAGChat(collection_name=args.collection)
 
     while True:
@@ -133,7 +131,6 @@ def run_chat_mode(args):
         if query.lower() in ["exit", "quit"]:
             break
 
-        # Process the query
         with console.status("[bold yellow]Searching knowledge base..."):
             result = chat.chat(query)
 
@@ -154,7 +151,6 @@ def run_search_mode(args):
     console.print("[bold green]RAGnificent Search Mode[/bold green]")
     console.print("[italic]Type 'exit' or 'quit' to end the session[/italic]")
 
-    # Initialize the pipeline
     pipeline = RAGPipeline(collection_name=args.collection)
 
     while True:
@@ -162,7 +158,6 @@ def run_search_mode(args):
         if query.lower() in ["exit", "quit"]:
             break
 
-        # Process the query
         with console.status("[bold yellow]Searching knowledge base..."):
             results = pipeline.search_documents(query, limit=5)
 

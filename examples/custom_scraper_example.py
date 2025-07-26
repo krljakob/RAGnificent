@@ -1,5 +1,5 @@
 """
-Example demonstrating advanced scraper customization.
+Example demonstrating scraper customization.
 
 This example shows how to:
 1. Configure a custom scraper with specific settings

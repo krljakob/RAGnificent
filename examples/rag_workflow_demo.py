@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RAGnificent Comprehensive Demo
+RAGnificent Demo
 Demonstrates end-to-end scraping, chunking, embedding, and search functionality.
 Consolidates functionality from multiple demo scripts.
 """
@@ -250,7 +250,7 @@ class RAGDemo:
 
 def main():
     """Main entry point with command-line interface"""
-    parser = argparse.ArgumentParser(description="RAGnificent Comprehensive Demo")
+    parser = argparse.ArgumentParser(description="RAGnificent Demo")
     parser.add_argument(
         "--mode",
         choices=["full", "existing", "pipeline", "basic"],

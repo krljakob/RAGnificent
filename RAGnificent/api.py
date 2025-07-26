@@ -24,7 +24,7 @@ logger = get_logger(__name__)
 # FastAPI app
 app = FastAPI(
     title="RAGnificent API",
-    description="A powerful RAG pipeline API for web scraping, content processing, and semantic search",
+    description="API for web scraping, content processing, and semantic search",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -355,11 +355,7 @@ async def query_endpoint(
     top_k: int = Query(5, description="Number of results"),
     use_llm: bool = Query(False, description="Use LLM for response generation"),
 ):
-    """
-    Advanced query endpoint with optional LLM integration.
-
-    Can perform simple search or RAG-enhanced response generation.
-    """
+    """Query documents with optional LLM-generated responses."""
     try:
         logger.info(f"Query request: {query}")
 

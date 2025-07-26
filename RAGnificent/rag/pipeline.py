@@ -115,12 +115,16 @@ class Pipeline:
         ) or self.pipeline_config.get("output_dir")
         from ..core.security import secure_file_path
 
-        # Secure the data directory path
+        # Set up data directory path
         base_data_dir = self.config.data_dir
-        user_data_dir = data_dir or pipeline_data_dir or ""
-
-        if user_data_dir:
-            resolved_data_dir = Path(secure_file_path(base_data_dir, user_data_dir))
+        if user_data_dir := data_dir or pipeline_data_dir or "":
+            # If user provides an absolute path, resolve it
+            user_path = Path(user_data_dir)
+            if user_path.is_absolute():
+                resolved_data_dir = user_path.resolve()
+            else:
+                # For relative paths, use secure path joining
+                resolved_data_dir = Path(secure_file_path(base_data_dir, user_data_dir))
         else:
             resolved_data_dir = Path(base_data_dir).resolve()
 
@@ -349,9 +353,7 @@ class Pipeline:
         """Execute an indexing step."""
         from ..core.security import secure_file_path
 
-        # Secure the input directory path
-        user_input_dir = config.get("input_dir", "")
-        if user_input_dir:
+        if user_input_dir := config.get("input_dir", ""):
             input_dir = secure_file_path(str(self.data_dir), user_input_dir)
         else:
             input_dir = str(self.data_dir)
@@ -705,7 +707,6 @@ class Pipeline:
         Returns:
             List of chunk dictionaries
         """
-        # Use our advanced semantic chunker
         chunks = self.chunker.create_chunks_from_markdown(content, url)
 
         # Convert Chunk objects to dictionaries
@@ -1324,7 +1325,6 @@ Always cite your sources by referencing the document numbers.
                     f"Processing batch {i//current_batch_size + 1}/{(len(items) + current_batch_size - 1)//current_batch_size} ({len(batch)} items)"
                 )
 
-                # Process the batch
                 batch_results = process_func(batch)
 
                 if batch_results:

@@ -16,30 +16,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import requests
 from bs4 import BeautifulSoup, Tag
 
-# Import directly using a system-level import approach
-# First, ensure all required paths are in sys.path
-core_path = Path(__file__).parent
-utils_path = Path(__file__).parent.parent / "utils"
-
-# Add paths if needed
-if str(core_path) not in sys.path:
-    sys.path.append(str(core_path))
-if str(utils_path) not in sys.path:
-    sys.path.append(str(utils_path))
-
-# Now import directly from modules
-from chunk_utils import ContentChunker, create_semantic_chunks
-from sitemap_utils import SitemapParser
-from throttle import RequestThrottler
-
-from cache import RequestCache
+# Use proper relative imports for internal modules
+from RAGnificent.core.cache import RequestCache
+from RAGnificent.core.throttle import RequestThrottler
+from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
+from RAGnificent.utils.sitemap_utils import SitemapParser
 
 # Configure logging with more detailed formatting
 logging.basicConfig(
@@ -897,7 +881,6 @@ class MarkdownScraper:
         if output_format != "markdown" and content == markdown_content:
             output_file = output_file.replace(f".{output_format}", ".md")
 
-        # Save the content
         self.save_content(content, output_file)
 
         # Create and save chunks if enabled (always from markdown content)
@@ -1448,10 +1431,7 @@ def _process_single_url_mode(
     skip_cache: bool,
 ) -> None:
     """Process a single URL."""
-    # Scrape the URL
     html_content = scraper.scrape_website(url, skip_cache=skip_cache)
-
-    # Convert the content
     content, markdown_content = scraper._convert_content(
         html_content, url, output_format
     )
@@ -1461,7 +1441,6 @@ def _process_single_url_mode(
         output_file, output_format, content, markdown_content
     )
 
-    # Save the content
     scraper.save_content(content, output_file)
 
     # Process chunks if enabled

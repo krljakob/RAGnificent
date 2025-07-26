@@ -2,7 +2,6 @@
 Vector store module for RAGnificent.
 
 Provides interface to vector databases (primarily Qdrant) for storing and retrieving embeddings.
-Includes robust error handling, connection management, and search capabilities.
 """
 
 import logging

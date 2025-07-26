@@ -303,7 +303,7 @@ class ResourceManager(StatsMixin):
 
     def get_resource_usage(self) -> Dict[str, Any]:
         """
-        Get comprehensive resource usage statistics.
+        Get resource usage statistics.
 
         Returns:
             Dictionary with resource usage information

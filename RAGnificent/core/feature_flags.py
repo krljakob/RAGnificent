@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class FeatureFlag(str, Enum):
     """Enumeration of available feature flags."""
 
-    ADVANCED_CHUNKING = "enable_advanced_chunking"
+    SEMANTIC_CHUNKING = "enable_semantic_chunking"
     PARALLEL_PROCESSING = "enable_parallel_processing"
     MEMORY_OPTIMIZATION = "enable_memory_optimization"
     CACHING = "enable_caching"
@@ -48,7 +48,7 @@ class FeatureFlagManager:
             config_dict: Optional dictionary with feature flag configuration
         """
         self.flags: Dict[str, bool] = {
-            FeatureFlag.ADVANCED_CHUNKING.value: True,
+            FeatureFlag.SEMANTIC_CHUNKING.value: True,
             FeatureFlag.PARALLEL_PROCESSING.value: True,
             FeatureFlag.MEMORY_OPTIMIZATION.value: True,
             FeatureFlag.CACHING.value: True,

@@ -1,6 +1,5 @@
 """
-RAGnificent - A powerful and modular web scraper that converts web content into
-well-structured Markdown files with RAG-ready chunking capabilities.
+RAGnificent - Web scraper for converting HTML to Markdown with semantic chunking.
 """
 
 __version__ = "0.1.0"

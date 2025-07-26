@@ -25,10 +25,8 @@ def main():
 
     try:
 
-        # Scrape the website
         html_content = scraper.scrape_website(url)
 
-        # Convert to markdown
         try:
             from ragnificent_rs import OutputFormat
 
