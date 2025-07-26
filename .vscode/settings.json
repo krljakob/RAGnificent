@@ -2,5 +2,28 @@
     "github-actions.workflows.pinned.workflows": [
         ".github/workflows/CI.yml",
         ".github/workflows/rust.yml"
+    ],
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.trunk/*actions/": true,
+        "**/.trunk/*logs/": true,
+        "**/.trunk/*notifications/": true,
+        "**/.trunk/*out/": true,
+        "**/.trunk/*plugins/": true,
+        ".pytest_cache": true,
+        ".request_cache": true,
+        ".ruff_cache": true,
+        "cache": true
+    },
+    "hide-files.files": [
+        ".pytest_cache",
+        ".request_cache",
+        ".ruff_cache",
+        "cache/embeddings",
+        "cache"
     ]
 }

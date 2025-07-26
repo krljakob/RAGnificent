@@ -178,50 +178,46 @@ class ContentChunker:
                 i = 0
                 while i < len(stripped) and stripped[i] == "#":
                     i += 1
-                if 1 <= i <= 6:
-                    # There must be at least one space after the #'s
-                    if i < len(stripped) and stripped[i] == " ":
-                        heading_text = stripped[i + 1 :].strip()
-                        level = i
-                        # This is a header line
-                        # If we have a current section, finalize it and add to sections list
-                        if current_section:
-                            sections.append(current_section)
-                        # Update header stack based on new header level
-                        while header_stack and int(header_stack[-1]["level"]) >= int(
-                            level
-                        ):
-                            header_stack.pop()
-                        # Create path representation of current location in hierarchy
-                        path_elements = [str(h["text"]) for h in header_stack] + [
-                            str(heading_text)
-                        ]
-                        path = " > ".join(path_elements)
-                        parent_headers = [
-                            {
-                                "text": str(header["text"]),
-                                "level": int(header["level"]),
-                                "markdown": "#" * int(header["level"])
-                                + " "
-                                + str(header["text"]),
-                            }
-                            for header in header_stack
-                        ]
-                        # Create new header entry
-                        header_entry = {"level": level, "text": heading_text}
-                        # Push to stack
-                        header_stack.append(header_entry)
-                        # Start new section
-                        current_section = {
-                            "heading": line,
-                            "content": line + "\n",
-                            "level": level,
-                            "path": path,
-                            "path_elements": path_elements,
-                            "parent_headers": parent_headers,
-                            "nested_level": len(parent_headers),
+                if 1 <= i <= 6 and (i < len(stripped) and stripped[i] == " "):
+                    heading_text = stripped[i + 1 :].strip()
+                    level = i
+                    # This is a header line
+                    # If we have a current section, finalize it and add to sections list
+                    if current_section:
+                        sections.append(current_section)
+                    # Update header stack based on new header level
+                    while header_stack and int(header_stack[-1]["level"]) >= level:
+                        header_stack.pop()
+                    # Create path representation of current location in hierarchy
+                    path_elements = [str(h["text"]) for h in header_stack] + [
+                        str(heading_text)
+                    ]
+                    path = " > ".join(path_elements)
+                    parent_headers = [
+                        {
+                            "text": str(header["text"]),
+                            "level": int(header["level"]),
+                            "markdown": "#" * int(header["level"])
+                            + " "
+                            + str(header["text"]),
                         }
-                        continue  # Go to next line
+                        for header in header_stack
+                    ]
+                    # Create new header entry
+                    header_entry = {"level": level, "text": heading_text}
+                    # Push to stack
+                    header_stack.append(header_entry)
+                    # Start new section
+                    current_section = {
+                        "heading": line,
+                        "content": line + "\n",
+                        "level": level,
+                        "path": path,
+                        "path_elements": path_elements,
+                        "parent_headers": parent_headers,
+                        "nested_level": len(parent_headers),
+                    }
+                    continue
             # Not a header line
             if current_section:
                 # Add line to current section content

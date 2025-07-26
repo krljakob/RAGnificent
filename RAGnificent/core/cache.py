@@ -430,10 +430,6 @@ class RequestCache(StatsMixin):
         # Manage memory cache size
         self._check_memory_limits()
 
-    def _get_cache_key(self, url: str) -> str:
-        """Generate a cache key for the given URL."""
-        return hashlib.sha256(url.encode("utf-8")).hexdigest()
-
     def set(self, url: str, content: str, ttl: Optional[int] = None) -> None:
         """
         Cache a response for a URL.

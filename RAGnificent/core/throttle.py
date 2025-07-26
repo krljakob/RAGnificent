@@ -291,7 +291,8 @@ class RequestThrottler(StatsMixin):
     def _extract_domain(self, url: str) -> str:
         """Extract domain from URL."""
         try:
-            return urlparse(url).netloc
+            netloc = urlparse(url).netloc
+            return netloc if netloc else "unknown"
         except Exception:
             return "unknown"
 

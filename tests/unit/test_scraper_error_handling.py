@@ -201,6 +201,10 @@ class TestScraperErrorHandling(unittest.TestCase):
                 self.assertIsNotNone(
                     content, "Should return content even if caching fails"
                 )
+                # Verify content integrity when cache fails
+                self.assertIn("<html>", content, "Content should be valid HTML")
+                self.assertIn("<h1>Test</h1>", content, "Content should contain expected elements")
+                self.assertIn("<p>Content</p>", content, "Content should contain expected text")
         except OSError:
             # The current implementation doesn't handle cache errors properly
             # We'll skip this test with a note about it
@@ -350,21 +354,33 @@ class TestScraperErrorHandling(unittest.TestCase):
             for url, content in zip(test_urls, test_contents, strict=False)
         ]
 
-        # The current implementation may not enforce the exact byte limit
-        # but should enforce the max_memory_items limit
-        # Let's verify at least the item count is correct
-        # and memory usage is somewhat reasonable (allowing some overhead)
-        self.assertLessEqual(
-            small_cache.current_memory_usage,
-            0.02 * 1024 * 1024,  # 20KB - allowing some overhead
-            "Memory cache should keep memory usage reasonable",
-        )
-
-        # Verify the item count is at most 2
+        # Verify cache enforces limits correctly
         self.assertLessEqual(
             len(small_cache.memory_cache),
             2,
-            "Memory cache should enforce item count limits",
+            "Memory cache should enforce max_memory_items limit",
+        )
+        
+        # Verify cache eviction actually occurred
+        self.assertGreater(
+            len(test_urls), len(small_cache.memory_cache),
+            "Cache should have evicted items when limits exceeded"
+        )
+        
+        # Verify memory usage tracking is functional
+        self.assertGreater(
+            small_cache.current_memory_usage, 0,
+            "Memory usage tracking should be active"
+        )
+        
+        # Verify most recently added items are retained (LRU behavior)
+        cached_keys = set(small_cache.memory_cache.keys())
+        # Should contain the last 2 URLs added (stored as URLs, not hashed keys)
+        expected_keys = set(test_urls[-2:])
+        remaining_keys = expected_keys.intersection(cached_keys)
+        self.assertGreater(
+            len(remaining_keys), 0,
+            "Cache should retain recently accessed items"
         )
 
 

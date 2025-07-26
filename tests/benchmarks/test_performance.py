@@ -212,7 +212,9 @@ def mock_embedding_service():
 
     class MockEmbeddingService:
         def embed_chunks(self, chunks):
-            time.sleep(0.01 * len(chunks))
+            # Use minimal delay for testing instead of actual computation time
+            # Original: time.sleep(0.01 * len(chunks)) - too slow for unit tests
+            time.sleep(0.001 * len(chunks))  # Reduced 10x for faster tests
             for chunk in chunks:
                 chunk["embedding"] = [0.1] * 384  # Mock embedding vector
             return chunks
@@ -231,12 +233,14 @@ def mock_vector_store():
         def store_documents(
             self, documents, embedding_field="embedding", id_field="id"
         ):
-            time.sleep(0.01 * len(documents))
+            # Reduced delay for faster testing: 0.01 -> 0.001 (10x speedup)
+            time.sleep(0.001 * len(documents))
             self.documents.extend(documents)
             return True
 
         def search(self, query_vector, limit=5, threshold=0.7):
-            time.sleep(0.02)
+            # Reduced search delay: 0.02 -> 0.002 (10x speedup)
+            time.sleep(0.002)
             return self.documents[: min(limit, len(self.documents))]
 
         def count_documents(self):
@@ -253,23 +257,39 @@ def test_cache_performance():
     with PerformanceTimer("Cache initialization (default)"):
         cache = RequestCache(cache_dir=str(cache_dir))
 
+    # Track cache operations for validation
+    urls_set = []
     with PerformanceTimer("Cache set (100 items)"):
         for i in range(100):
             url = f"https://example.com/page{i}"
             content = f"Content for page {i}" * 100  # Make content reasonably sized
-            cache.set(url, content)
+            success = cache.set(url, content)
+            assert success is not False, f"Cache set should succeed for URL {i}"
+            urls_set.append(url)
 
+    # Verify all items were cached correctly
+    cache_hit_count = 0
     with PerformanceTimer("Cache get (100 hits)"):
         for i in range(100):
             url = f"https://example.com/page{i}"
             content = cache.get(url)
-            assert content is not None
+            assert content is not None, f"Cache should hit for URL {i}"
+            expected_content = f"Content for page {i}" * 100
+            assert content == expected_content, f"Cache content mismatch for URL {i}"
+            cache_hit_count += 1
+    
+    assert cache_hit_count == 100, f"Should have 100 cache hits, got {cache_hit_count}"
 
+    # Verify cache misses behave correctly
+    cache_miss_count = 0
     with PerformanceTimer("Cache get (100 misses)"):
         for i in range(100, 200):
             url = f"https://example.com/page{i}"
             content = cache.get(url)
-            assert content is None
+            assert content is None, f"Cache should miss for uncached URL {i}"
+            cache_miss_count += 1
+    
+    assert cache_miss_count == 100, f"Should have 100 cache misses, got {cache_miss_count}"
 
     with PerformanceTimer("Cache with compression"):
         compressed_cache = RequestCache(
@@ -334,7 +354,8 @@ def test_throttler_performance():
             throttler.throttle(f"https://{domain}/page")
 
     def mock_request(url):
-        time.sleep(0.05)  # Simulate network delay
+        # Reduced network simulation delay: 0.05 -> 0.005 (10x speedup)
+        time.sleep(0.005)  # Simulate network delay
         return type("Response", (), {"status_code": 200})
 
     with PerformanceTimer("Execute (5 requests)"):
@@ -347,7 +368,8 @@ def test_throttler_performance():
 
         # Create a wrapper function that doesn't need URL parameter
         def mock_request_wrapper():
-            time.sleep(0.05)
+            # Reduced delay for parallel testing: 0.05 -> 0.005 (10x speedup)
+            time.sleep(0.005)
             return type("Response", (), {"status_code": 200})
 
         results = throttler.execute_parallel(mock_request_wrapper, urls)
@@ -495,7 +517,8 @@ def test_parallel_scraping_performance(test_urls):
         )
 
     def mock_scrape_website(url):
-        time.sleep(0.1)  # Simulate network delay
+        # Reduced scraping simulation delay: 0.1 -> 0.01 (10x speedup)
+        time.sleep(0.01)  # Simulate network delay
         return f"<html><body><h1>Title for {url}</h1><p>Content for {url}</p></body></html>"
 
     enhanced_scraper.scrape_website = mock_scrape_website

@@ -5,6 +5,7 @@ Async version of the web scraper using httpx for improved performance.
 import asyncio
 import json
 import logging
+import os
 import re
 import time
 from pathlib import Path
@@ -326,10 +327,17 @@ class AsyncMarkdownScraper:
             allowed_extensions = {"markdown": "md", "json": "json", "xml": "xml"}
             extension = allowed_extensions.get(output_format, "md")
             output_file = Path(output_dir) / f"{base_name}.{extension}"
-            normalized_output_file = Path(os.path.normpath(output_file))
 
-            if not str(normalized_output_file).startswith(str(output_dir)):
-                raise ValueError("Attempted to write outside the allowed directory.")
+            # Secure path validation using pathlib
+            try:
+                normalized_output_file = output_file.resolve()
+                allowed_dir = Path(output_dir).resolve()
+
+                # Check if the resolved path is within the allowed directory
+                if not str(normalized_output_file).startswith(str(allowed_dir)):
+                    raise ValueError("Attempted to write outside the allowed directory.")
+            except (OSError, ValueError) as e:
+                raise ValueError(f"Invalid output path: {e}") from e
 
             with open(normalized_output_file, "w", encoding="utf-8") as f:
                 f.write(output)
@@ -347,14 +355,19 @@ class AsyncMarkdownScraper:
                     chunk_file = (
                         Path(chunks_output_dir) / f"{base_name}_chunk_{i:03d}.md"
                     )
-                    normalized_chunk_file = Path(os.path.normpath(chunk_file))
 
-                    if not str(normalized_chunk_file).startswith(
-                        str(chunks_output_dir)
-                    ):
-                        raise ValueError(
-                            "Attempted to write chunk outside the allowed directory."
-                        )
+                    # Secure path validation using pathlib
+                    try:
+                        normalized_chunk_file = chunk_file.resolve()
+                        allowed_chunks_dir = Path(chunks_output_dir).resolve()
+
+                        # Check if the resolved path is within the allowed directory
+                        if not str(normalized_chunk_file).startswith(str(allowed_chunks_dir)):
+                            raise ValueError(
+                                "Attempted to write chunk outside the allowed directory."
+                            )
+                    except (OSError, ValueError) as e:
+                        raise ValueError(f"Invalid chunk path: {e}") from e
 
                     with open(normalized_chunk_file, "w", encoding="utf-8") as f:
                         f.write(chunk["content"])

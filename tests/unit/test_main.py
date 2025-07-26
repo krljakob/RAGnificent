@@ -229,6 +229,12 @@ def test_scrape_website_with_cache():
         result2 = scraper.scrape_website(url)
         assert len(result2) > 0
 
-        # Just verify cache functionality doesn't crash
+        # Verify cache functionality works correctly
         cached_result = scraper.request_cache.get(url)
-        # May be None if cache is not working, but shouldn't crash
+        assert cached_result is not None, "Cache should store and retrieve content"
+        assert cached_result == result2, "Cached content should match scraped content"
+        
+        # Verify cache key generation is consistent
+        cache_key = scraper.request_cache._get_cache_key(url)
+        assert cache_key is not None, "Should generate valid cache key"
+        assert len(cache_key) > 0, "Cache key should not be empty"

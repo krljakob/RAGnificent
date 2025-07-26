@@ -70,11 +70,7 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
     # Sanitize model name to prevent path traversal
     safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
     safe_model_name = safe_model_name.replace("..", "_")
-    safe_model_name = safe_model_name.strip(".")
-
-    # Ensure we don't have empty name
-    if not safe_model_name:
-        safe_model_name = "default_model"
+    safe_model_name = safe_model_name.strip(".") or "default_model"
 
     # Create model-specific cache directory safely
     model_cache_dir = cache_dir / safe_model_name
@@ -85,7 +81,7 @@ def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
         raise ValueError(f"Invalid text hash format: {text_hash}")
 
     # Return path to specific cache file
-    return model_cache_dir / f"{text_hash}.pkl"
+    return model_cache_dir / f"{text_hash}.npy"
 
 
 def compute_text_hash(text: str) -> str:
@@ -255,9 +251,15 @@ class SentenceTransformerEmbedding:
             result = [None] * len(text)
             for i, embed in zip(text_indices, new_embeddings, strict=False):
                 result[i] = embed
-            for embed in embeddings:
-                idx = result.index(None)
-                result[idx] = embed
+            
+            # Fill remaining None slots with new embeddings
+            embedding_iter = iter(embeddings)
+            for i in range(len(result)):
+                if result[i] is None:
+                    try:
+                        result[i] = next(embedding_iter)
+                    except StopIteration:
+                        break
 
             return result
 
@@ -811,6 +813,18 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Error in batch embedding: {e}")
             return chunks  # Return original chunks without embeddings in case of error
+
+    def embed(self, texts: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
+        """
+        Generate embeddings for text(s) - compatibility method for tests.
+
+        Args:
+            texts: String or list of strings to embed
+
+        Returns:
+            Single embedding array or list of embedding arrays
+        """
+        return self.model.embed(texts)
 
 
 # Singleton instance for easy access
