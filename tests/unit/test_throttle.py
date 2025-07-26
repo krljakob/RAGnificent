@@ -1,5 +1,5 @@
 """
-Comprehensive tests for the throttle module.
+Tests for the throttle module.
 """
 
 import asyncio

@@ -1,8 +1,5 @@
 """
-Comprehensive tests for the embedding service functionality.
-
-Tests cover all embedding model types, caching, error handling, 
-vector operations, and integration points without skipping functionality.
+Tests for the embedding service functionality.
 """
 
 import os

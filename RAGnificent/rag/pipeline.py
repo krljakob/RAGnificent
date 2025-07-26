@@ -707,7 +707,6 @@ class Pipeline:
         Returns:
             List of chunk dictionaries
         """
-        # Use our advanced semantic chunker
         chunks = self.chunker.create_chunks_from_markdown(content, url)
 
         # Convert Chunk objects to dictionaries
@@ -1326,7 +1325,6 @@ Always cite your sources by referencing the document numbers.
                     f"Processing batch {i//current_batch_size + 1}/{(len(items) + current_batch_size - 1)//current_batch_size} ({len(batch)} items)"
                 )
 
-                # Process the batch
                 batch_results = process_func(batch)
 
                 if batch_results:

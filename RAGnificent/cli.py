@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 # Create Typer app
 app = typer.Typer(
     name="rag",
-    help="RAGnificent - A powerful RAG pipeline builder",
+    help="RAGnificent CLI for web scraping and content processing",
     add_completion=True,
     no_args_is_help=True,
 )
@@ -56,7 +56,7 @@ def main(
     verbose: bool = verbose_option,
     debug: bool = debug_option,
 ):
-    """RAGnificent - A powerful RAG pipeline builder."""
+    """Configure logging and global options."""
     # Configure logging based on verbosity
     log_level = "DEBUG" if debug else ("INFO" if verbose else "WARNING")
     setup_logger(level=log_level)

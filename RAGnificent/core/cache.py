@@ -15,7 +15,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
 
-# Optional advanced caching dependencies
 try:
     import diskcache
 
@@ -40,17 +39,7 @@ except ImportError:
 
 
 class RequestCache(StatsMixin):
-    """
-    Advanced cache for HTTP requests with TTL, compression, and monitoring.
-
-    Features:
-    - Memory and disk caching with configurable limits
-    - Per-URL TTL configuration
-    - Content compression for large responses
-    - Cache statistics and monitoring
-    - Pattern-based cache invalidation
-    - Cache preloading for frequently accessed URLs
-    """
+    """Cache for HTTP requests with TTL, compression, and monitoring."""
 
     def __init__(
         self,
@@ -772,14 +761,14 @@ def cached_function(cache: RequestCache, ttl: Optional[int] = None):
     return decorator
 
 
-def create_advanced_cache(
+def create_cache(
     cache_dir: str = ".rag_cache",
     backend: str = "auto",
     max_age: int = 3600,
     size_limit_gb: float = 1.0,
 ) -> RequestCache:
     """
-    Factory function to create an advanced cache with optimal settings.
+    Factory function to create a cache instance.
 
     Args:
         cache_dir: Directory for cache storage

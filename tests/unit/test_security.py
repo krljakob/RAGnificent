@@ -1,5 +1,5 @@
 """
-Comprehensive tests for the security module.
+Tests for the security module.
 """
 
 import os

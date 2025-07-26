@@ -1,5 +1,5 @@
 """
-Comprehensive tests for the validators module.
+Tests for the validators module.
 """
 
 from unittest.mock import patch
@@ -309,7 +309,7 @@ class TestValidateOutputFormat:
             assert validate_output_format(fmt) is False, f"Failed for {fmt}"
 
     def test_format_validation_comprehensive_behavior(self):
-        """Test comprehensive output format validation behavior."""
+        """Test output format validation behavior."""
         # Test valid formats (case insensitive)
         valid_formats = ["markdown", "json", "xml", "Markdown", "JSON", "XML"]
         for fmt in valid_formats:
@@ -433,7 +433,7 @@ class TestValidateRateLimit:
         assert validate_rate_limit(1000) is False
 
     def test_rate_limit_boundary_validation_behavior(self):
-        """Test rate limit validation with comprehensive boundary testing."""
+        """Test rate limit validation with boundary testing."""
         # Test invalid rates (zero and negative)
         invalid_rates = [0, -1, -10, -0.5, 0.0]
         for rate in invalid_rates:
@@ -528,7 +528,7 @@ class TestInputValidator:
         assert validator.validate_input("unknown_type", "value") is False
 
     def test_input_validator_comprehensive_behavior(self):
-        """Test comprehensive input validator behavior across all input types."""
+        """Test input validator behavior across all input types."""
         validator = InputValidator()
         
         # Test all supported input types with valid inputs

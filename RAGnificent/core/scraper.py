@@ -881,7 +881,6 @@ class MarkdownScraper:
         if output_format != "markdown" and content == markdown_content:
             output_file = output_file.replace(f".{output_format}", ".md")
 
-        # Save the content
         self.save_content(content, output_file)
 
         # Create and save chunks if enabled (always from markdown content)
@@ -1432,10 +1431,7 @@ def _process_single_url_mode(
     skip_cache: bool,
 ) -> None:
     """Process a single URL."""
-    # Scrape the URL
     html_content = scraper.scrape_website(url, skip_cache=skip_cache)
-
-    # Convert the content
     content, markdown_content = scraper._convert_content(
         html_content, url, output_format
     )
@@ -1445,7 +1441,6 @@ def _process_single_url_mode(
         output_file, output_format, content, markdown_content
     )
 
-    # Save the content
     scraper.save_content(content, output_file)
 
     # Process chunks if enabled

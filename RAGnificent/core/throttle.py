@@ -1,5 +1,5 @@
 """
-Advanced throttling module for rate limiting requests.
+Rate limiting module for HTTP requests.
 
 Provides domain-specific rate limiting, adaptive throttling,
 parallel request management, and backpressure mechanisms.
@@ -42,16 +42,7 @@ except ImportError:
 
 
 class RequestThrottler(StatsMixin):
-    """
-    Advanced request throttler with domain-specific rate limiting and adaptive throttling.
-
-    Features:
-    - Domain-specific rate limiting
-    - Adaptive throttling based on server response
-    - Parallel request management with worker pools
-    - Backpressure mechanisms to prevent overloading
-    - Statistics and monitoring
-    """
+    """Request throttler with domain-specific rate limiting."""
 
     def __init__(
         self,
