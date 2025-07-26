@@ -208,14 +208,14 @@ class TestRedactSensitiveData:
     def test_complex_redaction(self):
         """Test redaction with multiple sensitive data types."""
         text = """
-        api_key=abcdefghijklmnopqrstuvwxyz123456
+        api_key=test_key_for_redaction_check_only
         Email: user@example.com
         password: "secret123456789"
         IP: 192.168.1.1
         """
         redacted = redact_sensitive_data(text)
 
-        assert "abcdefghijklmnopqrstuvwxyz123456" not in redacted
+        assert "test_key_for_redaction_check_only" not in redacted
         assert "user@example.com" not in redacted
         assert "secret123456789" not in redacted
         assert "192.168.1.1" not in redacted

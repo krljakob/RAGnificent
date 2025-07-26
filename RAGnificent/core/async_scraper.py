@@ -333,8 +333,10 @@ class AsyncMarkdownScraper:
                 normalized_output_file = output_file.resolve()
                 allowed_dir = Path(output_dir).resolve()
 
-                # Check if the resolved path is within the allowed directory
-                if not str(normalized_output_file).startswith(str(allowed_dir)):
+                # Check if the resolved path is within the allowed directory using relative_to
+                try:
+                    normalized_output_file.relative_to(allowed_dir)
+                except ValueError:
                     raise ValueError("Attempted to write outside the allowed directory.")
             except (OSError, ValueError) as e:
                 raise ValueError(f"Invalid output path: {e}") from e
@@ -361,8 +363,10 @@ class AsyncMarkdownScraper:
                         normalized_chunk_file = chunk_file.resolve()
                         allowed_chunks_dir = Path(chunks_output_dir).resolve()
 
-                        # Check if the resolved path is within the allowed directory
-                        if not str(normalized_chunk_file).startswith(str(allowed_chunks_dir)):
+                        # Check if the resolved path is within the allowed directory using relative_to
+                        try:
+                            normalized_chunk_file.relative_to(allowed_chunks_dir)
+                        except ValueError:
                             raise ValueError(
                                 "Attempted to write chunk outside the allowed directory."
                             )
