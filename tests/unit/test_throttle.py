@@ -21,6 +21,7 @@ try:
     from tests.utils.performance_testing import (
         assert_immediate_operation,
         assert_rate_limit_timing,
+        assert_timing_within,
         PerformanceBudgets,
         TimingCategories,
     )
@@ -33,6 +34,11 @@ except ImportError:
         tolerance = expected * 0.12  # 12% tolerance to match TimingCategories.RATE_LIMIT_TOLERANCE
         assert expected - tolerance <= actual <= expected + tolerance, \
             f"{description}: expected {expected:.3f}s ±12%, got {actual:.3f}s"
+    
+    def assert_timing_within(actual, expected, tolerance_pct, description=""):
+        tolerance = expected * (tolerance_pct / 100.0)
+        assert expected - tolerance <= actual <= expected + tolerance, \
+            f"{description}: expected {expected:.3f}s ±{tolerance_pct}%, got {actual:.3f}s"
     
     class PerformanceBudgets:
         THROTTLE_IMMEDIATE = 0.05
@@ -162,6 +168,22 @@ class TestRequestThrottler:
         throttler.throttle("https://blog.example.com/page")
         assert "blog.example.com" in throttler.domain_stats
 
+    def test_domain_precedence_wildcard_vs_exact(self):
+        """Test that exact domain matches take precedence over wildcard patterns."""
+        throttler = RequestThrottler(
+            requests_per_second=10.0,  # 0.1s default
+            domain_specific_limits={
+                "*.example.com": 2.0,  # Wildcard: 0.5s for any subdomain
+                "api.example.com": 1.0,  # Exact: 1s for api subdomain specifically
+            },
+        )
+
+        # Exact match should take precedence over wildcard
+        assert throttler._get_domain_rate_limit("api.example.com") == 1.0  # exact match
+        assert throttler._get_domain_rate_limit("www.example.com") == 2.0  # wildcard match
+        assert throttler._get_domain_rate_limit("blog.example.com") == 2.0  # wildcard match
+        assert throttler._get_domain_rate_limit("other.com") == 10.0  # default
+
     def test_backpressure(self):
         """Test backpressure mechanism."""
         throttler = RequestThrottler(max_workers=10)
@@ -175,7 +197,7 @@ class TestRequestThrottler:
 
         # Should apply backpressure delay
         assert throttler.backpressure_delay > 0
-        assert elapsed >= throttler.backpressure_delay * 0.95  # Reduced variance from 10% to 5% for better precision
+        assert_timing_within(elapsed, throttler.backpressure_delay, 5.0, "Backpressure delay")
 
     def test_release_updates_stats(self):
         """Test that release updates statistics correctly."""
@@ -575,13 +597,13 @@ class TestAsyncRequestThrottler:
         start_time = time.time()
         await throttler.throttle("https://example.com/page1")
         first_elapsed = time.time() - start_time
-        assert first_elapsed < 0.05
+        assert_immediate_operation(first_elapsed, "First async throttle request")
 
         # Second request to same domain should be throttled
         start_time = time.time()
         await throttler.throttle("https://example.com/page2")
         second_elapsed = time.time() - start_time
-        assert second_elapsed >= 0.05
+        assert_rate_limit_timing(second_elapsed, 0.1, "Second async throttle request")
 
     @pytest.mark.asyncio
     async def test_domain_specific_async(self):
@@ -599,7 +621,7 @@ class TestAsyncRequestThrottler:
         start_time = time.time()
         await throttler.throttle("https://slow.com/page2")
         elapsed = time.time() - start_time
-        assert elapsed >= 0.9
+        assert_rate_limit_timing(elapsed, 1.0, "Domain-specific async throttle delay")
 
     @pytest.mark.asyncio
     async def test_record_response(self):

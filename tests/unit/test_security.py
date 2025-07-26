@@ -78,8 +78,8 @@ class TestRateLimiter:
         third_call_time = test_func()
         elapsed = third_call_time - start_time
 
-        # Should have waited at least 0.5 seconds
-        assert elapsed >= 0.5
+        # Should have waited for rate limit timing
+        assert_rate_limit_timing(elapsed, 0.5, "Rate limiter enforcement delay")
 
     def test_rate_limiter_cleans_old_calls(self):
         """Test that rate limiter cleans up old calls."""
@@ -208,14 +208,14 @@ class TestRedactSensitiveData:
     def test_complex_redaction(self):
         """Test redaction with multiple sensitive data types."""
         text = """
-        api_key=test_key_for_redaction_check_only
+        api_key=abcdefghijklmnopqrstuvwxyz123456
         Email: user@example.com
         password: "secret123456789"
         IP: 192.168.1.1
         """
         redacted = redact_sensitive_data(text)
 
-        assert "test_key_for_redaction_check_only" not in redacted
+        assert "abcdefghijklmnopqrstuvwxyz123456" not in redacted
         assert "user@example.com" not in redacted
         assert "secret123456789" not in redacted
         assert "192.168.1.1" not in redacted
