@@ -153,9 +153,10 @@ class TestRequestThrottler:
         throttler.throttle("https://www.example.com/page")
         throttler.throttle("https://example.com/page")
         
-        assert "api.example.com" in throttler.domain_stats
-        assert "www.example.com" in throttler.domain_stats
-        assert "example.com" in throttler.domain_stats
+        from urllib.parse import urlparse
+        assert urlparse("https://api.example.com/page").hostname in throttler.domain_stats
+        assert urlparse("https://www.example.com/page").hostname in throttler.domain_stats
+        assert urlparse("https://example.com/page").hostname in throttler.domain_stats
         
         # Verify that domain without specific limit uses default
         throttler.throttle("https://blog.example.com/page")
