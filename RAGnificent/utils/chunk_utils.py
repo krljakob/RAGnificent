@@ -28,39 +28,20 @@ class Chunk:
 
 
 class ContentChunker:
-    """Handles chunking of content for RAG systems."""
+    """Content chunker for RAG systems."""
 
     def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
-        """
-        Initialize the chunker.
-
-        Args:
-            chunk_size: Maximum size of content chunks in characters
-            chunk_overlap: Overlap between consecutive chunks in characters
-        """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
 
     def create_chunks_from_markdown(
         self, markdown_content: str, source_url: str
     ) -> List[Chunk]:
-        """
-        Split the markdown content into chunks for RAG processing, preserving header hierarchy.
-
-        Args:
-            markdown_content: The markdown content to chunk
-            source_url: The URL the content was scraped from
-
-        Returns:
-            A list of Chunk objects
-        """
-        # Parse hierarchy of sections using header levels
+        """Split markdown content into chunks preserving header hierarchy."""
         sections = self._parse_markdown_sections(markdown_content)
 
-        # Now create chunks from hierarchical sections
         chunks = []
 
-        # Parse domain for metadata
         domain = urlparse(source_url).netloc
 
         for section in sections:
@@ -71,7 +52,6 @@ class ContentChunker:
             parent_headers = section.get("parent_headers", [])
             path_elements = section.get("path_elements", [])
 
-            # If the section is smaller than chunk_size, keep it as one chunk
             if len(content) <= self.chunk_size:
                 chunk_id = hashlib.md5(
                     f"{source_url}:{heading_path}".encode()
@@ -96,7 +76,6 @@ class ContentChunker:
                 )
                 chunks.append(chunk)
             else:
-                # Split into overlapping chunks
                 words = content.split()
                 words_per_chunk = (
                     self.chunk_size // 5

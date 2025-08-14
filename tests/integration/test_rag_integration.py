@@ -79,19 +79,33 @@ Integration testing verifies that components work together correctly.
 
         # Verify chunking results
         self.assertGreater(len(chunks), 0, "Should create chunks from test document")
-        self.assertLess(len(chunks), 20, "Should not create excessive chunks from test document")
-        
+        self.assertLess(
+            len(chunks), 20, "Should not create excessive chunks from test document"
+        )
+
         # Verify chunk structure and content
         for i, chunk in enumerate(chunks):
             self.assertIn("content", chunk, f"Chunk {i} should have content field")
             self.assertIn("url", chunk, f"Chunk {i} should have url field")
-            self.assertNotEqual(chunk["content"].strip(), "", f"Chunk {i} content should not be empty")
-            self.assertEqual(chunk["url"], self.test_document["url"], f"Chunk {i} should have correct source URL")
-        
+            self.assertNotEqual(
+                chunk["content"].strip(), "", f"Chunk {i} content should not be empty"
+            )
+            self.assertEqual(
+                chunk["url"],
+                self.test_document["url"],
+                f"Chunk {i} should have correct source URL",
+            )
+
         # Verify content preservation
         chunk_text = " ".join(chunk["content"] for chunk in chunks)
-        self.assertIn("Test Document", chunk_text, "Document title should be preserved in chunks")
-        self.assertIn("test document for RAG", chunk_text, "Key content should be preserved in chunks")
+        self.assertIn(
+            "Test Document", chunk_text, "Document title should be preserved in chunks"
+        )
+        self.assertIn(
+            "test document for RAG",
+            chunk_text,
+            "Key content should be preserved in chunks",
+        )
 
         embedded_chunks = self.pipeline.embed_chunks(
             chunks, output_file="test_embedded_chunks.json"
@@ -99,30 +113,50 @@ Integration testing verifies that components work together correctly.
 
         # Verify embedding results
         self.assertEqual(len(embedded_chunks), len(chunks), "Should embed all chunks")
-        
+
         # Verify embedding structure and quality
         for i, chunk in enumerate(embedded_chunks):
             self.assertIn("embedding", chunk, f"Chunk {i} should have an embedding")
             embedding = chunk["embedding"]
-            self.assertIsInstance(embedding, (list, np.ndarray), f"Chunk {i} embedding should be list or array")
-            
+            self.assertIsInstance(
+                embedding,
+                (list, np.ndarray),
+                f"Chunk {i} embedding should be list or array",
+            )
+
             if isinstance(embedding, list):
-                self.assertGreater(len(embedding), 0, f"Chunk {i} embedding should not be empty")
-                self.assertLess(len(embedding), 2000, f"Chunk {i} embedding should have reasonable size")
-                self.assertTrue(all(isinstance(x, (int, float)) for x in embedding), 
-                              f"Chunk {i} embedding should contain numeric values")
+                self.assertGreater(
+                    len(embedding), 0, f"Chunk {i} embedding should not be empty"
+                )
+                self.assertLess(
+                    len(embedding),
+                    2000,
+                    f"Chunk {i} embedding should have reasonable size",
+                )
+                self.assertTrue(
+                    all(isinstance(x, (int, float)) for x in embedding),
+                    f"Chunk {i} embedding should contain numeric values",
+                )
             else:  # numpy array
-                self.assertGreater(embedding.size, 0, f"Chunk {i} embedding should not be empty")
-                self.assertLess(embedding.size, 2000, f"Chunk {i} embedding should have reasonable size")
-            
+                self.assertGreater(
+                    embedding.size, 0, f"Chunk {i} embedding should not be empty"
+                )
+                self.assertLess(
+                    embedding.size,
+                    2000,
+                    f"Chunk {i} embedding should have reasonable size",
+                )
+
             # Verify original chunk data is preserved
-            self.assertIn("content", chunk, f"Embedded chunk {i} should preserve content")
+            self.assertIn(
+                "content", chunk, f"Embedded chunk {i} should preserve content"
+            )
             self.assertIn("url", chunk, f"Embedded chunk {i} should preserve url")
 
         # Verify storage succeeded
         success = self.pipeline.store_chunks(embedded_chunks)
         self.assertTrue(success, "Should successfully store embedded chunks")
-        
+
         # Test search functionality
         query = "RAG systems"
         results = self.pipeline.search_documents(query)
@@ -130,14 +164,20 @@ Integration testing verifies that components work together correctly.
         # Verify search results
         self.assertGreater(len(results), 0, "Should find results for query")
         self.assertLessEqual(len(results), 10, "Should not return excessive results")
-        
+
         # Verify result structure
         for i, result in enumerate(results):
             self.assertIn("content", result, f"Result {i} should have content")
             self.assertIn("score", result, f"Result {i} should have relevance score")
-            self.assertIsInstance(result["score"], (int, float), f"Result {i} score should be numeric")
-            self.assertGreater(result["score"], 0, f"Result {i} should have positive relevance score")
-            self.assertNotEqual(result["content"].strip(), "", f"Result {i} content should not be empty")
+            self.assertIsInstance(
+                result["score"], (int, float), f"Result {i} score should be numeric"
+            )
+            self.assertGreater(
+                result["score"], 0, f"Result {i} should have positive relevance score"
+            )
+            self.assertNotEqual(
+                result["content"].strip(), "", f"Result {i} content should not be empty"
+            )
 
         # Verify search relevance
         found_relevant_content = any(
@@ -149,48 +189,64 @@ Integration testing verifies that components work together correctly.
         self.assertTrue(
             found_relevant_content, "Should find chunk containing query-related terms"
         )
-        
+
         # Verify results are ranked by relevance (scores should be in descending order)
         scores = [result["score"] for result in results]
-        self.assertEqual(scores, sorted(scores, reverse=True), "Results should be ranked by relevance score")
+        self.assertEqual(
+            scores,
+            sorted(scores, reverse=True),
+            "Results should be ranked by relevance score",
+        )
 
     def test_pipeline_with_different_chunking_strategies(self):
         """Test the pipeline with different chunking strategies."""
         # Test different chunking strategies
         strategies = [
             (ChunkingStrategy.SEMANTIC, "Semantic"),
-            (ChunkingStrategy.SLIDING_WINDOW, "Sliding window"), 
-            (ChunkingStrategy.RECURSIVE, "Recursive")
+            (ChunkingStrategy.SLIDING_WINDOW, "Sliding window"),
+            (ChunkingStrategy.RECURSIVE, "Recursive"),
         ]
-        
+
         strategy_results = {}
-        
+
         for strategy, name in strategies:
             chunks = self.pipeline.chunk_documents(
                 [self.test_document], strategy=strategy
             )
-            
+
             # Verify each strategy produces chunks
             self.assertGreater(len(chunks), 0, f"{name} chunking should create chunks")
-            self.assertLess(len(chunks), 50, f"{name} chunking should not create excessive chunks")
-            
+            self.assertLess(
+                len(chunks), 50, f"{name} chunking should not create excessive chunks"
+            )
+
             # Verify chunk quality
             for i, chunk in enumerate(chunks):
                 self.assertIn("content", chunk, f"{name} chunk {i} should have content")
-                self.assertNotEqual(chunk["content"].strip(), "", f"{name} chunk {i} should not be empty")
+                self.assertNotEqual(
+                    chunk["content"].strip(),
+                    "",
+                    f"{name} chunk {i} should not be empty",
+                )
                 self.assertIn("url", chunk, f"{name} chunk {i} should have url")
-            
+
             # Store results for comparison
             strategy_results[name] = chunks
-        
+
         # Verify strategies produce different results (implementation-dependent)
         chunk_counts = [len(chunks) for chunks in strategy_results.values()]
-        self.assertGreater(max(chunk_counts), 0, "At least one strategy should produce chunks")
-        
+        self.assertGreater(
+            max(chunk_counts), 0, "At least one strategy should produce chunks"
+        )
+
         # Verify content preservation across strategies
         for strategy_name, chunks in strategy_results.items():
             combined_content = " ".join(chunk["content"] for chunk in chunks)
-            self.assertIn("Test Document", combined_content, 
-                         f"{strategy_name} should preserve document title")
-            self.assertIn("RAG", combined_content, 
-                         f"{strategy_name} should preserve key terms")
+            self.assertIn(
+                "Test Document",
+                combined_content,
+                f"{strategy_name} should preserve document title",
+            )
+            self.assertIn(
+                "RAG", combined_content, f"{strategy_name} should preserve key terms"
+            )

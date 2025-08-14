@@ -1,8 +1,8 @@
 """Test utilities for RAGnificent."""
 
 from .performance_testing import (
+    PerformanceBudgets,
     PerformanceError,
-    PerformanceBudgets, 
     TimingCategories,
     assert_critical_timing,
     assert_immediate_operation,
@@ -17,7 +17,7 @@ from .performance_testing import (
 __all__ = [
     "PerformanceError",
     "PerformanceBudgets",
-    "TimingCategories", 
+    "TimingCategories",
     "assert_critical_timing",
     "assert_immediate_operation",
     "assert_performance_budget",

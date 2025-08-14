@@ -39,7 +39,7 @@ except ImportError:
 
 
 class RequestCache(StatsMixin):
-    """Cache for HTTP requests with TTL, compression, and monitoring."""
+    """HTTP request cache with TTL and compression."""
 
     def __init__(
         self,
@@ -53,20 +53,6 @@ class RequestCache(StatsMixin):
         diskcache_size_limit: int = 2**30,  # 1GB default
         joblib_compress: bool = True,
     ):
-        """
-        Initialize the request cache.
-
-        Args:
-            cache_dir: Directory to store cached responses
-            max_age: Maximum age of cached responses in seconds (default: 1 hour)
-            max_memory_items: Maximum number of items to keep in memory cache
-            max_memory_size_mb: Maximum size of memory cache in MB
-            compression_threshold: Minimum size in bytes for compressing content
-            enable_stats: Whether to collect cache statistics
-            cache_backend: Backend to use ("auto", "diskcache", "joblib", "filesystem")
-            diskcache_size_limit: Maximum size for diskcache backend
-            joblib_compress: Enable compression for joblib backend
-        """
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.max_age = max_age
@@ -75,11 +61,9 @@ class RequestCache(StatsMixin):
         self.compression_threshold = compression_threshold
         super().__init__(enable_stats=enable_stats)
 
-        # Determine cache backend
         self.cache_backend = self._select_cache_backend(cache_backend)
         self._init_cache_backend(diskcache_size_limit, joblib_compress)
 
-        # Memory cache for all backends
         self.memory_cache: Dict[str, Tuple[str, float, Optional[int], bool]] = {}
         self.current_memory_usage = 0  # Approximate memory usage in bytes
 
@@ -104,7 +88,6 @@ class RequestCache(StatsMixin):
         self._load_ttl_patterns()
 
     def _select_cache_backend(self, backend: str) -> str:
-        """Select the best available cache backend."""
         if backend == "auto":
             if DISKCACHE_AVAILABLE:
                 return "diskcache"
@@ -120,7 +103,6 @@ class RequestCache(StatsMixin):
     def _init_cache_backend(
         self, diskcache_size_limit: int, joblib_compress: bool
     ) -> None:
-        """Initialize the selected cache backend."""
         if self.cache_backend == "diskcache":
             self.disk_cache = diskcache.Cache(
                 str(self.cache_dir / "diskcache"),
@@ -145,7 +127,6 @@ class RequestCache(StatsMixin):
             logger.info("Using filesystem cache backend")
 
     def _load_ttl_patterns(self) -> None:
-        """Load TTL patterns from metadata file."""
         ttl_file = self.metadata_dir / "ttl_patterns.json"
         if ttl_file.exists():
             try:
@@ -223,21 +204,12 @@ class RequestCache(StatsMixin):
         return encoded, False
 
     def _decompress_content(self, data: bytes, is_compressed: bool) -> str:
-        """Decompress content if it was compressed."""
         if is_compressed:
             return gzip.decompress(data).decode("utf-8")
         return data.decode("utf-8")
 
     def get(self, url: str) -> Optional[str]:
-        """
-        Get a cached response for a URL if it exists and is not expired.
-
-        Args:
-            url: The URL to get from cache
-
-        Returns:
-            The cached content or None if not in cache or expired
-        """
+        """Get cached response for URL if it exists and is not expired."""
         if self.enable_stats:
             for pattern, _ in self.ttl_patterns:
                 if pattern.search(url):
@@ -246,7 +218,6 @@ class RequestCache(StatsMixin):
         url_ttl = self._get_ttl_for_url(url) or self.max_age
         current_time = time.time()
 
-        # First check memory cache
         if url in self.memory_cache:
             content, timestamp, ttl, is_compressed = self.memory_cache[url]
             effective_ttl = ttl or url_ttl
@@ -261,27 +232,22 @@ class RequestCache(StatsMixin):
                     if is_compressed
                     else content
                 )
-            # Remove expired item from memory cache
             del self.memory_cache[url]
             logger.debug(f"Memory cache expired for {url}")
 
-        # Check backend cache
         cached_content = self._get_from_backend(url, url_ttl, current_time)
         if cached_content is not None:
             if self.enable_stats:
                 self.stats["hits"] += 1
                 self.stats["disk_hits"] += 1
 
-            # Cache in memory for faster access
             self._add_to_memory_cache(url, cached_content, current_time, url_ttl)
             return cached_content
 
-        # Legacy filesystem check for backward compatibility
         cache_path = self._get_cache_path(url)
         metadata_path = self._get_metadata_path(url)
 
         if cache_path.exists():
-            # Check metadata for TTL if available
             cached_ttl = None
             is_compressed = False
 
@@ -296,7 +262,6 @@ class RequestCache(StatsMixin):
 
             effective_ttl = cached_ttl or url_ttl
 
-            # Check if cache is expired
             if current_time - cache_path.stat().st_mtime <= effective_ttl:
                 try:
                     if is_compressed:
@@ -307,7 +272,6 @@ class RequestCache(StatsMixin):
                         with open(cache_path, "r", encoding="utf-8") as f:
                             content = f.read()
 
-                    # Add to memory cache
                     if is_compressed:
                         self.memory_cache[url] = (
                             compressed_data,
@@ -334,7 +298,6 @@ class RequestCache(StatsMixin):
 
                     logger.debug(f"Cache read error details: {traceback.format_exc()}")
 
-            # Remove expired cache files
             try:
                 cache_path.unlink(missing_ok=True)
                 metadata_path.unlink(missing_ok=True)
@@ -350,7 +313,6 @@ class RequestCache(StatsMixin):
     def _get_from_backend(
         self, url: str, url_ttl: int, current_time: float
     ) -> Optional[str]:
-        """Get content from the configured backend cache."""
         cache_key = self._get_cache_key(url)
 
         if self.cache_backend == "diskcache":
@@ -361,7 +323,6 @@ class RequestCache(StatsMixin):
 
                     if current_time - timestamp <= effective_ttl:
                         return content
-                    # Remove expired item
                     del self.disk_cache[cache_key]
             except Exception as e:
                 logger.warning(f"Error accessing diskcache: {e}")
@@ -436,35 +397,27 @@ class RequestCache(StatsMixin):
 
         compressed_data, is_compressed = self._compress_content(content)
 
-        # Calculate the size of the new content (compressed or not)
         content_size = len(compressed_data)
 
-        # Check if the URL is already in the memory cache
         if url in self.memory_cache:
             old_content, _, _, old_compressed = self.memory_cache[url]
             old_size = len(old_content)
-            # Adjust memory usage
             self.current_memory_usage = (
                 self.current_memory_usage - old_size + content_size
             )
         else:
-            # Add the new content size to the current usage
             self.current_memory_usage += content_size
 
-            # Check if we need to make room in the memory cache
             self._check_memory_limits()
 
-        # Store in backend cache
         self._set_to_backend(url, content, ttl)
 
-        # Update memory cache with compressed data if applicable
         current_time = time.time()
         if is_compressed:
             self.memory_cache[url] = (compressed_data, current_time, ttl, True)
         else:
             self.memory_cache[url] = (content, current_time, ttl, False)
 
-        # Update disk cache
         cache_path = self._get_cache_path(url)
         metadata_path = self._get_metadata_path(url)
 
@@ -490,27 +443,20 @@ class RequestCache(StatsMixin):
             logger.warning(f"Failed to save response to cache: {e}")
 
     def _check_memory_limits(self) -> None:
-        """Check if memory limits are exceeded and evict items if necessary."""
-        # Check item count limit
         if len(self.memory_cache) >= self.max_memory_items:
             self._evict_lru_items(len(self.memory_cache) - self.max_memory_items + 1)
 
-        # Check memory size limit
         max_bytes = self.max_memory_size_mb * 1024 * 1024
         if self.current_memory_usage > max_bytes:
-            # Calculate how much we need to evict
             excess_bytes = self.current_memory_usage - max_bytes
             self._evict_bytes(excess_bytes)
 
     def _evict_lru_items(self, count: int) -> None:
-        """Evict least recently used items from the memory cache."""
         if not self.memory_cache:
             return
 
-        # Sort by timestamp (second element of the tuple)
         items = sorted(self.memory_cache.items(), key=lambda x: x[1][1])
 
-        # Evict the oldest items
         evicted = 0
         for i in range(min(count, len(items))):
             url, (content, _, _, _) = items[i]
@@ -525,11 +471,9 @@ class RequestCache(StatsMixin):
         logger.debug(f"Evicted {evicted} items from memory cache")
 
     def _evict_bytes(self, bytes_to_evict: int) -> None:
-        """Evict items from memory cache until the required bytes are freed."""
         if not self.memory_cache:
             return
 
-        # Sort by timestamp (second element of the tuple)
         items = sorted(self.memory_cache.items(), key=lambda x: x[1][1])
 
         bytes_evicted = 0
@@ -556,16 +500,7 @@ class RequestCache(StatsMixin):
     def clear(
         self, max_age: Optional[int] = None, pattern: Optional[str] = None
     ) -> int:
-        """
-        Clear expired cache entries or entries matching a pattern.
-
-        Args:
-            max_age: Maximum age in seconds (defaults to instance max_age)
-            pattern: Optional regex pattern to match URLs for selective clearing
-
-        Returns:
-            Number of cache entries removed
-        """
+        """Clear expired cache entries or entries matching a pattern."""
         if max_age is None:
             max_age = self.max_age
 
@@ -577,7 +512,6 @@ class RequestCache(StatsMixin):
                 logger.error(f"Invalid regex pattern '{pattern}': {e}")
                 return 0
 
-        # Clear memory cache
         current_time = time.time()
         expired_keys = []
 

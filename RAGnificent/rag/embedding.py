@@ -29,7 +29,6 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-# Load environment variables for API keys
 load_dotenv()
 
 
@@ -52,48 +51,27 @@ class EmbeddingAPIError(EmbeddingError):
 
 
 def get_embedding_cache_path(model_name: str, text_hash: str) -> Path:
-    """
-    Get path for cached embeddings
-
-    Args:
-        model_name: Name of the embedding model
-        text_hash: Hash of the text content
-
-    Returns:
-        Path to the cache file
-    """
+    """Get path for cached embeddings."""
     import re
 
     config = get_config()
     cache_dir = config.embedding.cache_dir
 
-    # Sanitize model name to prevent path traversal
     safe_model_name = re.sub(r"[^\w\-_.]", "_", model_name)
     safe_model_name = safe_model_name.replace("..", "_")
     safe_model_name = safe_model_name.strip(".") or "default_model"
 
-    # Create model-specific cache directory safely
     model_cache_dir = cache_dir / safe_model_name
     os.makedirs(model_cache_dir, exist_ok=True)
 
-    # Validate that text_hash is safe (should be hex only)
     if not re.match(r"^[a-f0-9]+$", text_hash):
         raise ValueError(f"Invalid text hash format: {text_hash}")
 
-    # Return path to specific cache file
     return model_cache_dir / f"{text_hash}.npy"
 
 
 def compute_text_hash(text: str) -> str:
-    """
-    Compute deterministic hash for text content
-
-    Args:
-        text: Text to hash
-
-    Returns:
-        Hash string
-    """
+    """Compute deterministic hash for text content."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
@@ -126,17 +104,7 @@ def get_cached_embedding(model_name: str, text: str) -> Optional[np.ndarray]:
 
 
 def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -> bool:
-    """
-    Save embedding to cache
-
-    Args:
-        model_name: Name of the embedding model
-        text: Text content
-        embedding: The embedding vector
-
-    Returns:
-        True if saved successfully, False otherwise
-    """
+    """Save embedding to cache."""
     config = get_config()
 
     if not config.embedding.use_cache:
@@ -154,15 +122,9 @@ def save_embedding_to_cache(model_name: str, text: str, embedding: np.ndarray) -
 
 
 class SentenceTransformerEmbedding:
-    """Embedding generation using SentenceTransformers"""
+    """Embedding generation using SentenceTransformers."""
 
     def __init__(self, model_name: Optional[str] = None):
-        """
-        Initialize SentenceTransformer embedding model.
-
-        Args:
-            model_name: Model name to use
-        """
         try:
             from sentence_transformers import SentenceTransformer
 
@@ -191,35 +153,22 @@ class SentenceTransformerEmbedding:
             ) from e
 
     def embed(self, text: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
-        """
-        Generate embeddings for text input.
-
-        Args:
-            text: Single text string or list of text strings
-
-        Returns:
-            Embedding vector(s)
-        """
+        """Generate embeddings for text input."""
         try:
             if isinstance(text, str):
-                # Check cache for single text
                 cached = get_cached_embedding(self.model_name, text)
                 if cached is not None:
                     return cached
 
-                # Generate new embedding
                 embedding = self.model.encode(text, normalize_embeddings=self.normalize)
 
-                # Cache the result
                 save_embedding_to_cache(self.model_name, text, embedding)
                 return embedding
 
-            # For lists, check cache for each text
             embeddings = []
             texts_to_embed = []
             text_indices = []
 
-            # Check cache first
             for i, t in enumerate(text):
                 cached = get_cached_embedding(self.model_name, t)
                 if cached is not None:
@@ -228,11 +177,9 @@ class SentenceTransformerEmbedding:
                     texts_to_embed.append(t)
                     text_indices.append(i)
 
-            # If all were cached, return immediately
             if not texts_to_embed:
                 return embeddings
 
-            # Generate new embeddings in batches
             new_embeddings = []
             for i in range(0, len(texts_to_embed), self.batch_size):
                 batch_texts = texts_to_embed[i : i + self.batch_size]
@@ -243,16 +190,13 @@ class SentenceTransformerEmbedding:
                 )
                 new_embeddings.extend(batch_embeddings)
 
-            # Cache new embeddings
             for i, embedding in enumerate(new_embeddings):
                 save_embedding_to_cache(self.model_name, texts_to_embed[i], embedding)
 
-            # Merge cached and new embeddings
             result = [None] * len(text)
             for i, embed in zip(text_indices, new_embeddings, strict=False):
                 result[i] = embed
-            
-            # Fill remaining None slots with new embeddings
+
             embedding_iter = iter(embeddings)
             for i in range(len(result)):
                 if result[i] is None:
@@ -814,7 +758,9 @@ class EmbeddingService:
             logger.error(f"Error in batch embedding: {e}")
             return chunks  # Return original chunks without embeddings in case of error
 
-    def embed(self, texts: Union[str, List[str]]) -> Union[np.ndarray, List[np.ndarray]]:
+    def embed(
+        self, texts: Union[str, List[str]]
+    ) -> Union[np.ndarray, List[np.ndarray]]:
         """
         Generate embeddings for text(s) - compatibility method for tests.
 

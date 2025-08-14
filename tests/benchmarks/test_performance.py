@@ -277,7 +277,7 @@ def test_cache_performance():
             expected_content = f"Content for page {i}" * 100
             assert content == expected_content, f"Cache content mismatch for URL {i}"
             cache_hit_count += 1
-    
+
     assert cache_hit_count == 100, f"Should have 100 cache hits, got {cache_hit_count}"
 
     # Verify cache misses behave correctly
@@ -288,8 +288,10 @@ def test_cache_performance():
             content = cache.get(url)
             assert content is None, f"Cache should miss for uncached URL {i}"
             cache_miss_count += 1
-    
-    assert cache_miss_count == 100, f"Should have 100 cache misses, got {cache_miss_count}"
+
+    assert (
+        cache_miss_count == 100
+    ), f"Should have 100 cache misses, got {cache_miss_count}"
 
     with PerformanceTimer("Cache with compression"):
         compressed_cache = RequestCache(

@@ -54,18 +54,6 @@ class RequestThrottler(StatsMixin):
         retry_delay: float = 2.0,
         enable_stats: bool = True,
     ):
-        """
-        Initialize the throttler.
-
-        Args:
-            requests_per_second: Default maximum number of requests per second
-            domain_specific_limits: Dict mapping domains to their rate limits
-            max_workers: Maximum number of parallel workers
-            adaptive_throttling: Whether to adjust rate limits based on responses
-            max_retries: Maximum number of retries for failed requests
-            retry_delay: Base delay between retries (will be exponentially increased)
-            enable_stats: Whether to collect throttling statistics
-        """
         self.default_rate_limit = max(0.1, requests_per_second)
         self.min_interval = 1.0 / self.default_rate_limit
         self.domain_limits = domain_specific_limits or {}
@@ -95,12 +83,7 @@ class RequestThrottler(StatsMixin):
         )
 
     def throttle(self, url: Optional[str] = None) -> None:
-        """
-        Wait if necessary to maintain the rate limit.
-
-        Args:
-            url: Optional URL to apply domain-specific rate limiting
-        """
+        """Wait if necessary to maintain the rate limit."""
         with self.lock:
             current_time = time.time()
 
@@ -152,15 +135,7 @@ class RequestThrottler(StatsMixin):
         response_time: Optional[float] = None,
         error: Optional[Exception] = None,
     ) -> None:
-        """
-        Release a request slot and update statistics.
-
-        Args:
-            url: URL that was requested
-            status_code: HTTP status code of the response
-            response_time: Time taken for the request in seconds
-            error: Exception if the request failed
-        """
+        """Release a request slot and update statistics."""
         with self.lock:
             self.active_requests = max(0, self.active_requests - 1)
 
@@ -177,7 +152,7 @@ class RequestThrottler(StatsMixin):
                         backoff_time = min(
                             60, self.retry_delay * (2 ** (stats.consecutive_errors - 1))
                         )
-                        backoff_time *= 1 + random.random()  # Add jitter
+                        backoff_time *= 1 + random.random()
                         stats.backoff_until = time.time() + backoff_time
                         logger.warning(
                             f"Domain {domain} experiencing errors ({stats.consecutive_errors} consecutive). "
@@ -199,18 +174,7 @@ class RequestThrottler(StatsMixin):
                             self._adjust_rate_limit(domain)
 
     def execute(self, func: Callable, url: str, *args, **kwargs) -> Any:
-        """
-        Execute a function with throttling and retry logic.
-
-        Args:
-            func: Function to execute
-            url: URL being requested
-            *args: Arguments to pass to the function
-            **kwargs: Keyword arguments to pass to the function
-
-        Returns:
-            Result of the function
-        """
+        """Execute a function with throttling and retry logic."""
         domain = self._extract_domain(url)
         retries = 0
 
@@ -283,7 +247,7 @@ class RequestThrottler(StatsMixin):
         """Extract domain from URL."""
         try:
             netloc = urlparse(url).netloc
-            return netloc if netloc else "unknown"
+            return netloc or "unknown"
         except Exception:
             return "unknown"
 

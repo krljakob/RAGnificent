@@ -203,8 +203,12 @@ class TestScraperErrorHandling(unittest.TestCase):
                 )
                 # Verify content integrity when cache fails
                 self.assertIn("<html>", content, "Content should be valid HTML")
-                self.assertIn("<h1>Test</h1>", content, "Content should contain expected elements")
-                self.assertIn("<p>Content</p>", content, "Content should contain expected text")
+                self.assertIn(
+                    "<h1>Test</h1>", content, "Content should contain expected elements"
+                )
+                self.assertIn(
+                    "<p>Content</p>", content, "Content should contain expected text"
+                )
         except OSError:
             # The current implementation doesn't handle cache errors properly
             # We'll skip this test with a note about it
@@ -360,27 +364,28 @@ class TestScraperErrorHandling(unittest.TestCase):
             2,
             "Memory cache should enforce max_memory_items limit",
         )
-        
+
         # Verify cache eviction actually occurred
         self.assertGreater(
-            len(test_urls), len(small_cache.memory_cache),
-            "Cache should have evicted items when limits exceeded"
+            len(test_urls),
+            len(small_cache.memory_cache),
+            "Cache should have evicted items when limits exceeded",
         )
-        
+
         # Verify memory usage tracking is functional
         self.assertGreater(
-            small_cache.current_memory_usage, 0,
-            "Memory usage tracking should be active"
+            small_cache.current_memory_usage,
+            0,
+            "Memory usage tracking should be active",
         )
-        
+
         # Verify most recently added items are retained (LRU behavior)
         cached_keys = set(small_cache.memory_cache.keys())
         # Should contain the last 2 URLs added (stored as URLs, not hashed keys)
         expected_keys = set(test_urls[-2:])
         remaining_keys = expected_keys.intersection(cached_keys)
         self.assertGreater(
-            len(remaining_keys), 0,
-            "Cache should retain recently accessed items"
+            len(remaining_keys), 0, "Cache should retain recently accessed items"
         )
 
 

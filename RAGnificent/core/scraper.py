@@ -39,7 +39,7 @@ logger = logging.getLogger("markdown_scraper")
 
 
 class MarkdownScraper:
-    """Scrapes websites and converts content to markdown, JSON, or XML with chunking support."""
+    """Web scraper with multi-format output and chunking support."""
 
     # Precompiled regex patterns for better performance
     _whitespace_pattern = re.compile(r"\s+")
@@ -58,19 +58,6 @@ class MarkdownScraper:
         max_workers: int = 10,
         adaptive_throttling: bool = True,
     ) -> None:
-        """
-        Args:
-            requests_per_second: Maximum number of requests per second
-            timeout: Request timeout in seconds
-            max_retries: Maximum number of retry attempts for failed requests
-            chunk_size: Maximum size of content chunks in characters
-            chunk_overlap: Overlap between consecutive chunks in characters
-            cache_enabled: Whether to enable request caching
-            cache_max_age: Maximum age of cached responses in seconds
-            domain_specific_limits: Dict mapping domains to their rate limits
-            max_workers: Maximum number of parallel workers
-            adaptive_throttling: Whether to adjust rate limits based on responses
-        """
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -78,7 +65,6 @@ class MarkdownScraper:
             }
         )
 
-        # Initialize enhanced throttler with domain-specific limits and adaptive throttling
         self.throttler = RequestThrottler(
             requests_per_second=requests_per_second,
             domain_specific_limits=domain_specific_limits,
@@ -95,13 +81,11 @@ class MarkdownScraper:
         self.requests_per_second = requests_per_second
         self.max_workers = max_workers
 
-        # Initialize request cache
         self.cache_enabled = cache_enabled
         self.request_cache = (
             RequestCache(max_age=cache_max_age) if cache_enabled else None
         )
 
-        # Try to use the Rust implementation if available
         try:
             from ragnificent_rs import OutputFormat, convert_html
 
@@ -111,7 +95,6 @@ class MarkdownScraper:
         except ImportError:
             self.rust_available = False
 
-            # Define fallback OutputFormat enum-like class
             class FallbackOutputFormat:
                 MARKDOWN = "markdown"
                 JSON = "json"
@@ -119,10 +102,7 @@ class MarkdownScraper:
 
             self.OutputFormat = FallbackOutputFormat
 
-            # Define fallback convert_html function
             def fallback_convert_html(html_content, url, output_format):
-                # This is a simple implementation that always converts to markdown
-                # For other formats, the _convert_content method handles conversion
                 from markdownify import markdownify
 
                 return markdownify(html_content, heading_style="ATX")
@@ -130,20 +110,7 @@ class MarkdownScraper:
             self.convert_html = fallback_convert_html
 
     def scrape_website(self, url: str, skip_cache: bool = False) -> str:
-        """
-        Scrape a website with retry logic, rate limiting, and caching.
-
-        Args:
-            url: The URL to scrape
-            skip_cache: Whether to skip the cache and force a new request
-
-        Returns:
-            The HTML content as a string
-
-        Raises:
-            requests.exceptions.RequestException: If the request fails after retries
-            ValueError: If the URL is invalid
-        """
+        """Scrape a website with retry logic, rate limiting, and caching."""
         from core.security import redact_sensitive_data
         from core.validators import sanitize_url, validate_url
 
@@ -166,21 +133,17 @@ class MarkdownScraper:
         except ImportError:
             psutil_available = False
 
-        # Check cache first
         cached_content = self._check_cache(url, skip_cache)
         if cached_content is not None:
             return cached_content
 
         logger.info(f"Attempting to scrape the website: {redact_sensitive_data(url)}")
 
-        # Start performance monitoring
         performance_monitor = self._start_performance_monitoring(psutil_available)
 
         try:
-            # Attempt to fetch content with retries
             html_content = self._fetch_with_retries(url)
 
-            # Cache the response if enabled
             self._cache_response(url, html_content)
 
             return html_content
@@ -188,11 +151,9 @@ class MarkdownScraper:
             logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {str(e)}")
             raise
         finally:
-            # Stop performance monitoring and log results
             self._log_performance_metrics(url, performance_monitor, psutil_available)
 
     def _check_cache(self, url: str, skip_cache: bool) -> Optional[str]:
-        """Check if content is available in cache."""
         if self.cache_enabled and not skip_cache and self.request_cache is not None:
             cached_content = self.request_cache.get(url)
             if cached_content is not None:
@@ -201,7 +162,6 @@ class MarkdownScraper:
         return None
 
     def _start_performance_monitoring(self, psutil_available: bool):
-        """Start monitoring performance metrics."""
         start_time = time.time()
         tracemalloc.start()
 
@@ -210,7 +170,6 @@ class MarkdownScraper:
                 "start_time": start_time,
                 "process": None,
             }
-        # Using the psutil module that was already imported in scrape_website
         import psutil
 
         process = psutil.Process()
@@ -220,7 +179,6 @@ class MarkdownScraper:
         }
 
     def _log_performance_metrics(self, url: str, monitor, psutil_available: bool):
-        """Log performance metrics for the request."""
         end_time = time.time()
         execution_time = end_time - monitor["start_time"]
         memory_usage = tracemalloc.get_traced_memory()
@@ -237,12 +195,10 @@ class MarkdownScraper:
         tracemalloc.stop()
 
     def _cache_response(self, url: str, content: str) -> None:
-        """Cache the response if caching is enabled."""
         if self.cache_enabled and self.request_cache is not None:
             self.request_cache.set(url, content)
 
     def _fetch_with_retries(self, url: str) -> str:
-        """Fetch URL content with retry logic."""
         for attempt in range(self.max_retries):
             try:
                 self.throttler.throttle()
@@ -286,8 +242,6 @@ class MarkdownScraper:
                 logger.error(f"An unexpected error occurred: {err}")
                 raise
 
-        # This line should never be reached due to the raise statements in _handle_request_error,
-        # but adding it to satisfy the linter's "missing return statement" warning
         raise requests.exceptions.RequestException(
             f"Failed to retrieve {url} after {self.max_retries} attempts"
         )
@@ -295,7 +249,6 @@ class MarkdownScraper:
     def _handle_request_error(
         self, url: str, attempt: int, error, warning_msg: str, error_msg: str
     ) -> None:
-        """Handle request errors with appropriate logging and retries."""
         logger.warning(warning_msg)
 
         # If this is the last attempt, log error and raise
@@ -411,7 +364,6 @@ class MarkdownScraper:
         logger.info("Converting HTML content to Markdown.")
         soup = BeautifulSoup(html_content, "html.parser")
 
-        # Extract base URL for resolving relative links
         base_url_str = url
         base_tag = soup.find("base")
         if (
@@ -425,16 +377,12 @@ class MarkdownScraper:
                 base_href = base_href[0] if base_href else ""
             base_url_str = base_href or base_url_str
 
-        # Ensure we have a string for base_url
         base_url = str(base_url_str) if base_url_str is not None else ""
 
-        # Extract page title
         title = self._get_text_from_element(soup.title) if soup.title else "No Title"
 
-        # Initialize markdown content with the title
         markdown_content = f"# {title}\n\n"
 
-        # Get the main content area (try common content containers)
         main_content = (
             soup.find("main")
             or soup.find("article")
@@ -444,8 +392,6 @@ class MarkdownScraper:
         )
 
         if main_content and hasattr(main_content, "find_all"):
-            # Process each element in the main content
-            # Make sure we only process Tag objects
             for element in [
                 e
                 for e in main_content.find_all(
@@ -474,15 +420,8 @@ class MarkdownScraper:
         return markdown_content.strip()
 
     def save_content(self, content: str, output_file: str) -> None:
-        """
-        Save content to a file.
-
-        Args:
-            content: The content to save (markdown, JSON, or XML)
-            output_file: The output file path
-        """
+        """Save content to a file."""
         try:
-            # Create directories if they don't exist
             output_path = Path(output_file)
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -494,26 +433,11 @@ class MarkdownScraper:
             raise
 
     def save_markdown(self, markdown_content: str, output_file: str) -> None:
-        """
-        Save markdown content to a file (legacy method).
-
-        Args:
-            markdown_content: The markdown content to save
-            output_file: The output file path
-        """
+        """Legacy method for saving markdown content."""
         self.save_content(markdown_content, output_file)
 
     def create_chunks(self, markdown_content: str, source_url: str):
-        """
-        Create chunks from the markdown content using the chunk_utils module.
-
-        Args:
-            markdown_content: The markdown content to chunk
-            source_url: The source URL of the content
-
-        Returns:
-            List of chunks for RAG
-        """
+        """Create semantic chunks from markdown content."""
         return create_semantic_chunks(
             content=markdown_content,
             source_url=source_url,
@@ -522,26 +446,13 @@ class MarkdownScraper:
         )
 
     def save_chunks(self, chunks, output_dir, output_format="jsonl"):
-        """
-        Save content chunks using the chunk_utils module.
-
-        Args:
-            chunks: The chunks to save
-            output_dir: Directory to save chunks to
-            output_format: Format to save chunks (json or jsonl)
-        """
+        """Save content chunks to files."""
         self.chunker.save_chunks(chunks, output_dir, output_format)
 
     def _convert_content(
         self, html_content: str, url: str, output_format: str
     ) -> tuple:
-        """
-        Convert HTML content to the specified output format.
-
-        Args:
-            html_content: The HTML content to convert
-            url: The source URL for resolving relative links
-            output_format: The output format (markdown, json, or xml)
+        """Convert HTML content to the specified output format.
 
         Returns:
             Tuple of (converted_content, markdown_content) where:

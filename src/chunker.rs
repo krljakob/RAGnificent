@@ -38,13 +38,17 @@ pub fn create_semantic_chunks(
 ) -> Result<Vec<String>, ChunkerError> {
     // Validate input parameters
     if chunk_size == 0 {
-        return Err(ChunkerError::Other("chunk_size must be greater than 0".to_string()));
+        return Err(ChunkerError::Other(
+            "chunk_size must be greater than 0".to_string(),
+        ));
     }
-    
+
     if chunk_overlap >= chunk_size {
-        return Err(ChunkerError::Other("chunk_overlap must be less than chunk_size".to_string()));
+        return Err(ChunkerError::Other(
+            "chunk_overlap must be less than chunk_size".to_string(),
+        ));
     }
-    
+
     let heading_regex = Regex::new(r"^(#{1,6})\s+(.+)$")?;
     let chunks = semantic_chunking(markdown, chunk_size, chunk_overlap, &heading_regex)?;
 
