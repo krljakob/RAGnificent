@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import urlparse
 
-# Precompiled regex for markdown headers (up to 3 leading spaces, 1-6 #, at least one space, then text)
-HEADER_RE = re.compile(r"^ {0,3}(#{1,6}) +(.*)$")
+# NOTE: Header parsing is implemented manually in `_parse_markdown_sections` for flexibility
+# If future refactors prefer a regex approach, introduce a tested pattern there.
 
 
 @dataclass

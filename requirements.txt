@@ -33,7 +33,7 @@ scikit-learn>=1.6.1
 # Vector databases and embeddings
 qdrant-client>=1.14.2
 openai>=1.78.0
-sentence-transformers>=3.0.0
+sentence-transformers>=4.1.0
 
 # Web and API
 fastapi>=0.115.12

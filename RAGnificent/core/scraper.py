@@ -19,23 +19,13 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup, Tag
 
-# Use proper relative imports for internal modules
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.throttle import RequestThrottler
+from RAGnificent.core.logging import get_logger
 from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
 from RAGnificent.utils.sitemap_utils import SitemapParser
 
-# Configure logging with more detailed formatting
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("markdown_scraper.log", mode="a"),
-    ],
-)
-
-logger = logging.getLogger("markdown_scraper")
+logger = get_logger(__name__)
 
 
 class MarkdownScraper:
@@ -87,7 +77,7 @@ class MarkdownScraper:
         )
 
         try:
-            from ragnificent_rs import OutputFormat, convert_html
+            from RAGnificent.ragnificent_rs import OutputFormat, convert_html
 
             self.rust_available = True
             self.OutputFormat = OutputFormat
@@ -111,8 +101,8 @@ class MarkdownScraper:
 
     def scrape_website(self, url: str, skip_cache: bool = False) -> str:
         """Scrape a website with retry logic, rate limiting, and caching."""
-        from core.security import redact_sensitive_data
-        from core.validators import sanitize_url, validate_url
+        from RAGnificent.core.security import redact_sensitive_data
+        from RAGnificent.core.validators import sanitize_url, validate_url
 
         if not validate_url(url):
             error_msg = f"Invalid URL format: {redact_sensitive_data(url)}"

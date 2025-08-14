@@ -160,7 +160,8 @@ def sanitize_headers(headers: Dict[str, str]) -> Dict[str, str]:
     if not headers:
         return {}
 
-    sanitized = headers.copy()
+    # Build a mapping of lowercase -> original key to preserve original casing
+    original_keys: Dict[str, str] = {k.lower(): k for k in headers.keys()}
 
     sensitive_headers = {
         "authorization",
@@ -171,9 +172,12 @@ def sanitize_headers(headers: Dict[str, str]) -> Dict[str, str]:
         "proxy-authorization",
     }
 
-    for header in sensitive_headers:
-        if header.lower() in sanitized:
-            sanitized[header] = "[REDACTED]"
+    sanitized: Dict[str, str] = headers.copy()
+
+    for sensitive in sensitive_headers:
+        if sensitive in original_keys:
+            original_key = original_keys[sensitive]
+            sanitized[original_key] = "[REDACTED]"
 
     return sanitized
 

@@ -167,9 +167,9 @@ This project includes a comprehensive `justfile` for common development tasks:
 - **Python 3.12+**: Required Python version
 - **sentence-transformers>=4.1.0**: For text embeddings
 - **torch>=2.7.0**: PyTorch for ML operations
-- **transformers==4.51.3**: Hugging Face transformers
+- **transformers==4.53.0**: Hugging Face transformers
 - **sentry-sdk[fastapi]>=2.29.1**: Error tracking and monitoring
-- **bleach==6.2.0**: HTML sanitization for security
+- **bleach>=6.2.0**: HTML sanitization for security
 - **qdrant-client>=1.4.0**: Vector database client
 - **beautifulsoup4**: HTML parsing
 - **requests**: HTTP client for web scraping

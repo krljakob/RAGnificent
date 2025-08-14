@@ -262,28 +262,26 @@ class TestSanitizeHeaders:
         assert sanitized["cookie"] == "[REDACTED]"
         assert sanitized["set-cookie"] == "[REDACTED]"
 
-    def test_case_sensitive_headers_behavior(self):
-        """Test the actual case-sensitive behavior of header sanitization."""
-        # Test that mixed case headers are NOT sanitized due to implementation bug
+    def test_case_insensitive_header_sanitization(self):
+        """Mixed-case sensitive headers should be redacted case-insensitively."""
         mixed_case_headers = {
             "Authorization": "Bearer token",
             "X-API-KEY": "secret",
         }
         sanitized_mixed = sanitize_headers(mixed_case_headers)
 
-        # The function has a bug: it checks if header.lower() is in sanitized dict
-        # but sanitized dict has original case keys, so mixed case headers are not redacted
-        assert sanitized_mixed["Authorization"] == "Bearer token"
-        assert sanitized_mixed["X-API-KEY"] == "secret"
+        # Now both should be redacted preserving original casing
+        assert sanitized_mixed["Authorization"] == "[REDACTED]"
+        assert sanitized_mixed["X-API-KEY"] == "[REDACTED]"
 
-        # Test that lowercase headers ARE sanitized
+        # Test that lowercase headers are also sanitized
         lowercase_headers = {
             "authorization": "Bearer token",
             "x-api-key": "secret",
         }
         sanitized_lower = sanitize_headers(lowercase_headers)
 
-        # These should be redacted because keys exactly match the lowercase sensitive list
+        # These should be redacted as well
         assert sanitized_lower["authorization"] == "[REDACTED]"
         assert sanitized_lower["x-api-key"] == "[REDACTED]"
 
