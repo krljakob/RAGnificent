@@ -468,27 +468,206 @@ class MarkdownScraper:
 
             # Then convert to the requested format
             try:
-                # Try to use functions from ragnificent_rs for conversion
-                from ragnificent_rs import document_to_xml, parse_markdown_to_document
-
-                document = parse_markdown_to_document(markdown_content, url)
+                # Parse markdown to structured document
+                document = self._parse_markdown_to_document(markdown_content, url)
 
                 if output_format == "json":
                     # Using json that was already imported at the top level
                     content = json.dumps(document, indent=2)
                 elif output_format == "xml":
-                    content = document_to_xml(document)
+                    content = self._document_to_xml(document)
                 else:
                     # Fallback to markdown if format not supported
                     content = markdown_content
-            except ImportError:
+            except Exception as e:
                 # Fallback to markdown if conversion functions are not available
                 logger.warning(
-                    f"Could not convert to {output_format}, using markdown instead"
+                    f"Could not convert to {output_format}, using markdown instead. Error: {e}"
                 )
                 content = markdown_content
 
         return content, markdown_content
+
+    def _parse_markdown_to_document(self, markdown: str, base_url: str) -> Dict:
+        """Parse markdown to structured document for JSON/XML conversion."""
+        lines = markdown.split("\n")
+        document = {
+            "title": "No Title",
+            "base_url": base_url,
+            "headings": [],
+            "paragraphs": [],
+            "links": [],
+            "images": [],
+            "lists": [],
+            "code_blocks": [],
+            "blockquotes": [],
+        }
+
+        # Extract title (first h1)
+        for line in lines:
+            if line.startswith("# "):
+                document["title"] = line[2:].strip()
+                break
+
+        # Process other elements
+        current_block = []
+        in_code_block = False
+        code_lang = ""
+        in_list = False
+        current_list = []
+
+        for line in lines:
+            # Skip title line which we already processed
+            if line.strip() == f"# {document['title']}":
+                continue
+
+            # Handle headings
+            if line.startswith("#") and not in_code_block:
+                level = 0
+                while level < len(line) and line[level] == "#":
+                    level += 1
+                if level <= 6 and level < len(line) and line[level] == " ":
+                    document["headings"].append(
+                        {"level": level, "text": line[level + 1 :].strip()}
+                    )
+
+            # Handle code blocks
+            elif line.startswith("```") and not in_code_block:
+                in_code_block = True
+                code_lang = line[3:].strip()
+                current_block = []
+            elif line.startswith("```") and in_code_block:
+                in_code_block = False
+                document["code_blocks"].append(
+                    {"language": code_lang, "code": "\n".join(current_block)}
+                )
+                current_block = []
+
+            # Collect code block content
+            elif in_code_block:
+                current_block.append(line)
+
+            # Handle lists
+            elif (line.strip().startswith("- ") or line.strip().startswith("* ") or 
+                  (line.strip() and line.strip()[0].isdigit() and ". " in line.strip()[:4])) and not in_code_block:
+                if not in_list:
+                    in_list = True
+                    current_list = []
+                # Remove list marker
+                if line.strip().startswith("- ") or line.strip().startswith("* "):
+                    current_list.append(line.strip()[2:])
+                else:
+                    # Numbered list
+                    idx = line.strip().find(". ")
+                    current_list.append(line.strip()[idx+2:])
+            elif in_list and (not line.strip() or not (line.strip().startswith("- ") or line.strip().startswith("* "))):
+                # End of list
+                if current_list:
+                    document["lists"].append(current_list)
+                in_list = False
+                current_list = []
+
+            # Handle blockquotes
+            elif line.startswith(">") and not in_code_block:
+                document["blockquotes"].append(line[1:].strip())
+
+            # Handle paragraphs (very simplified)
+            elif line.strip() and not in_code_block and not in_list:
+                # Extract links
+                import re
+                link_pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
+                for match in re.finditer(link_pattern, line):
+                    document["links"].append({"text": match.group(1), "url": match.group(2)})
+                
+                # Extract images
+                img_pattern = r'!\[([^\]]*)\]\(([^\)]+)\)'
+                for match in re.finditer(img_pattern, line):
+                    document["images"].append({"alt": match.group(1), "url": match.group(2)})
+                
+                # Add as paragraph
+                document["paragraphs"].append(line.strip())
+
+        # Handle any remaining list items
+        if in_list and current_list:
+            document["lists"].append(current_list)
+
+        return document
+
+    def _document_to_xml(self, document: Dict) -> str:
+        """Convert document structure to XML."""
+        import xml.etree.ElementTree as ET
+        from xml.dom import minidom
+        
+        root = ET.Element("document")
+
+        # Add title
+        title = ET.SubElement(root, "title")
+        title.text = document["title"]
+
+        # Add base URL
+        base_url = ET.SubElement(root, "base_url")
+        base_url.text = document["base_url"]
+
+        # Add headings
+        if document["headings"]:
+            headings = ET.SubElement(root, "headings")
+            for h in document["headings"]:
+                heading = ET.SubElement(headings, "heading")
+                heading.set("level", str(h["level"]))
+                heading.text = h["text"]
+
+        # Add paragraphs
+        if document["paragraphs"]:
+            paragraphs = ET.SubElement(root, "paragraphs")
+            for p in document["paragraphs"]:
+                paragraph = ET.SubElement(paragraphs, "paragraph")
+                paragraph.text = p
+
+        # Add links
+        if document["links"]:
+            links = ET.SubElement(root, "links")
+            for l in document["links"]:
+                link = ET.SubElement(links, "link")
+                link.set("href", l["url"])
+                link.text = l["text"]
+
+        # Add images
+        if document["images"]:
+            images = ET.SubElement(root, "images")
+            for img in document["images"]:
+                image = ET.SubElement(images, "image")
+                image.set("src", img["url"])
+                image.set("alt", img["alt"])
+
+        # Add lists
+        if document["lists"]:
+            lists = ET.SubElement(root, "lists")
+            for lst in document["lists"]:
+                list_elem = ET.SubElement(lists, "list")
+                for item in lst:
+                    item_elem = ET.SubElement(list_elem, "item")
+                    item_elem.text = item
+
+        # Add code blocks
+        if document["code_blocks"]:
+            code_blocks = ET.SubElement(root, "code_blocks")
+            for cb in document["code_blocks"]:
+                code_block = ET.SubElement(code_blocks, "code_block")
+                if cb["language"]:
+                    code_block.set("language", cb["language"])
+                code_block.text = cb["code"]
+
+        # Add blockquotes
+        if document["blockquotes"]:
+            blockquotes = ET.SubElement(root, "blockquotes")
+            for bq in document["blockquotes"]:
+                blockquote = ET.SubElement(blockquotes, "blockquote")
+                blockquote.text = bq
+
+        # Convert to string with pretty formatting
+        rough_string = ET.tostring(root, encoding='utf-8')
+        reparsed = minidom.parseString(rough_string)
+        return reparsed.toprettyxml(indent="  ")
 
     def scrape_by_sitemap(
         self,
