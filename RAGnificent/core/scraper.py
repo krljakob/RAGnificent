@@ -20,8 +20,8 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 from RAGnificent.core.cache import RequestCache
-from RAGnificent.core.throttle import RequestThrottler
 from RAGnificent.core.logging import get_logger
+from RAGnificent.core.throttle import RequestThrottler
 from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
 from RAGnificent.utils.sitemap_utils import SitemapParser
 
@@ -548,8 +548,15 @@ class MarkdownScraper:
                 current_block.append(line)
 
             # Handle lists
-            elif (line.strip().startswith("- ") or line.strip().startswith("* ") or 
-                  (line.strip() and line.strip()[0].isdigit() and ". " in line.strip()[:4])) and not in_code_block:
+            elif (
+                line.strip().startswith("- ")
+                or line.strip().startswith("* ")
+                or (
+                    line.strip()
+                    and line.strip()[0].isdigit()
+                    and ". " in line.strip()[:4]
+                )
+            ) and not in_code_block:
                 if not in_list:
                     in_list = True
                     current_list = []
@@ -559,8 +566,11 @@ class MarkdownScraper:
                 else:
                     # Numbered list
                     idx = line.strip().find(". ")
-                    current_list.append(line.strip()[idx+2:])
-            elif in_list and (not line.strip() or not (line.strip().startswith("- ") or line.strip().startswith("* "))):
+                    current_list.append(line.strip()[idx + 2 :])
+            elif in_list and (
+                not line.strip()
+                or not (line.strip().startswith("- ") or line.strip().startswith("* "))
+            ):
                 # End of list
                 if current_list:
                     document["lists"].append(current_list)
@@ -575,15 +585,20 @@ class MarkdownScraper:
             elif line.strip() and not in_code_block and not in_list:
                 # Extract links
                 import re
-                link_pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
+
+                link_pattern = r"\[([^\]]+)\]\(([^\)]+)\)"
                 for match in re.finditer(link_pattern, line):
-                    document["links"].append({"text": match.group(1), "url": match.group(2)})
-                
+                    document["links"].append(
+                        {"text": match.group(1), "url": match.group(2)}
+                    )
+
                 # Extract images
-                img_pattern = r'!\[([^\]]*)\]\(([^\)]+)\)'
+                img_pattern = r"!\[([^\]]*)\]\(([^\)]+)\)"
                 for match in re.finditer(img_pattern, line):
-                    document["images"].append({"alt": match.group(1), "url": match.group(2)})
-                
+                    document["images"].append(
+                        {"alt": match.group(1), "url": match.group(2)}
+                    )
+
                 # Add as paragraph
                 document["paragraphs"].append(line.strip())
 
@@ -597,18 +612,15 @@ class MarkdownScraper:
         """Convert document structure to XML."""
         import xml.etree.ElementTree as ET
         from xml.dom import minidom
-        
+
         root = ET.Element("document")
 
-        # Add title
         title = ET.SubElement(root, "title")
         title.text = document["title"]
 
-        # Add base URL
         base_url = ET.SubElement(root, "base_url")
         base_url.text = document["base_url"]
 
-        # Add headings
         if document["headings"]:
             headings = ET.SubElement(root, "headings")
             for h in document["headings"]:
@@ -616,14 +628,12 @@ class MarkdownScraper:
                 heading.set("level", str(h["level"]))
                 heading.text = h["text"]
 
-        # Add paragraphs
         if document["paragraphs"]:
             paragraphs = ET.SubElement(root, "paragraphs")
             for p in document["paragraphs"]:
                 paragraph = ET.SubElement(paragraphs, "paragraph")
                 paragraph.text = p
 
-        # Add links
         if document["links"]:
             links = ET.SubElement(root, "links")
             for l in document["links"]:
@@ -631,7 +641,6 @@ class MarkdownScraper:
                 link.set("href", l["url"])
                 link.text = l["text"]
 
-        # Add images
         if document["images"]:
             images = ET.SubElement(root, "images")
             for img in document["images"]:
@@ -639,7 +648,6 @@ class MarkdownScraper:
                 image.set("src", img["url"])
                 image.set("alt", img["alt"])
 
-        # Add lists
         if document["lists"]:
             lists = ET.SubElement(root, "lists")
             for lst in document["lists"]:
@@ -648,7 +656,6 @@ class MarkdownScraper:
                     item_elem = ET.SubElement(list_elem, "item")
                     item_elem.text = item
 
-        # Add code blocks
         if document["code_blocks"]:
             code_blocks = ET.SubElement(root, "code_blocks")
             for cb in document["code_blocks"]:
@@ -657,15 +664,13 @@ class MarkdownScraper:
                     code_block.set("language", cb["language"])
                 code_block.text = cb["code"]
 
-        # Add blockquotes
         if document["blockquotes"]:
             blockquotes = ET.SubElement(root, "blockquotes")
             for bq in document["blockquotes"]:
                 blockquote = ET.SubElement(blockquotes, "blockquote")
                 blockquote.text = bq
 
-        # Convert to string with pretty formatting
-        rough_string = ET.tostring(root, encoding='utf-8')
+        rough_string = ET.tostring(root, encoding="utf-8")
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="  ")
 
@@ -706,7 +711,6 @@ class MarkdownScraper:
         Returns:
             List of successfully scraped URLs
         """
-        # Get URLs from sitemap
         filtered_urls = self._discover_urls_from_sitemap(
             base_url, min_priority, include_patterns, exclude_patterns, limit
         )
@@ -722,7 +726,6 @@ class MarkdownScraper:
         # Extract URL strings from SitemapURL objects
         urls = [url_info.loc for url_info in filtered_urls]
 
-        # Process URLs either in parallel or sequentially
         successfully_scraped = []
         failed_urls = []
 
@@ -862,14 +865,12 @@ class MarkdownScraper:
         limit: Optional[int] = None,
     ) -> List:
         """Discover and filter URLs from a sitemap."""
-        # Create sitemap parser
         sitemap_parser = SitemapParser(
             requests_per_second=self.requests_per_second,
             max_retries=self.max_retries,
             timeout=self.timeout,
         )
 
-        # Parse sitemap and get filtered URLs
         logger.info(f"Discovering URLs from sitemap for {base_url}")
         sitemap_parser.parse_sitemap(base_url)
         filtered_urls = sitemap_parser.filter_urls(
@@ -891,11 +892,9 @@ class MarkdownScraper:
         self, output_dir: str, save_chunks: bool, chunk_dir: Optional[str] = None
     ) -> Tuple[Path, Optional[str]]:
         """Prepare output and chunk directories."""
-        # Create output directory
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        # Set up chunk directory if chunking is enabled
         chunk_directory = None
         if save_chunks:
             if chunk_dir is None:
@@ -944,7 +943,6 @@ class MarkdownScraper:
         chunk_format: str,
     ) -> None:
         """Process a single URL: scrape, convert, save content and chunks."""
-        # Generate filename for this URL
         filename = self._get_filename_from_url(url, output_format)
         output_file = str(output_path / filename)
 
@@ -952,18 +950,15 @@ class MarkdownScraper:
         logger.info(f"Scraping URL {index+1}/{total}: {url}")
         html_content = self.scrape_website(url, skip_cache=False)
 
-        # Convert based on output format using the helper method
         content, markdown_content = self._convert_content(
             html_content, url, output_format
         )
 
-        # Check if we had to fall back to markdown
         if output_format != "markdown" and content == markdown_content:
             output_file = output_file.replace(f".{output_format}", ".md")
 
         self.save_content(content, output_file)
 
-        # Create and save chunks if enabled (always from markdown content)
         if save_chunks and chunk_dir:
             self._process_chunks(
                 markdown_content, url, chunk_dir, filename, chunk_format
@@ -1061,7 +1056,6 @@ class MarkdownScraper:
             output_dir, save_chunks, chunk_dir
         )
 
-        # Process links either sequentially or in parallel
         successfully_scraped = []
         failed_urls = []
 
@@ -1245,11 +1239,9 @@ def main(
         worker_timeout: Timeout in seconds for each worker (None for no timeout)
     """
     if args_list is not None:
-        # Parse command line arguments
         parser = _create_argument_parser()
         args = parser.parse_args(args_list)
 
-        # Set parameters from args
         url = args.url
         output_file = args.output
         output_format = args.format
@@ -1272,7 +1264,6 @@ def main(
         max_workers = args.max_workers
         worker_timeout = args.worker_timeout
 
-    # Setup
     validated_format = _validate_output_format(output_format)
     _check_rust_availability()
 
@@ -1475,11 +1466,9 @@ def _process_sitemap_mode(
     limit: Optional[int],
 ) -> None:
     """Process website using sitemap mode."""
-    # Parse base URL
     parsed_url = urlparse(url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
 
-    # Get output directory from output_file
     output_path = Path(output_file)
     output_dir = str(output_path.parent) if output_path.is_file() else output_file
 
@@ -1523,7 +1512,6 @@ def _process_single_url_mode(
 
     scraper.save_content(content, output_file)
 
-    # Process chunks if enabled
     if save_chunks:
         chunks = scraper.create_chunks(markdown_content, url)
         scraper.save_chunks(chunks, chunk_dir, chunk_format)
@@ -1547,7 +1535,6 @@ def _process_links_file_mode(
         links_file = "links.txt"
         logger.info(f"No links file specified, using default: {links_file}")
 
-    # Get output directory from output_file
     output_path = Path(output_file)
     output_dir = str(output_path.parent) if output_path.is_file() else output_file
 
@@ -1571,7 +1558,6 @@ def _ensure_correct_extension(
     output_file: str, output_format: str, content: str, markdown_content: str
 ) -> str:
     """Ensure the output file has the correct extension."""
-    # Set correct extension
     output_ext = ".md" if output_format == "markdown" else f".{output_format}"
 
     # If file doesn't have the correct extension, add it

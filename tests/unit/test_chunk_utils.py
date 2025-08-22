@@ -174,10 +174,8 @@ It also has multiple lines.
             ),
         ]
 
-        # Save chunks
         self.chunker.save_chunks(chunks, self.test_dir, "jsonl")
 
-        # Check the file exists
         jsonl_path = Path(self.test_dir) / "chunks.jsonl"
         self.assertTrue(jsonl_path.exists())
 
@@ -186,7 +184,6 @@ It also has multiple lines.
             lines = f.readlines()
             self.assertEqual(len(lines), len(chunks), "Should write one line per chunk")
 
-            # Parse and validate each line
             for i, line in enumerate(lines):
                 self.assertNotEqual(line.strip(), "", f"Line {i} should not be empty")
 

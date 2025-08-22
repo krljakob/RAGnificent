@@ -188,7 +188,6 @@ class SitemapParser:
             Tuple containing list of SitemapURLs and list of sitemap index URLs
         """
         try:
-            # Setup XML parsing with namespace support
             namespace = self._extract_namespace(content)
             ns_map = {"sm": namespace} if namespace else {}
             root = ET.fromstring(content)
@@ -341,13 +340,11 @@ class SitemapParser:
             logger.warning(f"Could not retrieve sitemap from {sitemap_url}")
             return []
 
-        # Check content type to determine how to handle the response
         content_type = response.headers.get("Content-Type", "").lower()
 
         if "xml" in content_type:
             return self._process_xml_sitemap(response)
         if "html" in content_type:
-            # Handle HTML sitemap
             logger.info(f"Detected HTML sitemap at {sitemap_url}")
             return self._parse_html_sitemap(response.text, sitemap_url)
 
@@ -363,11 +360,9 @@ class SitemapParser:
             return []
 
     def _process_xml_sitemap(self, response: requests.Response) -> List[SitemapURL]:
-        # Handle XML sitemap
         content = response.text
         urls, sitemap_indices = self._parse_sitemap_xml(content)
 
-        # Process any sitemap indices recursively
         for index_url in sitemap_indices:
             urls.extend(self._process_sitemap(index_url))
 
@@ -403,7 +398,6 @@ class SitemapParser:
         if self.respect_robots_txt:
             sitemap_locations.extend(self._find_sitemaps_in_robots(base_url))
 
-        # Add common sitemap locations if none found in robots.txt
         if not sitemap_locations:
             sitemap_locations.extend(
                 [
@@ -414,7 +408,6 @@ class SitemapParser:
                 ]
             )
 
-        # Process each potential sitemap
         for sitemap_url in sitemap_locations:
             if urls := self._process_sitemap(sitemap_url):
                 logger.info(f"Found {len(urls)} URLs in sitemap {sitemap_url}")
@@ -422,7 +415,6 @@ class SitemapParser:
                 # If we found URLs in this sitemap, we can stop looking
                 break
 
-        # Apply domain filtering if requested
         if filter_by_domain:
             original_count = len(self.discovered_urls)
             self.discovered_urls = [
@@ -492,7 +484,6 @@ class SitemapParser:
                 if not any(pattern.search(url.loc) for pattern in exclude_compiled)
             ]
 
-        # Apply limit
         if limit is not None:
             filtered_urls = filtered_urls[:limit]
 

@@ -411,7 +411,6 @@ class AsyncRequestThrottler:
 
         domain_stats = self._domain_stats[domain]
 
-        # Check if we're in a backoff period
         if domain_stats.backoff_until and time.time() < domain_stats.backoff_until:
             backoff_time = domain_stats.backoff_until - time.time()
             logger.info(
@@ -429,13 +428,11 @@ class AsyncRequestThrottler:
         last_request_time = self._last_request_times[domain]
         time_since_last = current_time - last_request_time
 
-        # Apply throttling if needed
         if time_since_last < min_interval:
             sleep_time = min_interval - time_since_last
             logger.debug(f"Throttling domain {domain} for {sleep_time:.2f} seconds")
             await asyncio.sleep(sleep_time)
 
-        # Update last request time
         self._last_request_times[domain] = time.time()
 
     def _get_domain_rate_limit(self, domain: str) -> float:
@@ -474,7 +471,6 @@ class AsyncRequestThrottler:
             domain_stats.consecutive_errors += 1
             domain_stats.last_error_time = time.time()
 
-            # Apply exponential backoff for consecutive errors
             if domain_stats.consecutive_errors >= 3:
                 backoff_time = min(60.0, 2 ** (domain_stats.consecutive_errors - 2))
                 domain_stats.backoff_until = time.time() + backoff_time

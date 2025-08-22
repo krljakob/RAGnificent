@@ -3,6 +3,7 @@ Command line entry point for RAGnificent.
 """
 
 import sys
+
 from RAGnificent.core.scraper import main
 
 if __name__ == "__main__":

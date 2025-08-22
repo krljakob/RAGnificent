@@ -8,12 +8,7 @@ pub mod html_parser;
 pub mod js_renderer;
 pub mod markdown_converter;
 
-/// Python-friendly enumeration of output formats
-///
-/// Attributes:
-///     MARKDOWN (int): Format for Markdown output (0)
-///     JSON (int): Format for JSON output (1)
-///     XML (int): Format for XML output (2)
+/// output formats for conversion
 #[pyclass]
 #[derive(Clone, Copy)]
 pub enum OutputFormat {
@@ -24,17 +19,7 @@ pub enum OutputFormat {
 
 #[pymethods]
 impl OutputFormat {
-    /// Convert a string representation to an OutputFormat
-    ///
-    /// Args:
-    ///     format_str (str): String representation of format ("markdown", "json", or "xml")
-    ///
-    /// Returns:
-    ///     OutputFormat: The corresponding OutputFormat enum value
-    ///
-    /// Example:
-    ///     >>> format = OutputFormat.from_str("json")
-    ///     >>> print(format)  # OutputFormat.JSON
+    /// convert string to OutputFormat
     #[staticmethod]
     fn from_str(format_str: &str) -> Self {
         match format_str.to_lowercase().as_str() {
@@ -55,18 +40,7 @@ impl From<OutputFormat> for markdown_converter::OutputFormat {
     }
 }
 
-/// A Python module implemented in Rust for RAGnificent.
-///
-/// This module provides high-performance implementations of key RAGnificent functions:
-/// - HTML to Markdown/JSON/XML conversion
-/// - Semantic text chunking for RAG applications
-/// - JavaScript page rendering (when compiled with the 'real_rendering' feature)
-///
-/// Example:
-///     >>> from ragnificent_rs import convert_html_to_markdown, OutputFormat
-///     >>> html = "<h1>Title</h1><p>Content</p>"
-///     >>> markdown = convert_html_to_markdown(html, "https://example.com")
-///     >>> json_output = convert_html_to_format(html, "https://example.com", "json")
+/// rust implementations for RAGnificent HTML conversion and chunking
 #[pymodule]
 fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<OutputFormat>()?;
@@ -77,17 +51,7 @@ fn ragnificent_rs(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-/// Converts HTML content to markdown format
-///
-/// Args:
-///     html (str): The HTML content to convert
-///     base_url (str): The base URL for resolving relative links
-///
-/// Returns:
-///     str: The converted markdown content
-///
-/// Raises:
-///     RuntimeError: If conversion fails
+/// convert HTML to markdown
 #[pyfunction]
 pub fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> {
     let result = markdown_converter::convert_to_markdown(html, base_url)

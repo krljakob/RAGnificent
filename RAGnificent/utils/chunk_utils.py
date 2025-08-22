@@ -230,18 +230,15 @@ class ContentChunker:
             output_dir: Directory to save the chunks
             output_format: Format to save chunks in (json or jsonl)
         """
-        # Create the output directory if it doesn't exist
         chunk_dir = Path(output_dir)
         chunk_dir.mkdir(parents=True, exist_ok=True)
 
         if output_format == "jsonl":
-            # Save all chunks to a single JSONL file
             output_file = chunk_dir / "chunks.jsonl"
             with open(output_file, "w", encoding="utf-8") as f:
                 for chunk in chunks:
                     f.write(json.dumps(asdict(chunk)) + "\n")
             return
-        # Save each chunk as a separate JSON file
         for chunk in chunks:
             output_file = chunk_dir / f"{chunk.id}.json"
             with open(output_file, "w", encoding="utf-8") as f:

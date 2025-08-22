@@ -71,7 +71,6 @@ class AsyncMarkdownScraper:
             follow_redirects=True,
         )
 
-        # Initialize async throttler
         self.throttler = AsyncRequestThrottler(
             requests_per_second=requests_per_second,
             domain_specific_limits=domain_specific_limits,
@@ -84,7 +83,6 @@ class AsyncMarkdownScraper:
         self.chunker = ContentChunker(chunk_size, chunk_overlap)
         self.max_workers = max_workers
 
-        # Initialize request cache
         self.cache_enabled = cache_enabled
         self.request_cache = (
             RequestCache(max_age=cache_max_age) if cache_enabled else None
@@ -146,7 +144,6 @@ class AsyncMarkdownScraper:
             )
             url = sanitized_url
 
-        # Check cache first
         cached_content = self._check_cache(url, skip_cache)
         if cached_content is not None:
             return cached_content
@@ -254,12 +251,10 @@ class AsyncMarkdownScraper:
         Returns:
             List of successfully scraped URLs
         """
-        # Create output directory
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         if save_chunks and chunk_dir:
             Path(chunk_dir).mkdir(parents=True, exist_ok=True)
 
-        # Create tasks for concurrent scraping
         tasks = []
         for url in urls:
             task = self._scrape_and_save(
@@ -267,7 +262,6 @@ class AsyncMarkdownScraper:
             )
             tasks.append(task)
 
-        # Execute tasks concurrently with semaphore to limit parallelism
         semaphore = asyncio.Semaphore(self.max_workers)
 
         async def bounded_scrape(task):
@@ -300,7 +294,6 @@ class AsyncMarkdownScraper:
             # Scrape the website
             html_content = await self.scrape_website(url)
 
-            # Convert content
             if self.rust_available:
                 format_map = {
                     "markdown": self.OutputFormat.MARKDOWN,
@@ -315,7 +308,6 @@ class AsyncMarkdownScraper:
             else:
                 output = self._convert_content(html_content, url, output_format)
 
-            # Generate filename
             parsed_url = urlparse(url)
             path_parts = parsed_url.path.strip("/").split("/")
             if path_parts and path_parts[-1]:
@@ -323,7 +315,6 @@ class AsyncMarkdownScraper:
             else:
                 base_name = self._url_path_pattern.sub("_", parsed_url.netloc)
 
-            # Save the converted content
             allowed_extensions = {"markdown": "md", "json": "json", "xml": "xml"}
             extension = allowed_extensions.get(output_format, "md")
             output_file = Path(output_dir) / f"{base_name}.{extension}"
@@ -348,7 +339,6 @@ class AsyncMarkdownScraper:
 
             logger.info(f"Saved {output_format} to: {output_file}")
 
-            # Save chunks if requested
             if save_chunks and output_format == "markdown":
                 chunks = self.chunker.create_chunks_from_markdown(
                     output, source_url=url
@@ -409,7 +399,6 @@ class AsyncMarkdownScraper:
         Returns:
             List of successfully scraped URLs
         """
-        # Parse sitemap
         sitemap_parser = SitemapParser()
         sitemap_urls = sitemap_parser.parse_sitemap(
             url, min_priority=min_priority, url_filter=url_filter

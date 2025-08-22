@@ -10,7 +10,7 @@ Check out the [deepwiki](https://deepwiki.com/krljakob/RAGnificent/) for a granu
 
 ## Documentation
 
-- 📖 **[Features](docs/FEATURES.md)** - Comprehensive feature overview and capabilities
+- 📖 **[Features](docs/FEATURES.md)** - Feature overview and capabilities
 - ⚙️ **[Configuration](docs/CONFIGURATION.md)** - Configuration management and environment setup
 - 🚀 **[Optimization](docs/OPTIMIZATION.md)** - Performance tuning and optimization guide
 
@@ -102,9 +102,9 @@ python scripts/visualize_benchmarks.py
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch (`git checkout -b feature/fix-rate-limiting`)
+3. Commit your changes (`git commit -m 'Fix rate limiting edge case'`)
+4. Push to the branch (`git push origin feature/fix-rate-limiting`)
 5. Open a Pull Request
 
 ## License

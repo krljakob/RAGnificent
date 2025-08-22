@@ -119,9 +119,9 @@ class TestSanitizeUrl:
     def test_malformed_url(self):
         """Test sanitization of malformed URL."""
         # Malformed URLs may still be processed by urlparse
-        result = sanitize_url("not a url")
+        sanitized_url = sanitize_url("not a url")
         # Should either return empty or the original string
-        assert result in {"", "not a url"}
+        assert sanitized_url in {"", "not a url"}
 
     def test_preserve_query_params(self):
         """Test that query parameters are preserved."""
@@ -233,8 +233,8 @@ class TestValidateRegexPattern:
         ]
 
         for pattern in dangerous_patterns:
-            result = validate_regex_pattern(pattern)
-            assert result is False, f"Dangerous pattern should be rejected: {pattern}"
+            is_valid = validate_regex_pattern(pattern)
+            assert is_valid is False, f"Dangerous pattern should be rejected: {pattern}"
 
         # Test that normal patterns are still accepted
         safe_patterns = [
@@ -245,8 +245,8 @@ class TestValidateRegexPattern:
         ]
 
         for pattern in safe_patterns:
-            result = validate_regex_pattern(pattern)
-            assert result is True, f"Safe pattern should be accepted: {pattern}"
+            is_valid = validate_regex_pattern(pattern)
+            assert is_valid is True, f"Safe pattern should be accepted: {pattern}"
 
 
 class TestValidateHtmlContent:
