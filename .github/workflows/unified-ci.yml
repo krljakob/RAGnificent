@@ -37,6 +37,11 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
+      
+      - name: Security audit for Rust dependencies
+        run: |
+          cargo install cargo-audit --features=fix || true
+          cargo audit
 
   python-tests:
     name: Python ${{ matrix.python-version }} Tests
@@ -95,3 +100,13 @@ jobs:
         run: |
           .venv/bin/uv pip install build
           .venv/bin/python -m build
+      
+      - name: Security scan with pip-audit
+        run: |
+          .venv/bin/uv pip install pip-audit
+          .venv/bin/pip-audit
+      
+      - name: Security scan with bandit
+        run: |
+          .venv/bin/uv pip install bandit[toml]
+          .venv/bin/bandit -r RAGnificent/ -ll
