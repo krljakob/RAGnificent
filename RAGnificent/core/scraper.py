@@ -21,6 +21,7 @@ from bs4 import BeautifulSoup, Tag
 from bs4 import BeautifulSoup, Tag
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.logging import get_logger
+from RAGnificent.core.security import redact_sensitive_data
 from RAGnificent.core.throttle import RequestThrottler
 from RAGnificent.utils.chunk_utils import ContentChunker, create_semantic_chunks
 from RAGnificent.utils.sitemap_utils import SitemapParser
@@ -100,7 +101,6 @@ class MarkdownScraper:
             self.convert_html = fallback_convert_html
 
     def scrape_website(self, url: str, skip_cache: bool = False, output_format: str = "markdown", return_chunks: bool = False):
-    def scrape_website(self, url: str, skip_cache: bool = False, output_format: str = None, return_chunks: bool = False):
         """Scrape a website with retry logic, rate limiting, and caching.
 
         Returns:
@@ -146,7 +146,13 @@ class MarkdownScraper:
 
         try:
             html_content = self._fetch_with_retries(url)
-            self._cache_response(url, html_content)
+            
+            # Try to cache but don't fail if caching fails
+            try:
+                self._cache_response(url, html_content)
+            except Exception as cache_error:
+                logger.warning(f"Failed to cache response for {url}: {cache_error}")
+                # Continue processing even if caching fails
 
             # Convert to requested format
             converted_content, markdown_content = self._convert_content(html_content, url, output_format)

@@ -378,7 +378,7 @@ class TestOpenAIEmbedding:
         ]
         mock_openai_module.embeddings.create.return_value = mock_response
         mock_openai_module.api_key = "test-key"
-        
+
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with patch.dict("sys.modules", {"openai": mock_openai_module}):
                 yield mock_openai_module.embeddings.create
