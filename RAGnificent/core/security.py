@@ -161,7 +161,7 @@ def sanitize_headers(headers: Dict[str, str]) -> Dict[str, str]:
         return {}
 
     # Build a mapping of lowercase -> original key to preserve original casing
-    original_keys: Dict[str, str] = {k.lower(): k for k in headers.keys()}
+    original_keys: Dict[str, str] = {k.lower(): k for k in headers}
 
     sensitive_headers = {
         "authorization",

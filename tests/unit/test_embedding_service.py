@@ -366,17 +366,22 @@ class TestSimpleCountEmbedding:
 class TestOpenAIEmbedding:
     """Test OpenAI embedding functionality."""
 
-    @pytest.fixture
+    @pytest.fixture(autouse=True)
     def mock_openai(self):
         """Mock OpenAI API for testing."""
-        with patch("openai.embeddings.create") as mock_create:
-            mock_response = MagicMock()
-            mock_response.data = [
-                MagicMock(embedding=[0.1, 0.2, 0.3, 0.4]),
-                MagicMock(embedding=[0.5, 0.6, 0.7, 0.8]),
-            ]
-            mock_create.return_value = mock_response
-            yield mock_create
+        # Create a mock module
+        mock_openai_module = MagicMock()
+        mock_response = MagicMock()
+        mock_response.data = [
+            MagicMock(embedding=[0.1, 0.2, 0.3, 0.4]),
+            MagicMock(embedding=[0.5, 0.6, 0.7, 0.8]),
+        ]
+        mock_openai_module.embeddings.create.return_value = mock_response
+        mock_openai_module.api_key = "test-key"
+        
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            with patch.dict("sys.modules", {"openai": mock_openai_module}):
+                yield mock_openai_module.embeddings.create
 
     @pytest.fixture
     def mock_config(self):
@@ -392,10 +397,9 @@ class TestOpenAIEmbedding:
 
     def test_initialization_success(self, mock_openai, mock_config):
         """Test successful OpenAI embedding initialization."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            embedding_model = OpenAIEmbedding("text-embedding-3-small")
-            assert embedding_model.model_name == "text-embedding-3-small"
-            assert embedding_model.api_key == "test-api-key"
+        embedding_model = OpenAIEmbedding("text-embedding-3-small")
+        assert embedding_model.model_name == "text-embedding-3-small"
+        assert embedding_model.api_key == "test-api-key"
 
     def test_initialization_no_api_key(self, mock_config):
         """Test OpenAI initialization without API key."""
@@ -406,29 +410,27 @@ class TestOpenAIEmbedding:
 
     def test_embed_single_text(self, mock_openai, mock_config):
         """Test embedding single text with OpenAI."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            embedding_model = OpenAIEmbedding()
-            mock_config.embedding.use_cache = False
+        embedding_model = OpenAIEmbedding()
+        mock_config.embedding.use_cache = False
 
-            result = embedding_model.embed("test text")
+        result = embedding_model.embed("test text")
 
-            assert isinstance(result, np.ndarray)
-            np.testing.assert_array_equal(result, np.array([0.1, 0.2, 0.3, 0.4]))
-            mock_openai.assert_called_once()
+        assert isinstance(result, np.ndarray)
+        np.testing.assert_array_equal(result, np.array([0.1, 0.2, 0.3, 0.4]))
+        mock_openai.assert_called_once()
 
     def test_embed_multiple_texts(self, mock_openai, mock_config):
         """Test embedding multiple texts with OpenAI."""
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-            embedding_model = OpenAIEmbedding()
-            mock_config.embedding.use_cache = False
+        embedding_model = OpenAIEmbedding()
+        mock_config.embedding.use_cache = False
 
-            texts = ["first text", "second text"]
-            result = embedding_model.embed(texts)
+        texts = ["first text", "second text"]
+        result = embedding_model.embed(texts)
 
-            assert isinstance(result, list)
-            assert len(result) == 2
-            np.testing.assert_array_equal(result[0], np.array([0.1, 0.2, 0.3, 0.4]))
-            np.testing.assert_array_equal(result[1], np.array([0.5, 0.6, 0.7, 0.8]))
+        assert isinstance(result, list)
+        assert len(result) == 2
+        np.testing.assert_array_equal(result[0], np.array([0.1, 0.2, 0.3, 0.4]))
+        np.testing.assert_array_equal(result[1], np.array([0.5, 0.6, 0.7, 0.8]))
 
     def test_api_retry_logic(self, mock_config):
         """Test OpenAI API retry mechanism."""
