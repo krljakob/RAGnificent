@@ -18,7 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
-
+from bs4 import BeautifulSoup, Tag
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.logging import get_logger
 from RAGnificent.core.throttle import RequestThrottler
@@ -99,15 +99,22 @@ class MarkdownScraper:
 
             self.convert_html = fallback_convert_html
 
-    def scrape_website(self, url: str, skip_cache: bool = False) -> str:
-        """Scrape a website with retry logic, rate limiting, and caching."""
-        from RAGnificent.core.security import redact_sensitive_data
+    def scrape_website(self, url: str, skip_cache: bool = False, output_format: str = "markdown", return_chunks: bool = False):
+    def scrape_website(self, url: str, skip_cache: bool = False, output_format: str = None, return_chunks: bool = False):
+        """Scrape a website with retry logic, rate limiting, and caching.
+
+        Returns:
+            str: Content in specified format (if return_chunks=False)
+            tuple: (content, chunks) if return_chunks=True
+        """
+        if output_format is None:
+            output_format = "markdown"
         from RAGnificent.core.validators import sanitize_url, validate_url
 
         if not validate_url(url):
             error_msg = f"Invalid URL format: {redact_sensitive_data(url)}"
             logger.error(error_msg)
-            raise ValueError(error_msg)
+            return None
 
         sanitized_url = sanitize_url(url)
         if sanitized_url != url:
@@ -118,14 +125,20 @@ class MarkdownScraper:
 
         try:
             import psutil  # type: ignore
-
             psutil_available = True
         except ImportError:
             psutil_available = False
 
         cached_content = self._check_cache(url, skip_cache)
         if cached_content is not None:
-            return cached_content
+            if return_chunks:
+                # For cached content, convert and return with chunks
+                converted_content, markdown_content = self._convert_content(cached_content, url, output_format)
+                chunks = self.create_chunks(markdown_content, url)
+                return converted_content, chunks
+            else:
+                converted_content, _ = self._convert_content(cached_content, url, output_format)
+                return converted_content
 
         logger.info(f"Attempting to scrape the website: {redact_sensitive_data(url)}")
 
@@ -133,13 +146,19 @@ class MarkdownScraper:
 
         try:
             html_content = self._fetch_with_retries(url)
-
             self._cache_response(url, html_content)
 
-            return html_content
+            # Convert to requested format
+            converted_content, markdown_content = self._convert_content(html_content, url, output_format)
+
+            if return_chunks:
+                chunks = self.create_chunks(markdown_content, url)
+                return converted_content, chunks
+            else:
+                return converted_content
         except Exception as e:
             logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {str(e)}")
-            raise
+            return None
         finally:
             self._log_performance_metrics(url, performance_monitor, psutil_available)
 
@@ -372,7 +391,6 @@ class MarkdownScraper:
         title = self._get_text_from_element(soup.title) if soup.title else "No Title"
 
         markdown_content = f"# {title}\n\n"
-
         main_content = (
             soup.find("main")
             or soup.find("article")
@@ -404,6 +422,7 @@ class MarkdownScraper:
                 if isinstance(e, Tag)
             ]:
                 if element_markdown := self._get_element_markdown(element, base_url):
+                    markdown_content += element_markdown + "\n\n"
                     markdown_content += element_markdown + "\n\n"
 
         logger.info("Conversion to Markdown completed.")
@@ -950,6 +969,11 @@ class MarkdownScraper:
         logger.info(f"Scraping URL {index+1}/{total}: {url}")
         html_content = self.scrape_website(url, skip_cache=False)
 
+        # Handle case where scraping failed and returned None
+        if html_content is None:
+            logger.error(f"Failed to scrape content from {url}, skipping...")
+            raise RuntimeError(f"Failed to scrape content from {url}")
+
         content, markdown_content = self._convert_content(
             html_content, url, output_format
         )
@@ -978,6 +1002,93 @@ class MarkdownScraper:
         # Create URL-specific chunk directory to prevent filename collisions
         url_chunk_dir = f"{chunk_dir}/{filename.split('.')[-2]}"
         self.save_chunks(chunks, url_chunk_dir, chunk_format)
+
+    def _extract_metadata(self, html_content: str, url: str) -> Dict:
+        """Extract metadata from HTML content."""
+        soup = BeautifulSoup(html_content, "html.parser")
+        metadata = {
+            "title": "",
+            "description": "",
+            "keywords": "",
+            "og_title": "",
+            "og_image": "",
+            "url": url
+        }
+
+        # Extract title
+        title_tag = soup.find("title")
+        if title_tag:
+            metadata["title"] = self._get_text_from_element(title_tag)
+
+        # Extract meta description
+        desc_tag = soup.find("meta", attrs={"name": "description"})
+        if desc_tag and desc_tag.get("content"):
+            content = desc_tag.get("content")
+            if isinstance(content, list):
+                content = content[0] if content else ""
+            metadata["description"] = str(content)
+
+        # Extract meta keywords
+        keywords_tag = soup.find("meta", attrs={"name": "keywords"})
+        if keywords_tag and keywords_tag.get("content"):
+            content = keywords_tag.get("content")
+            if isinstance(content, list):
+                content = content[0] if content else ""
+            metadata["keywords"] = str(content)
+
+        # Extract Open Graph title
+        og_title_tag = soup.find("meta", attrs={"property": "og:title"})
+        if og_title_tag and og_title_tag.get("content"):
+            content = og_title_tag.get("content")
+            if isinstance(content, list):
+                content = content[0] if content else ""
+            metadata["og_title"] = str(content)
+
+        # Extract Open Graph image
+        og_image_tag = soup.find("meta", attrs={"property": "og:image"})
+        if og_image_tag and og_image_tag.get("content"):
+            content = og_image_tag.get("content")
+            if isinstance(content, list):
+                content = content[0] if content else ""
+            metadata["og_image"] = str(content)
+
+        return metadata
+
+    def _clean_text(self, text: str) -> str:
+        """Clean text by normalizing whitespace."""
+        return self._whitespace_pattern.sub(" ", text.strip())
+
+    def _save_to_file(self, content: str, output_file: str) -> None:
+        """Save content to a file."""
+        self.save_content(content, output_file)
+
+    def _save_chunks(self, chunks: List, output_dir: str) -> None:
+        """Save content chunks to directory."""
+        self.save_chunks(chunks, output_dir)
+
+    def scrape_multiple_urls(self, urls: List[str], parallel: bool = False, max_workers: int = 4) -> List[Dict]:
+        """Scrape multiple URLs and return results."""
+        results = []
+
+        if parallel:
+            def process_url(url):
+                try:
+                    content = self.scrape_website(url)
+                    return {"url": url, "success": True, "content": content}
+                except Exception as e:
+                    return {"url": url, "success": False, "error": str(e)}
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                results = list(executor.map(process_url, urls))
+        else:
+            for url in urls:
+                try:
+                    content = self.scrape_website(url)
+                    results.append({"url": url, "success": True, "content": content})
+                except Exception as e:
+                    results.append({"url": url, "success": False, "error": str(e)})
+
+        return results
 
     def scrape_by_links_file(
         self,
@@ -1189,8 +1300,8 @@ class MarkdownScraper:
 
 def main(
     args_list=None,
-    url: str = None,
-    output_file: str = None,
+    url: Optional[str] = None,
+    output_file: Optional[str] = None,
     output_format: str = "markdown",
     save_chunks: bool = True,
     chunk_dir: str = "chunks",
@@ -1279,10 +1390,11 @@ def main(
         if links_file or Path("links.txt").exists():
             # Use provided links_file or default to links.txt if it exists
             links_file_path = links_file or "links.txt"
+            output_file_resolved = output_file or "output"
             _process_links_file_mode(
                 scraper=scraper,
                 links_file=links_file_path,
-                output_file=output_file,
+                output_file=output_file_resolved,
                 output_format=validated_format,
                 save_chunks=save_chunks,
                 chunk_dir=chunk_dir,
@@ -1292,10 +1404,13 @@ def main(
                 worker_timeout=worker_timeout,
             )
         elif use_sitemap:
+            if url is None:
+                raise ValueError("URL is required for sitemap mode")
+            output_file_resolved = output_file or "output"
             _process_sitemap_mode(
                 scraper=scraper,
                 url=url,
-                output_file=output_file,
+                output_file=output_file_resolved,
                 output_format=validated_format,
                 save_chunks=save_chunks,
                 chunk_dir=chunk_dir,
@@ -1306,10 +1421,13 @@ def main(
                 limit=limit,
             )
         else:
+            if url is None:
+                raise ValueError("URL is required for single URL mode")
+            output_file_resolved = output_file or "output"
             _process_single_url_mode(
                 scraper=scraper,
                 url=url,
-                output_file=output_file,
+                output_file=output_file_resolved,
                 output_format=validated_format,
                 save_chunks=save_chunks,
                 chunk_dir=chunk_dir,
@@ -1500,7 +1618,23 @@ def _process_single_url_mode(
     skip_cache: bool,
 ) -> None:
     """Process a single URL."""
-    html_content = scraper.scrape_website(url, skip_cache=skip_cache)
+    result = scraper.scrape_website(url, skip_cache=skip_cache)
+
+    # Handle different return types from scrape_website
+    if result is None:
+        logger.error(f"Failed to scrape content from {url}")
+        return
+    elif isinstance(result, tuple):
+        # If return_chunks was True, result is (content, chunks)
+        html_content = result[0] if result[0] else ""
+    else:
+        # Single string content
+        html_content = result
+
+    if not html_content:
+        logger.error(f"No content retrieved from {url}")
+        return
+
     content, markdown_content = scraper._convert_content(
         html_content, url, output_format
     )
