@@ -188,19 +188,19 @@ scrape-list:
 scrape-list-parallel:
 	python -m RAGnificent -o $(OUTPUT_DIR) --links-file $(LINKS_FILE) --parallel --max-workers $(WORKERS)
 
-# Run the complete RAG uv pipeline with a single URL
-.PHONY: rag-uv pipeline
-rag-uv pipeline:
+# Run the complete RAG pipeline with a single URL
+.PHONY: rag_pipeline
+rag_pipeline:
 ifeq ($(URL),)
-	@echo "Error: URL is required. Use 'make rag-uv pipeline URL=https://example.com'"
+	@echo "Error: URL is required. Use 'make rag_pipeline URL=https://example.com'"
 	@exit 1
 endif
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline = uv pipeline(collection_name='$(COLLECTION)'); uv pipeline.run_uv pipeline(url='$(URL)', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='$(COLLECTION)'); pipeline.run_pipeline(url='$(URL)', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
 
-# Run the complete RAG uv pipeline with a list of URLs
-.PHONY: rag-uv pipeline-list
-rag-uv pipeline-list:
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline = uv pipeline(collection_name='$(COLLECTION)'); uv pipeline.run_uv pipeline(links_file='$(LINKS_FILE)', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
+# Run the complete RAG pipeline with a list of URLs
+.PHONY: rag_pipeline_list
+rag_pipeline_list:
+	python -c "from RAGnificent.rag.pipeline import Pipeline; pipeline = Pipeline(collection_name='$(COLLECTION)'); pipeline.run_pipeline(links_file='$(LINKS_FILE)', run_extract=True, run_chunk=True, run_embed=True, run_store=True)"
 
 # Extract content from a URL
 .PHONY: extract
@@ -209,27 +209,27 @@ ifeq ($(URL),)
 	@echo "Error: URL is required. Use 'make extract URL=https://example.com'"
 	@exit 1
 endif
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().extract_content(url='$(URL)', output_file='$(RAW_DOCUMENTS)', output_format='$(FORMAT)')"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().extract_content(url='$(URL)', output_file='$(RAW_DOCUMENTS)', output_format='$(FORMAT)')"
 
 # Extract content from a list of URLs
 .PHONY: extract-list
 extract-list:
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().extract_content(links_file='$(LINKS_FILE)', output_file='$(RAW_DOCUMENTS)', output_format='$(FORMAT)')"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().extract_content(links_file='$(LINKS_FILE)', output_file='$(RAW_DOCUMENTS)', output_format='$(FORMAT)')"
 
 # Chunk documents
 .PHONY: chunk
 chunk:
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().chunk_documents('$(RAW_DOCUMENTS)', '$(DOCUMENT_CHUNKS)')"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().chunk_documents('$(RAW_DOCUMENTS)', '$(DOCUMENT_CHUNKS)')"
 
 # Embed chunks
 .PHONY: embed
 embed:
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline().embed_chunks('$(DOCUMENT_CHUNKS)', '$(EMBEDDED_CHUNKS)')"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline().embed_chunks('$(DOCUMENT_CHUNKS)', '$(EMBEDDED_CHUNKS)')"
 
 # Store chunks in vector database
 .PHONY: store
 store:
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; uv pipeline(collection_name='$(COLLECTION)').store_chunks('$(EMBEDDED_CHUNKS)')"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; Pipeline(collection_name='$(COLLECTION)').store_chunks('$(EMBEDDED_CHUNKS)')"
 
 # Search the vector database
 .PHONY: search
@@ -247,7 +247,7 @@ ifeq ($(QUERY),)
 	@echo "Error: QUERY is required. Use 'make query QUERY=\"your query\"'"
 	@exit 1
 endif
-	python -c "from RAGnificent.rag.uv pipeline import uv pipeline; response = uv pipeline(collection_name='$(COLLECTION)').query_with_context('$(QUERY)', $(LIMIT)); print(f'Response: {response[\"response\"]}\n\nSources:\n' + '\n'.join([f'- {r[\"source_url\"]}' for r in response['context']]))"
+	python -c "from RAGnificent.rag.pipeline import Pipeline; response = Pipeline(collection_name='$(COLLECTION)').query_with_context('$(QUERY)', $(LIMIT)); print(f'Response: {response[\"response\"]}\n\nSources:\n' + '\n'.join([f'- {r[\"source_url\"]}' for r in response['context']]))"
 
 # Run the demo for all output formats
 .PHONY: run-demo
@@ -262,7 +262,7 @@ run-hello:
 # Run the RAG uv pipeline example
 .PHONY: run-rag-example
 run-rag-example:
-	python examples/rag_uv pipeline_example.py
+	python examples/rag_pipeline_example.py
 
 # Visualize Qdrant data
 .PHONY: view-qdrant

@@ -372,20 +372,19 @@ class Pipeline:
                     content, source_url=str(md_file)
                 )
 
-                # Generate embeddings and store
-                for chunk in chunks:
-                    embedding = self.embedding_service.generate_embeddings(
-                        [chunk["content"]]
-                    )[0]
-                    self.vector_store.store_documents(
-                        [
-                            {
-                                "content": chunk["content"],
-                                "metadata": chunk["metadata"],
-                                "embedding": embedding,
-                            }
-                        ]
-                    )
+                # Generate embeddings for all chunks and store
+                chunk_dicts = [
+                    {
+                        "content": chunk.content,
+                        "metadata": chunk.metadata,
+                        "source_url": chunk.source_url,
+                        "id": chunk.id,
+                    }
+                    for chunk in chunks
+                ]
+
+                embedded_chunks = self.embedding_service.embed_chunks(chunk_dicts)
+                self.vector_store.store_documents(embedded_chunks)
 
                 indexed_count += len(chunks)
 
@@ -435,7 +434,7 @@ class Pipeline:
             Document dictionary or None if extraction failed
         """
         try:
-            from ragnificent_rs import OutputFormat
+            from RAGnificent.ragnificent_rs import OutputFormat
 
             # Convert string to OutputFormat enum if it's not already an enum
             output_format_enum = output_format
@@ -1099,16 +1098,27 @@ Always cite your sources by referencing the document numbers.
         ]
 
         try:
-            # Generate response
-            completion = openai.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=self.config.openai.max_tokens,
-                timeout=self.config.openai.request_timeout,
-            )
+            # Generate response (support both legacy and client-style APIs)
+            try:
+                from openai import OpenAI  # type: ignore
 
-            response = completion.choices[0].message.content
+                client = OpenAI()
+                completion = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=self.config.openai.max_tokens,
+                )
+                response = completion.choices[0].message.content
+            except Exception:  # Fallback to legacy if client API unavailable
+                completion = openai.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=self.config.openai.max_tokens,
+                    timeout=self.config.openai.request_timeout,
+                )
+                response = completion.choices[0].message.content
 
             return {
                 "query": query,

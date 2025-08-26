@@ -69,15 +69,17 @@ class RateLimiter:
 class ThrottledSession:
     """Session with built-in throttling for HTTP requests."""
 
-    def __init__(self, requests_per_second: float = 1.0):
+    def __init__(self, requests_per_second: float = 1.0, default_timeout: float = 30.0):
         """
         Initialize throttled session.
 
         Args:
             requests_per_second: Maximum number of requests per second
+            default_timeout: Default network timeout in seconds if none is provided
         """
         self.min_interval = 1.0 / requests_per_second
         self.last_request_time = 0
+        self.default_timeout = default_timeout
 
     def request(self, method: str, url: str, **kwargs) -> Any:
         """
@@ -102,7 +104,32 @@ class ThrottledSession:
             time.sleep(wait_time)
 
         self.last_request_time = time.time()
+        # Ensure a sane default timeout is always applied
+        kwargs.setdefault("timeout", self.default_timeout)
         return requests.request(method, url, **kwargs)
+
+
+def validate_file_access(path: str) -> bool:
+    """
+    Validate that a file path exists and is safely readable.
+
+    Args:
+        path: Absolute or relative path to a file
+
+    Returns:
+        bool: True if the file exists, is a regular file, and is readable
+    """
+    import os
+
+    try:
+        # Resolve symlinks and ensure it points to a regular file
+        real_path = os.path.realpath(path)
+        if not os.path.isfile(real_path):
+            return False
+        # Check read permission
+        return os.access(real_path, os.R_OK)
+    except Exception:
+        return False
 
 
 def redact_sensitive_data(
