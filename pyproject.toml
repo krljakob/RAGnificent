@@ -17,7 +17,6 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.29.1",
     "rich>=14.0.0",
     "bleach>=6.2.0",
-    "code2flow>=2.5.1",
     "responses>=0.25.7",
 ]
 
@@ -29,6 +28,7 @@ dev = [
     "mypy>=1.15.0",
     "isort>=6.0.1",
     "sourcery>=1.36.0",
+    "code2flow>=2.5.1",
 ]
 test = [
     "pytest>=8.3.5",

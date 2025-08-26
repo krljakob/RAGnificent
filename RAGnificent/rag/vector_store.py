@@ -195,9 +195,20 @@ def initialize_collection(
         logger.info(
             f"Creating collection '{collection_name}' with vector size {vector_size}"
         )
+        # Map distance string to Qdrant enum
+        distance_map = {
+            "Cosine": models.Distance.COSINE,
+            "cosine": models.Distance.COSINE,
+            "Euclid": models.Distance.EUCLID,
+            "euclid": models.Distance.EUCLID,
+            "Dot": models.Distance.DOT,
+            "dot": models.Distance.DOT,
+        }
+        dist_enum = distance_map.get(distance, models.Distance.COSINE)
+
         client.create_collection(
             collection_name=collection_name,
-            vectors_config=models.VectorParams(size=vector_size, distance=distance),
+            vectors_config=models.VectorParams(size=vector_size, distance=dist_enum),
         )
 
         logger.info(f"Successfully created collection '{collection_name}'")

@@ -18,7 +18,6 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
-from bs4 import BeautifulSoup, Tag
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.logging import get_logger
 from RAGnificent.core.security import redact_sensitive_data
@@ -216,7 +215,8 @@ class MarkdownScraper:
     def _fetch_with_retries(self, url: str) -> str:
         for attempt in range(self.max_retries):
             try:
-                self.throttler.throttle()
+                # Use domain-aware throttling
+                self.throttler.throttle(url)
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
 
@@ -428,7 +428,6 @@ class MarkdownScraper:
                 if isinstance(e, Tag)
             ]:
                 if element_markdown := self._get_element_markdown(element, base_url):
-                    markdown_content += element_markdown + "\n\n"
                     markdown_content += element_markdown + "\n\n"
 
         logger.info("Conversion to Markdown completed.")
