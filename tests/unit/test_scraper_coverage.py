@@ -256,10 +256,14 @@ class TestScraperCoverage:
         mock_response.text = '{"key": "value"}'
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/json"}
+        mock_response.elapsed = Mock(total_seconds=Mock(return_value=0.5))
         
         with patch.object(scraper.session, "get", return_value=mock_response):
             result = scraper.scrape_website("http://example.com/api.json")
             assert result is not None
+            # Assert that the result is the raw JSON string for non-HTML content
+            # The scraper returns raw text for non-HTML content types
+            assert result == '{"key": "value"}'
 
     def test_request_timeout(self, scraper):
         """Test request timeout handling."""

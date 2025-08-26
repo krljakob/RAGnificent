@@ -1,4 +1,4 @@
-name: Security Scanning
+name: Advanced Security Scanning
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: returntocorp/semgrep-action@v1
+      - uses: returntocorp/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d  # v1
         with:
           config: >-
             p/security-audit
@@ -39,70 +39,6 @@ jobs:
         with:
           fail-on-severity: moderate
 
-  cargo-audit:
-    name: Rust Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Run cargo-audit
-        run: cargo audit --deny warnings
-
-  pip-audit:
-    name: Python Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-      - name: Create virtual environment
-        run: uv venv .venv
-
-      - name: Install dependencies
-        run: |
-          .venv/bin/uv pip install --upgrade pip
-          .venv/bin/uv pip install -r requirements.txt
-          .venv/bin/uv pip install pip-audit
-
-      - name: Run pip-audit
-        run: .venv/bin/pip-audit --desc
-
-  bandit:
-    name: Bandit Security Linting
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install bandit
-        run: pip install bandit[toml]
-
-      - name: Run bandit
-        run: bandit -r RAGnificent/ -ll -f json -o bandit-report.json
-        continue-on-error: true
-
-      - name: Upload bandit results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: bandit-security-report
-          path: bandit-report.json
+  # Note: Basic security scans (cargo-audit, pip-audit, bandit) are already
+  # included in the unified-ci.yml workflow to avoid duplication.
+  # This workflow focuses on additional specialized security tools.
