@@ -1,6 +1,6 @@
 ![RAGnificent](docs/assets/github-banner.svg)
 
-# RAGnificent 🔄📝
+# RAGnificent
 
 RAGnificent combines Python and Rust components to scrape websites and convert HTML content to markdown, JSON, or XML formats. It supports sitemap parsing, semantic chunking for RAG (Retrieval-Augmented Generation), and includes performance optimizations through Rust integration.
 
@@ -10,9 +10,9 @@ Check out the [deepwiki](https://deepwiki.com/krljakob/RAGnificent/) for a granu
 
 ## Documentation
 
-- 📖 **[Features](docs/FEATURES.md)** - Feature overview and capabilities
-- ⚙️ **[Configuration](docs/CONFIGURATION.md)** - Configuration management and environment setup
-- 🚀 **[Optimization](docs/OPTIMIZATION.md)** - Performance tuning and optimization guide
+- **[Features](docs/FEATURES.md)** - Feature overview and capabilities
+- **[Configuration](docs/CONFIGURATION.md)** - Configuration management and environment setup
+- **[Optimization](docs/OPTIMIZATION.md)** - Performance tuning and optimization guide
 
 ## Installation
 

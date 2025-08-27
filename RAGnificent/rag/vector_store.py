@@ -65,7 +65,6 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
 
         config = get_config()
 
-        # Apply config override if provided
         if config_override:
             host = config_override.get("host", config.qdrant.host)
             port = config_override.get("port", config.qdrant.port)
@@ -81,12 +80,9 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
             timeout = config.qdrant.timeout
             prefer_grpc = config.qdrant.prefer_grpc
 
-        # Handle in-memory database
         if host.lower() == ":memory:":
             logger.info("Using in-memory Qdrant database")
             return QdrantClient(":memory:")
-
-        # Connect with retry logic
         max_retries = 3
         retry_count = 0
         last_exception = None
@@ -164,18 +160,14 @@ def initialize_collection(
 
         config = get_config()
 
-        # Get client if not provided
         if client is None:
             client = get_qdrant_client()
 
-        # Use config values if not specified
         if collection_name is None:
             collection_name = config.qdrant.collection
 
         if vector_size is None:
             vector_size = config.embedding.dimension
-
-        # Check if collection exists
         try:
             collections = client.get_collections().collections
             collection_names = [c.name for c in collections]
@@ -191,11 +183,9 @@ def initialize_collection(
         except UnexpectedResponse as e:
             logger.warning(f"Error checking collections, will try to create: {e}")
 
-        # Create new collection
         logger.info(
             f"Creating collection '{collection_name}' with vector size {vector_size}"
         )
-        # Map distance string to Qdrant enum
         distance_map = {
             "Cosine": models.Distance.COSINE,
             "cosine": models.Distance.COSINE,
@@ -333,7 +323,7 @@ class VectorStore:
                 self.client.upsert(collection_name=self.collection_name, points=points)
 
                 logger.info(
-                    f"Stored batch of {len(batch)} documents ({i+len(batch)}/{total_docs})"
+                    f"Stored batch of {len(batch)} documents ({i + len(batch)}/{total_docs})"
                 )
 
             logger.info(f"Successfully stored {total_docs} documents in vector store")

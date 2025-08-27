@@ -61,14 +61,9 @@ class Pipeline:
             data_dir: Directory to save data files
             continue_on_error: Whether to continue pipeline execution on errors
         """
-        # Load pipeline configuration
         self.pipeline_config = self._load_pipeline_config(config)
         self.continue_on_error = continue_on_error
-
-        # Load system configuration
         self.config = get_config()
-
-        # Resolve configuration parameters (CLI args override pipeline config override system config)
         self.collection_name = (
             collection_name
             or self.pipeline_config.get("collection_name")
@@ -267,7 +262,7 @@ class Pipeline:
             return
 
         for i, step in enumerate(self.pipeline_config["steps"]):
-            step_name = step.get("name", f"Step {i+1}")
+            step_name = step.get("name", f"Step {i + 1}")
             step_type = step.get("type")
             step_config = step.get("config", {})
 
@@ -1077,7 +1072,7 @@ class Pipeline:
         # Ensure we're working with dictionaries by explicitly requesting as_dict=True
         # Convert SearchResult objects to dictionaries if needed
         context_str = "\n\n".join(
-            f"DOCUMENT {i+1}:\n{result['content'] if isinstance(result, dict) else result.content}"
+            f"DOCUMENT {i + 1}:\n{result['content'] if isinstance(result, dict) else result.content}"
             for i, result in enumerate(results)
         )
 
@@ -1332,7 +1327,7 @@ Always cite your sources by referencing the document numbers.
             for i in range(0, len(items), current_batch_size):
                 batch = items[i : i + current_batch_size]
                 logger.info(
-                    f"Processing batch {i//current_batch_size + 1}/{(len(items) + current_batch_size - 1)//current_batch_size} ({len(batch)} items)"
+                    f"Processing batch {i // current_batch_size + 1}/{(len(items) + current_batch_size - 1) // current_batch_size} ({len(batch)} items)"
                 )
 
                 batch_results = process_func(batch)
@@ -1498,7 +1493,7 @@ Always cite your sources by referencing the document numbers.
                     for i in range(0, len(embeds), batch_size):
                         batch = embeds[i : i + batch_size]
                         logger.info(
-                            f"Storing batch {i//batch_size + 1}/{(len(embeds) + batch_size - 1)//batch_size} ({len(batch)} items)"
+                            f"Storing batch {i // batch_size + 1}/{(len(embeds) + batch_size - 1) // batch_size} ({len(batch)} items)"
                         )
                         batch_success = process_batch(batch)
                         if not batch_success:

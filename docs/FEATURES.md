@@ -2,14 +2,14 @@
 
 ## Core Features
 
-- 🌐 **Website Scraping**: Scrapes any accessible website with robust error handling and rate limiting
-- 🗺️ **Sitemap Integration**: Parses sitemap.xml to discover and scrape the most relevant content
-- 📝 **Multiple Output Formats**: Converts HTML to clean Markdown, JSON, or XML formats
-- 🧩 **RAG Chunking**: Implements intelligent chunking for Retrieval-Augmented Generation systems
-- 📋 **Structure Preservation**: Preserves document structure and metadata
-- 🪵 **Comprehensive Logging**: Detailed logging for monitoring and debugging
-- ✅ **Error Handling**: Robust error handling with exponential backoff
-- 🏎️ **Performance Optimized**: Performance optimizations and best practices
+- **Website Scraping**: Scrapes any accessible website with robust error handling and rate limiting
+- **Sitemap Integration**: Parses sitemap.xml to discover and scrape the most relevant content
+- **Multiple Output Formats**: Converts HTML to clean Markdown, JSON, or XML formats
+- **RAG Chunking**: Implements intelligent chunking for Retrieval-Augmented Generation systems
+- **Structure Preservation**: Preserves document structure and metadata
+- **Comprehensive Logging**: Detailed logging for monitoring and debugging
+- **Error Handling**: Robust error handling with exponential backoff
+- **Performance Optimized**: Performance optimizations and best practices
 
 ## HTML Element Support
 
@@ -26,7 +26,7 @@ RAGnificent handles various HTML elements:
 
 ## Advanced Features
 
-### 🚦 Feature Flags
+### Feature Flags
 
 - **Advanced chunking**: Enable experimental chunking algorithms
 - **Parallel processing**: Toggle parallel URL processing
@@ -34,14 +34,14 @@ RAGnificent handles various HTML elements:
 - **Security features**: Toggle enhanced security measures
 - **Gradual rollouts**: Percentage-based feature deployment
 
-### 🔒 Security Features
+### Security Features
 
 - **HTML Sanitization**: Automatic cleaning of scraped content using bleach
 - **Rate Limiting**: Built-in rate limiting for API protection
 - **Sensitive Data Redaction**: Automatic removal of sensitive information
 - **Input Validation**: Comprehensive URL and input validation
 
-### 📊 Resource Management
+### Resource Management
 
 - **Connection Pooling**: Efficient management of HTTP connections
 - **Memory Monitoring**: Track and limit memory usage
