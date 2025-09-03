@@ -106,7 +106,7 @@ lint:
     cargo clippy
     export PATH=".venv/bin:$PATH"
     ruff check .
-    mypy *.py
+    mypy RAGnificent/
 
 # Full code quality check with fixes
 code-quality:

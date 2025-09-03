@@ -401,9 +401,9 @@ class TestValidateChunkParams:
 
         for size, overlap in boundary_cases:
             result = validate_chunk_params(size, overlap)
-            assert (
-                result is False
-            ), f"Overlap >= size should be invalid: {size}, {overlap}"
+            assert result is False, (
+                f"Overlap >= size should be invalid: {size}, {overlap}"
+            )
 
         # Test valid boundary cases
         valid_cases = [
@@ -472,9 +472,9 @@ class TestValidateRateLimit:
 
         for rate, expected in boundary_cases:
             result = validate_rate_limit(rate)
-            assert (
-                result is expected
-            ), f"Boundary case failed: {rate} should be {expected}"
+            assert result is expected, (
+                f"Boundary case failed: {rate} should be {expected}"
+            )
 
 
 class TestInputValidator:

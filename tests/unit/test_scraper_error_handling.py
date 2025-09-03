@@ -38,7 +38,8 @@ class TestScraperErrorHandling(unittest.TestCase):
 
         # Create scraper instance for testing
         self.scraper = MarkdownScraper(
-            requests_per_second=10.0, cache_enabled=True  # Fast for testing
+            requests_per_second=10.0,
+            cache_enabled=True,  # Fast for testing
         )
 
         # Replace the request cache with one using our temp directory
@@ -205,7 +206,9 @@ class TestScraperErrorHandling(unittest.TestCase):
                     content, "Should return content even if caching fails"
                 )
                 # Verify content integrity when cache fails (returns Markdown, not HTML)
-                self.assertIn("Test", content, "Content should contain expected heading")
+                self.assertIn(
+                    "Test", content, "Content should contain expected heading"
+                )
                 self.assertIn(
                     "Content", content, "Content should contain paragraph text"
                 )

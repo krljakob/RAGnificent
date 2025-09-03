@@ -6,6 +6,7 @@ markdown_scraper.log
 # Cached Files
 *cache*
 !cache.py
+cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

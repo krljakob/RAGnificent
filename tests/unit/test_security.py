@@ -36,9 +36,9 @@ except ImportError:
         tolerance = (
             expected * 0.12
         )  # 12% tolerance to match TimingCategories.RATE_LIMIT_TOLERANCE
-        assert (
-            expected - tolerance <= actual <= expected + tolerance
-        ), f"{description}: expected {expected:.3f}s ±12%, got {actual:.3f}s"
+        assert expected - tolerance <= actual <= expected + tolerance, (
+            f"{description}: expected {expected:.3f}s ±12%, got {actual:.3f}s"
+        )
 
     class PerformanceBudgets:
         THROTTLE_IMMEDIATE = 0.1

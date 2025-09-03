@@ -32,9 +32,9 @@ def test_convert_html_to_markdown():
     # Verify markdown structure is valid
     lines = markdown.strip().split("\n")
     header_lines = [line for line in lines if line.startswith("#")]
-    assert (
-        len(header_lines) >= 2
-    ), "Should have at least 2 header lines (title + main title)"
+    assert len(header_lines) >= 2, (
+        "Should have at least 2 header lines (title + main title)"
+    )
 
 
 def test_chunk_markdown():
@@ -62,30 +62,30 @@ This is a test paragraph.
     # Verify all chunks are strings and non-empty
     for i, chunk in enumerate(chunks):
         assert isinstance(chunk, str), f"Chunk {i} should be a string"
-        assert (
-            len(chunk.strip()) > 0
-        ), f"Chunk {i} should not be empty or whitespace-only"
+        assert len(chunk.strip()) > 0, (
+            f"Chunk {i} should not be empty or whitespace-only"
+        )
 
     # Verify important content is preserved in chunks
     combined_content = " ".join(chunks)
     assert "# Title" in combined_content, "Title header should be preserved in chunks"
-    assert (
-        "## Section 1" in combined_content
-    ), "Section 1 header should be preserved in chunks"
-    assert (
-        "## Section 2" in combined_content
-    ), "Section 2 header should be preserved in chunks"
-    assert (
-        "This is a test paragraph." in combined_content
-    ), "Paragraph content should be preserved"
+    assert "## Section 1" in combined_content, (
+        "Section 1 header should be preserved in chunks"
+    )
+    assert "## Section 2" in combined_content, (
+        "Section 2 header should be preserved in chunks"
+    )
+    assert "This is a test paragraph." in combined_content, (
+        "Paragraph content should be preserved"
+    )
     assert "List item 1" in combined_content, "List items should be preserved"
     assert "List item 2" in combined_content, "List items should be preserved"
 
     # Verify chunk size constraints
     for i, chunk in enumerate(chunks):
-        assert (
-            len(chunk) <= chunk_size + 100
-        ), f"Chunk {i} size {len(chunk)} exceeds reasonable limit based on chunk_size {chunk_size}"
+        assert len(chunk) <= chunk_size + 100, (
+            f"Chunk {i} size {len(chunk)} exceeds reasonable limit based on chunk_size {chunk_size}"
+        )
 
     # Verify no content is completely lost (accounting for possible overlap)
     original_words = set(markdown.split())
@@ -94,9 +94,9 @@ This is a test paragraph.
     preservation_ratio = (
         len(preserved_words) / len(original_words) if original_words else 1
     )
-    assert (
-        preservation_ratio > 0.8
-    ), f"Should preserve most content, got {preservation_ratio:.2%} preservation"
+    assert preservation_ratio > 0.8, (
+        f"Should preserve most content, got {preservation_ratio:.2%} preservation"
+    )
 
 
 def test_render_js_page():
@@ -110,30 +110,30 @@ def test_render_js_page():
 
     # Verify it looks like HTML content (basic structure check)
     html_lower = html.lower()
-    assert any(
-        tag in html_lower for tag in ["<html", "<body", "<div", "<head"]
-    ), "Should contain basic HTML structure tags"
+    assert any(tag in html_lower for tag in ["<html", "<body", "<div", "<head"]), (
+        "Should contain basic HTML structure tags"
+    )
 
     # Verify it's not just an error message or empty page
-    assert (
-        "error" not in html_lower or len(html) > 100
-    ), "Should return substantial content, not just error messages"
+    assert "error" not in html_lower or len(html) > 100, (
+        "Should return substantial content, not just error messages"
+    )
 
 
 def test_error_handling():
     # Test HTML conversion with malformed input
     with pytest.raises(Exception) as exc_info:
         ragnificent_rs.convert_html_to_markdown("<unclosed", "invalid-url")
-    assert (
-        exc_info.value is not None
-    ), "Should raise specific exception for malformed HTML"
+    assert exc_info.value is not None, (
+        "Should raise specific exception for malformed HTML"
+    )
 
     # Test chunking with invalid parameters
     with pytest.raises(Exception) as exc_info:
         ragnificent_rs.chunk_markdown("test", -1, -1)
-    assert (
-        exc_info.value is not None
-    ), "Should raise specific exception for negative chunk parameters"
+    assert exc_info.value is not None, (
+        "Should raise specific exception for negative chunk parameters"
+    )
 
     # Test additional invalid chunking scenarios
     with pytest.raises(Exception):
@@ -153,9 +153,9 @@ def test_error_handling():
     try:
         # These should either work gracefully or raise appropriate exceptions
         result = ragnificent_rs.convert_html_to_markdown("", "https://example.com")
-        assert isinstance(
-            result, str
-        ), "Empty HTML should return empty string or valid result"
+        assert isinstance(result, str), (
+            "Empty HTML should return empty string or valid result"
+        )
     except Exception as e:
         # If it raises an exception, it should be a meaningful one
         assert str(e) != "", "Exception should have a meaningful message"

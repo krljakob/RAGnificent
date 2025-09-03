@@ -34,15 +34,15 @@ except ImportError:
         tolerance = (
             expected * 0.12
         )  # 12% tolerance to match TimingCategories.RATE_LIMIT_TOLERANCE
-        assert (
-            expected - tolerance <= actual <= expected + tolerance
-        ), f"{description}: expected {expected:.3f}s ±12%, got {actual:.3f}s"
+        assert expected - tolerance <= actual <= expected + tolerance, (
+            f"{description}: expected {expected:.3f}s ±12%, got {actual:.3f}s"
+        )
 
     def assert_timing_within(actual, expected, tolerance_pct, description=""):
         tolerance = expected * (tolerance_pct / 100.0)
-        assert (
-            expected - tolerance <= actual <= expected + tolerance
-        ), f"{description}: expected {expected:.3f}s ±{tolerance_pct}%, got {actual:.3f}s"
+        assert expected - tolerance <= actual <= expected + tolerance, (
+            f"{description}: expected {expected:.3f}s ±{tolerance_pct}%, got {actual:.3f}s"
+        )
 
     class PerformanceBudgets:
         THROTTLE_IMMEDIATE = 0.05
@@ -520,9 +520,9 @@ class TestRequestThrottler:
         # Verify rate limit was actually adjusted
         new_limit = throttler._get_domain_rate_limit(domain)
         assert domain in throttler.domain_limits, "Domain should be added to limits"
-        assert (
-            throttler.domain_limits[domain] < original_limit
-        ), "Rate limit should be reduced due to high error rate"
+        assert throttler.domain_limits[domain] < original_limit, (
+            "Rate limit should be reduced due to high error rate"
+        )
 
         # Verify the adjustment is meaningful (not just a trivial change)
         reduction_factor = throttler.domain_limits[domain] / original_limit

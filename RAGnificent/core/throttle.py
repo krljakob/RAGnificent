@@ -209,7 +209,7 @@ class RequestThrottler(StatsMixin):
                     retry_delay = self.retry_delay * (2**retries)
                     logger.warning(
                         f"Request to {url} failed with {type(e).__name__}: {str(e)}. "
-                        f"Retrying in {retry_delay:.2f}s ({retries+1}/{self.max_retries})"
+                        f"Retrying in {retry_delay:.2f}s ({retries + 1}/{self.max_retries})"
                     )
                     time.sleep(retry_delay)
                     retries += 1

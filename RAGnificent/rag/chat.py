@@ -4,26 +4,10 @@ Provides a chat interface with RAG-enhanced responses.
 """
 
 import logging
-import sys
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Use relative imports for internal modules
-try:
-    from .pipeline import Pipeline as RAGPipeline
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from rag.pipeline import Pipeline as RAGPipeline
-
-# Use built-in RAG functionality instead of v1_implementation
-try:
-    from ..core.config import get_config
-except ImportError:
-    from core.config import get_config
+from ..core.config import get_config
+from .pipeline import Pipeline as RAGPipeline
 
 logger = logging.getLogger(__name__)
 

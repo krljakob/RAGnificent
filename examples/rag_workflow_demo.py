@@ -61,7 +61,6 @@ class RAGDemo:
         all_chunks = []
 
         for i, url in enumerate(urls, 1):
-
             try:
                 start_time = time.time()
                 html_content = self.scraper.scrape_website(url)
@@ -148,7 +147,6 @@ class RAGDemo:
         ]
 
         for query in test_queries:
-
             try:
                 if vector_store:
                     if results := vector_store.search(
@@ -198,7 +196,6 @@ class RAGDemo:
             test_url = "https://docs.python.org/3/tutorial/introduction.html"
 
             if pipeline.process_url(test_url):
-
                 query = "What is Python?"
                 results = pipeline.search(query, limit=3)
 

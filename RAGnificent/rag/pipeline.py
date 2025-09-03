@@ -495,7 +495,7 @@ class Pipeline:
             List of URLs from the sitemap
         """
         try:
-            from utils.sitemap_utils import SitemapParser
+            from RAGnificent.utils.sitemap_utils import SitemapParser
 
             parser = SitemapParser()
             sitemap_urls = parser.parse_sitemap(sitemap_url)
@@ -734,7 +734,7 @@ class Pipeline:
         Returns:
             List of chunk dictionaries
         """
-        from utils.chunk_utils import chunk_text
+        from RAGnificent.utils.chunk_utils import chunk_text
 
         chunk_size = self.config.chunking.chunk_size
         chunk_overlap = self.config.chunking.chunk_overlap
@@ -774,7 +774,7 @@ class Pipeline:
         Returns:
             List of chunk dictionaries
         """
-        from utils.chunk_utils import recursive_chunk_text
+        from RAGnificent.utils.chunk_utils import recursive_chunk_text
 
         chunk_size = self.config.chunking.chunk_size
         chunk_overlap = self.config.chunking.chunk_overlap

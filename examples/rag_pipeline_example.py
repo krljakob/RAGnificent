@@ -51,7 +51,6 @@ def main():
     )
 
     if success := pipeline.store_chunks(embedded_chunks):
-
         search_results = pipeline.search_documents(
             query="What is retrieval-augmented generation?", limit=3
         )

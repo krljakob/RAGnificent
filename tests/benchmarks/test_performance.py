@@ -289,9 +289,9 @@ def test_cache_performance():
             assert content is None, f"Cache should miss for uncached URL {i}"
             cache_miss_count += 1
 
-    assert (
-        cache_miss_count == 100
-    ), f"Should have 100 cache misses, got {cache_miss_count}"
+    assert cache_miss_count == 100, (
+        f"Should have 100 cache misses, got {cache_miss_count}"
+    )
 
     with PerformanceTimer("Cache with compression"):
         compressed_cache = RequestCache(
@@ -534,9 +534,13 @@ def test_parallel_scraping_performance(test_urls):
 
     with PerformanceTimer("Parallel scraping with sitemap (5 URLs)"):
         original_discover = enhanced_scraper._discover_urls_from_sitemap
-        enhanced_scraper._discover_urls_from_sitemap = lambda base_url, min_priority=None, include_patterns=None, exclude_patterns=None, limit=None: [
-            type("SitemapURL", (), {"loc": url}) for url in test_urls
-        ]
+        enhanced_scraper._discover_urls_from_sitemap = (
+            lambda base_url,
+            min_priority=None,
+            include_patterns=None,
+            exclude_patterns=None,
+            limit=None: [type("SitemapURL", (), {"loc": url}) for url in test_urls]
+        )
 
         original_process = enhanced_scraper._process_single_url
         enhanced_scraper._process_single_url = lambda url, *args, **kwargs: {

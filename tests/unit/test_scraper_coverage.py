@@ -21,10 +21,7 @@ class TestScraperCoverage:
         """Create a scraper instance with mocked dependencies."""
         with patch("RAGnificent.core.scraper.RequestCache"):
             return MarkdownScraper(
-                requests_per_second=10,
-                timeout=5,
-                max_retries=2,
-                cache_enabled=False
+                requests_per_second=10, timeout=5, max_retries=2, cache_enabled=False
             )
 
     def test_scraper_initialization_with_defaults(self):
@@ -46,7 +43,7 @@ class TestScraperCoverage:
             cache_enabled=True,
             cache_max_age=7200,
             max_workers=20,
-            adaptive_throttling=False
+            adaptive_throttling=False,
         )
         assert scraper.timeout == 60
         assert scraper.max_retries == 5
@@ -58,7 +55,7 @@ class TestScraperCoverage:
         """Test scraper when Rust module is available."""
         scraper = MarkdownScraper()
         if scraper.rust_available:
-            assert hasattr(scraper, 'convert_html')
+            assert hasattr(scraper, "convert_html")
             html = "<h1>Test</h1><p>Content</p>"
             result, _ = scraper._convert_content(html, "http://example.com", "markdown")
             assert "Test" in result or "#" in result
@@ -84,22 +81,30 @@ class TestScraperCoverage:
 
         with patch.object(scraper.session, "get", return_value=mock_response):
             # Test markdown format
-            markdown = scraper.scrape_website("http://example.com", output_format="markdown")
+            markdown = scraper.scrape_website(
+                "http://example.com", output_format="markdown"
+            )
             assert markdown is not None
 
             # Test JSON format
-            json_output = scraper.scrape_website("http://example.com", output_format="json")
+            json_output = scraper.scrape_website(
+                "http://example.com", output_format="json"
+            )
             parsed = json.loads(json_output)
             assert "title" in parsed or "headers" in parsed
 
             # Test XML format
-            xml_output = scraper.scrape_website("http://example.com", output_format="xml")
+            xml_output = scraper.scrape_website(
+                "http://example.com", output_format="xml"
+            )
             assert "<?xml" in xml_output or "<document>" in xml_output
 
     def test_scrape_with_retry_logic(self, scraper):
         """Test scraper retry logic on failure."""
         mock_response_fail = Mock()
-        mock_response_fail.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_response_fail.raise_for_status.side_effect = requests.HTTPError(
+            "500 Server Error"
+        )
 
         mock_response_success = Mock()
         mock_response_success.text = "<h1>Success</h1>"
@@ -109,8 +114,9 @@ class TestScraperCoverage:
         mock_response_success.elapsed = Mock(total_seconds=Mock(return_value=0.5))
 
         with patch.object(
-            scraper.session, "get",
-            side_effect=[mock_response_fail, mock_response_success]
+            scraper.session,
+            "get",
+            side_effect=[mock_response_fail, mock_response_success],
         ):
             result = scraper.scrape_website("http://example.com")
             assert result is not None
@@ -118,7 +124,9 @@ class TestScraperCoverage:
     def test_scrape_with_max_retries_exceeded(self, scraper):
         """Test scraper when max retries are exceeded."""
         mock_response = Mock()
-        mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_response.raise_for_status.side_effect = requests.HTTPError(
+            "500 Server Error"
+        )
         mock_response.elapsed = Mock(total_seconds=Mock(return_value=0.5))
 
         scraper.max_retries = 2
@@ -176,7 +184,7 @@ class TestScraperCoverage:
                 metadata={"index": 0},
                 source_url="http://example.com",
                 created_at=datetime.now().isoformat(),
-                chunk_type="test"
+                chunk_type="test",
             ),
             Chunk(
                 id="test-chunk-2",
@@ -184,15 +192,15 @@ class TestScraperCoverage:
                 metadata={"index": 1},
                 source_url="http://example.com",
                 created_at=datetime.now().isoformat(),
-                chunk_type="test"
-            )
+                chunk_type="test",
+            ),
         ]
 
         scraper._save_chunks(chunks, str(tmp_path))
 
         # Check that chunk files were created (may be jsonl or json files)
         chunk_files = list(tmp_path.glob("*.json*"))  # Include .jsonl files
-        assert len(chunk_files) >= 1  # At least one chunk file should be created
+        assert chunk_files
 
     def test_scrape_multiple_urls_sequential(self, scraper):
         """Test scraping multiple URLs sequentially."""
@@ -237,8 +245,7 @@ class TestScraperCoverage:
 
         with patch.object(scraper.session, "get", return_value=mock_response):
             result, chunks = scraper.scrape_website(
-                "http://example.com",
-                return_chunks=True
+                "http://example.com", return_chunks=True
             )
             assert result is not None
             assert chunks is not None
@@ -246,10 +253,7 @@ class TestScraperCoverage:
 
     def test_domain_specific_throttling(self):
         """Test domain-specific throttling configuration."""
-        domain_limits = {
-            "example.com": 2.0,
-            "slow-site.com": 5.0
-        }
+        domain_limits = {"example.com": 2.0, "slow-site.com": 5.0}
 
         scraper = MarkdownScraper(domain_specific_limits=domain_limits)
 
@@ -301,8 +305,7 @@ class TestScraperCoverage:
         scraper.timeout = 1
 
         with patch.object(
-            scraper.session, "get",
-            side_effect=requests.Timeout("Request timed out")
+            scraper.session, "get", side_effect=requests.Timeout("Request timed out")
         ):
             result = scraper.scrape_website("http://slow-site.com")
             assert result is None
@@ -310,8 +313,9 @@ class TestScraperCoverage:
     def test_connection_error_handling(self, scraper):
         """Test connection error handling."""
         with patch.object(
-            scraper.session, "get",
-            side_effect=requests.ConnectionError("Connection failed")
+            scraper.session,
+            "get",
+            side_effect=requests.ConnectionError("Connection failed"),
         ):
             result = scraper.scrape_website("http://unreachable.com")
             assert result is None

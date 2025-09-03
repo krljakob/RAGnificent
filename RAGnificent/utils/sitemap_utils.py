@@ -5,17 +5,8 @@ This module consolidates functionality from the simplified sitemap.py and the mo
 robust sitemap_utils.py implementations.
 """
 
-import sys
-from pathlib import Path
-
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 import logging
 import re
-
-# Import directly using a system-level import approach (no relative imports)
 import sys
 import time
 import xml.etree.ElementTree as ET
@@ -28,16 +19,7 @@ from xml.etree.ElementTree import ParseError
 import requests
 from bs4 import BeautifulSoup
 
-# Ensure core module is available in the path
-core_path = Path(__file__).parent.parent / "core"
-if str(core_path) not in sys.path:
-    sys.path.append(str(core_path))
-
-# Now import directly from the module
-try:
-    from throttle import RequestThrottler
-except ImportError:
-    from core.throttle import RequestThrottler
+from RAGnificent.core.throttle import RequestThrottler
 
 logger = logging.getLogger("sitemap_parser")
 
@@ -94,8 +76,8 @@ class SitemapParser:
         Returns:
             The Response object or None if the request failed
         """
-        from core.security import redact_sensitive_data, sanitize_headers
-        from core.validators import sanitize_url, validate_url
+        from RAGnificent.core.security import redact_sensitive_data, sanitize_headers
+        from RAGnificent.core.validators import sanitize_url, validate_url
 
         if not validate_url(url):
             logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")

@@ -18,8 +18,6 @@ from dotenv import load_dotenv
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Configure logging for this module
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -383,8 +381,8 @@ class AppConfig:
         if config_dict:
             self.update_from_dict(config_dict)
 
-        # Configure logging based on settings
-        self.configure_logging()
+        # Do not auto-configure logging on import/instantiation to avoid side effects.
+        # Call `configure_logging()` explicitly from entrypoints/CLI.
 
     def update_from_dict(self, config: dict[str, Any]) -> None:
         """

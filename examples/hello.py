@@ -24,7 +24,6 @@ def main():
     url = "https://www.python.org"
 
     try:
-
         html_content = scraper.scrape_website(url)
 
         try:

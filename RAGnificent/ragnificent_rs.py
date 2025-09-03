@@ -16,9 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from xml.dom import minidom
 
-# Use relative imports for internal modules
-# Import fix applied
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Library code should avoid mutating sys.path; use package imports
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +107,7 @@ def convert_html(
             )
 
     # Fall back to Python implementation
-    from core.scraper import MarkdownScraper
+    from RAGnificent.core.scraper import MarkdownScraper
 
     scraper = MarkdownScraper()
 
@@ -275,7 +273,7 @@ def chunk_markdown(
             logger.warning(f"Error in Rust chunking, falling back to Python: {e}")
 
     # Fall back to Python implementation
-    from utils.chunk_utils import create_semantic_chunks
+    from RAGnificent.utils.chunk_utils import create_semantic_chunks
 
     chunks = create_semantic_chunks(
         content=markdown,

@@ -18,6 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
+
 from RAGnificent.core.cache import RequestCache
 from RAGnificent.core.logging import get_logger
 from RAGnificent.core.security import redact_sensitive_data
@@ -99,7 +100,13 @@ class MarkdownScraper:
 
             self.convert_html = fallback_convert_html
 
-    def scrape_website(self, url: str, skip_cache: bool = False, output_format: str = "markdown", return_chunks: bool = False):
+    def scrape_website(
+        self,
+        url: str,
+        skip_cache: bool = False,
+        output_format: str = "markdown",
+        return_chunks: bool = False,
+    ):
         """Scrape a website with retry logic, rate limiting, and caching.
 
         Returns:
@@ -124,6 +131,7 @@ class MarkdownScraper:
 
         try:
             import psutil  # type: ignore
+
             psutil_available = True
         except ImportError:
             psutil_available = False
@@ -132,12 +140,15 @@ class MarkdownScraper:
         if cached_content is not None:
             if return_chunks:
                 # For cached content, convert and return with chunks
-                converted_content, markdown_content = self._convert_content(cached_content, url, output_format)
+                converted_content, markdown_content = self._convert_content(
+                    cached_content, url, output_format
+                )
                 chunks = self.create_chunks(markdown_content, url)
                 return converted_content, chunks
-            else:
-                converted_content, _ = self._convert_content(cached_content, url, output_format)
-                return converted_content
+            converted_content, _ = self._convert_content(
+                cached_content, url, output_format
+            )
+            return converted_content
 
         logger.info(f"Attempting to scrape the website: {redact_sensitive_data(url)}")
 
@@ -145,7 +156,7 @@ class MarkdownScraper:
 
         try:
             html_content = self._fetch_with_retries(url)
-            
+
             # Try to cache but don't fail if caching fails
             try:
                 self._cache_response(url, html_content)
@@ -154,13 +165,14 @@ class MarkdownScraper:
                 # Continue processing even if caching fails
 
             # Convert to requested format
-            converted_content, markdown_content = self._convert_content(html_content, url, output_format)
+            converted_content, markdown_content = self._convert_content(
+                html_content, url, output_format
+            )
 
             if return_chunks:
                 chunks = self.create_chunks(markdown_content, url)
                 return converted_content, chunks
-            else:
-                return converted_content
+            return converted_content
         except Exception as e:
             logger.error(f"Failed to scrape {redact_sensitive_data(url)}: {str(e)}")
             return None
@@ -234,7 +246,7 @@ class MarkdownScraper:
                     url,
                     attempt,
                     http_err,
-                    f"HTTP error on attempt {attempt+1}/{self.max_retries}: {http_err}",
+                    f"HTTP error on attempt {attempt + 1}/{self.max_retries}: {http_err}",
                     f"Failed to retrieve {url} after {self.max_retries} attempts.",
                 )
             except requests.exceptions.ConnectionError as conn_err:
@@ -242,7 +254,7 @@ class MarkdownScraper:
                     url,
                     attempt,
                     conn_err,
-                    f"Connection error on attempt {attempt+1}/{self.max_retries}: {conn_err}",
+                    f"Connection error on attempt {attempt + 1}/{self.max_retries}: {conn_err}",
                     f"Connection error persisted for {url} after {self.max_retries} attempts.",
                 )
             except requests.exceptions.Timeout as timeout_err:
@@ -250,7 +262,7 @@ class MarkdownScraper:
                     url,
                     attempt,
                     timeout_err,
-                    f"Timeout on attempt {attempt+1}/{self.max_retries}: {timeout_err}",
+                    f"Timeout on attempt {attempt + 1}/{self.max_retries}: {timeout_err}",
                     f"Request to {url} timed out after {self.max_retries} attempts.",
                 )
             except Exception as err:
@@ -971,7 +983,7 @@ class MarkdownScraper:
         output_file = str(output_path / filename)
 
         # Scrape and convert the page
-        logger.info(f"Scraping URL {index+1}/{total}: {url}")
+        logger.info(f"Scraping URL {index + 1}/{total}: {url}")
         html_content = self.scrape_website(url, skip_cache=False)
 
         # Handle case where scraping failed and returned None
@@ -1017,12 +1029,10 @@ class MarkdownScraper:
             "keywords": "",
             "og_title": "",
             "og_image": "",
-            "url": url
+            "url": url,
         }
 
-        # Extract title
-        title_tag = soup.find("title")
-        if title_tag:
+        if title_tag := soup.find("title"):
             metadata["title"] = self._get_text_from_element(title_tag)
 
         # Extract meta description
@@ -1071,11 +1081,14 @@ class MarkdownScraper:
         """Save content chunks to directory."""
         self.save_chunks(chunks, output_dir)
 
-    def scrape_multiple_urls(self, urls: List[str], parallel: bool = False, max_workers: int = 4) -> List[Dict]:
+    def scrape_multiple_urls(
+        self, urls: List[str], parallel: bool = False, max_workers: int = 4
+    ) -> List[Dict]:
         """Scrape multiple URLs and return results."""
         results = []
 
         if parallel:
+
             def process_url(url):
                 try:
                     content = self.scrape_website(url)
@@ -1083,7 +1096,9 @@ class MarkdownScraper:
                 except Exception as e:
                     return {"url": url, "success": False, "error": str(e)}
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=max_workers
+            ) as executor:
                 results = list(executor.map(process_url, urls))
         else:
             for url in urls:
@@ -1629,9 +1644,9 @@ def _process_single_url_mode(
     if result is None:
         logger.error(f"Failed to scrape content from {url}")
         return
-    elif isinstance(result, tuple):
+    if isinstance(result, tuple):
         # If return_chunks was True, result is (content, chunks)
-        html_content = result[0] if result[0] else ""
+        html_content = result[0] or ""
     else:
         # Single string content
         html_content = result

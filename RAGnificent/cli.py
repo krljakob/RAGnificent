@@ -4,16 +4,32 @@ RAGnificent Command Line Interface.
 This module provides a modern, user-friendly CLI for RAGnificent using Typer.
 """
 
+import asyncio
 from pathlib import Path
 from typing import List, Optional
 
 import typer
+import uvicorn
+import yaml
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from typing_extensions import Annotated
 
+from RAGnificent import __version__
+from RAGnificent.core.async_scraper import AsyncMarkdownScraper
 from RAGnificent.core.logging import get_logger, setup_logger
+from RAGnificent.core.scraper import MarkdownScraper
+from RAGnificent.rag.chat import RAGChat
+from RAGnificent.rag.embedding import EmbeddingService
+from RAGnificent.rag.pipeline import Pipeline
+from RAGnificent.ragnificent_rs import (
+    OutputFormat,
+    chunk_markdown,
+    convert_html_to_format,
+    convert_html_to_markdown,
+)
+from RAGnificent.utils.chunk_utils import ContentChunker
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -37,8 +53,6 @@ debug_option = typer.Option(False, "--debug", "-d", help="Enable debug output")
 def version_callback(value: bool):
     """Print version and exit."""
     if value:
-        from RAGnificent import __version__
-
         console.print(f"RAGnificent v{__version__}")
         raise typer.Exit()
 
@@ -91,7 +105,6 @@ def scrape(
     ),
 ):
     """Scrape a website and convert content to the specified format."""
-    import asyncio
 
     with Progress(
         SpinnerColumn(),
@@ -151,8 +164,6 @@ async def _async_scrape(
     task,
 ):
     """Async scraping implementation."""
-    from RAGnificent.core.async_scraper import AsyncMarkdownScraper
-
     async with AsyncMarkdownScraper(max_workers=workers) as scraper:
         if use_sitemap:
             scraped_urls = await scraper.scrape_by_sitemap(
@@ -189,8 +200,6 @@ def _sync_scrape(
     task,
 ):
     """Sync scraping implementation."""
-    from RAGnificent.core.scraper import MarkdownScraper
-
     scraper = MarkdownScraper(max_workers=workers)
 
     if use_sitemap:
@@ -261,15 +270,9 @@ def convert(
     chunk_overlap: int = typer.Option(
         200, "--chunk-overlap", help="Overlap between chunks"
     ),
+    debug: bool = debug_option,
 ):
     """Convert documents between different formats."""
-    from RAGnificent.ragnificent_rs import (
-        convert_to_json,
-        convert_to_markdown,
-        convert_to_xml,
-    )
-    from RAGnificent.utils.chunk_utils import ContentChunker
-
     console.print(f"📄 Converting {input_file} to {to_format}...")
 
     try:
@@ -342,6 +345,7 @@ def pipeline(
     output_dir: Optional[Path] = typer.Option(
         None, "-o", "--output", help="Output directory (overrides config)"
     ),
+    debug: bool = debug_option,
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Show what would be executed without running"
     ),
@@ -350,10 +354,6 @@ def pipeline(
     ),
 ):
     """Execute a RAG pipeline from a configuration file."""
-    import yaml
-
-    from RAGnificent.rag.pipeline import Pipeline
-
     console.print(f"🔄 Loading pipeline from {config_file}...")
 
     try:
@@ -376,7 +376,7 @@ def pipeline(
         if dry_run:
             console.print("\n[yellow]DRY RUN - Showing pipeline steps:[/yellow]")
             for i, step in enumerate(config.get("steps", [])):
-                console.print(f"\n  Step {i+1}: {step.get('name', 'Unnamed step')}")
+                console.print(f"\n  Step {i + 1}: {step.get('name', 'Unnamed step')}")
                 console.print(f"    Type: {step.get('type')}")
                 console.print(f"    Config: {step.get('config', {})}")
             raise typer.Exit(0)
@@ -424,14 +424,13 @@ def chat(
     temperature: float = typer.Option(
         0.7, "-t", "--temperature", help="Sampling temperature"
     ),
+    debug: bool = debug_option,
 ):
     """Chat with the RAG system."""
-    from RAGnificent.rag.chat import ChatSession
-
     console.print(Panel.fit("RAGnificent Chat", border_style="blue"))
 
     try:
-        session = ChatSession(model=model, temperature=temperature)
+        session = RAGChat()
         response = session.chat(query)
 
         console.print("\n[bold blue]You:[/bold blue]", query)
@@ -458,14 +457,13 @@ def embed(
     batch_size: int = typer.Option(
         32, "-b", "--batch-size", help="Batch size for embedding"
     ),
+    debug: bool = debug_option,
 ):
     """Generate embeddings for text content."""
-    from RAGnificent.rag.embedding import EmbeddingGenerator
-
     console.print("🔍 Generating embeddings...")
 
     try:
-        generator = EmbeddingGenerator(model_name=model_name)
+        generator = EmbeddingService(model_name=model_name)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         if input_path.is_file():
@@ -493,8 +491,6 @@ def serve(
     ),
 ):
     """Start the RAGnificent API server."""
-    import uvicorn
-
     console.print("🚀 Starting RAGnificent API server...")
     console.print(f"   - Host: {host}")
     console.print(f"   - Port: {port}")

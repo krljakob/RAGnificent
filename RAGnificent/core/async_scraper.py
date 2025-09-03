@@ -189,7 +189,7 @@ class AsyncMarkdownScraper:
                     url,
                     attempt,
                     e,
-                    f"HTTP error on attempt {attempt+1}/{self.max_retries}: {e}",
+                    f"HTTP error on attempt {attempt + 1}/{self.max_retries}: {e}",
                     f"Failed to retrieve {url} after {self.max_retries} attempts.",
                 )
             except httpx.ConnectError as e:
@@ -197,7 +197,7 @@ class AsyncMarkdownScraper:
                     url,
                     attempt,
                     e,
-                    f"Connection error on attempt {attempt+1}/{self.max_retries}: {e}",
+                    f"Connection error on attempt {attempt + 1}/{self.max_retries}: {e}",
                     f"Connection error persisted for {url} after {self.max_retries} attempts.",
                 )
             except httpx.TimeoutException as e:
@@ -205,7 +205,7 @@ class AsyncMarkdownScraper:
                     url,
                     attempt,
                     e,
-                    f"Timeout on attempt {attempt+1}/{self.max_retries}: {e}",
+                    f"Timeout on attempt {attempt + 1}/{self.max_retries}: {e}",
                     f"Request to {url} timed out after {self.max_retries} attempts.",
                 )
             except Exception as e:

@@ -53,10 +53,8 @@ class TestE2ERAGWorkflow:
             mock_get.return_value = mock_response
 
             from RAGnificent.core.scraper import MarkdownScraper
-            yield MarkdownScraper(
-                requests_per_second=10,
-                cache_enabled=False
-            )
+
+            yield MarkdownScraper(requests_per_second=10, cache_enabled=False)
 
     @pytest.fixture
     def mock_embedding_service(self):
@@ -81,6 +79,7 @@ class TestE2ERAGWorkflow:
             mock_st.return_value = mock_model
 
             from RAGnificent.rag.embedding import get_embedding_service
+
             yield get_embedding_service("sentence-transformers")
 
     @pytest.fixture
@@ -109,20 +108,22 @@ class TestE2ERAGWorkflow:
                     similarities.append((similarity, i))
 
                 similarities.sort(reverse=True)
-                results = []
-                for score, idx in similarities[:top_k]:
-                    results.append({
+                return [
+                    {
                         "content": self.documents[idx],
                         "score": score,
-                        "metadata": {"index": idx}
-                    })
-                return results
+                        "metadata": {"index": idx},
+                    }
+                    for score, idx in similarities[:top_k]
+                ]
 
         with patch("RAGnificent.rag.vector_store.get_vector_store") as mock_get:
             mock_get.return_value = MockVectorStore()
             yield mock_get.return_value
 
-    def test_complete_workflow(self, mock_scraper, mock_embedding_service, mock_vector_store):
+    def test_complete_workflow(
+        self, mock_scraper, mock_embedding_service, mock_vector_store
+    ):
         """Test the complete RAG workflow from scraping to search."""
         # Step 1: Scrape content
         url = "https://example.com/test"
@@ -136,10 +137,7 @@ class TestE2ERAGWorkflow:
         from RAGnificent.utils.chunk_utils import ContentChunker
 
         chunker = ContentChunker(chunk_size=200, chunk_overlap=50)
-        chunks = chunker.create_chunks_from_markdown(
-            markdown_content,
-            source_url=url
-        )
+        chunks = chunker.create_chunks_from_markdown(markdown_content, source_url=url)
 
         assert len(chunks) > 0
         assert all("content" in chunk for chunk in chunks)
@@ -169,15 +167,21 @@ class TestE2ERAGWorkflow:
         # Verify search relevance
         top_result = search_results[0] if search_results else None
         assert top_result is not None
-        assert "components" in top_result["content"].lower() or \
-               "RAG" in top_result["content"]
+        assert (
+            "components" in top_result["content"].lower()
+            or "RAG" in top_result["content"]
+        )
 
-    def test_pipeline_class_integration(self, mock_scraper, mock_embedding_service, mock_vector_store):
+    def test_pipeline_class_integration(
+        self, mock_scraper, mock_embedding_service, mock_vector_store
+    ):
         """Test the Pipeline class for end-to-end workflow."""
         with patch("RAGnificent.rag.pipeline.MarkdownScraper") as mock_scraper_class:
             mock_scraper_class.return_value = mock_scraper
 
-            with patch("RAGnificent.rag.pipeline.get_embedding_service") as mock_emb_service:
+            with patch(
+                "RAGnificent.rag.pipeline.get_embedding_service"
+            ) as mock_emb_service:
                 mock_emb_service.return_value = mock_embedding_service
 
                 with patch("RAGnificent.rag.pipeline.get_vector_store") as mock_vs:
@@ -189,7 +193,7 @@ class TestE2ERAGWorkflow:
                         collection_name="test_collection",
                         chunk_size=200,
                         chunk_overlap=50,
-                        cache_enabled=False
+                        cache_enabled=False,
                     )
 
                     # Process URL
@@ -231,11 +235,12 @@ class TestE2ERAGWorkflow:
 
         with patch("RAGnificent.rag.pipeline.MarkdownScraper") as mock_scraper_class:
             # Simulate scraping failure
-            mock_scraper_class.return_value.scrape_website.side_effect = Exception("Network error")
+            mock_scraper_class.return_value.scrape_website.side_effect = Exception(
+                "Network error"
+            )
 
             pipeline = Pipeline(
-                collection_name="test_collection",
-                continue_on_error=True
+                collection_name="test_collection", continue_on_error=True
             )
 
             # Should handle error gracefully
@@ -243,14 +248,18 @@ class TestE2ERAGWorkflow:
             assert result["urls_processed"] == 0
             assert result["errors"] == 1
 
-    def test_batch_processing(self, mock_scraper, mock_embedding_service, mock_vector_store):
+    def test_batch_processing(
+        self, mock_scraper, mock_embedding_service, mock_vector_store
+    ):
         """Test batch processing of multiple URLs."""
         from RAGnificent.rag.pipeline import Pipeline
 
         with patch("RAGnificent.rag.pipeline.MarkdownScraper") as mock_scraper_class:
             mock_scraper_class.return_value = mock_scraper
 
-            with patch("RAGnificent.rag.pipeline.get_embedding_service") as mock_emb_service:
+            with patch(
+                "RAGnificent.rag.pipeline.get_embedding_service"
+            ) as mock_emb_service:
                 mock_emb_service.return_value = mock_embedding_service
 
                 with patch("RAGnificent.rag.pipeline.get_vector_store") as mock_vs:
@@ -260,14 +269,14 @@ class TestE2ERAGWorkflow:
                         collection_name="test_batch",
                         chunk_size=200,
                         chunk_overlap=50,
-                        cache_enabled=False
+                        cache_enabled=False,
                     )
 
                     # Process multiple URLs
                     urls = [
                         "https://example.com/doc1",
                         "https://example.com/doc2",
-                        "https://example.com/doc3"
+                        "https://example.com/doc3",
                     ]
 
                     result = pipeline.process_urls(urls, parallel=True, max_workers=3)
@@ -282,24 +291,23 @@ class TestE2ERAGWorkflow:
         from markdownify import markdownify
 
         from RAGnificent.utils.chunk_utils import ContentChunker
+
         markdown = markdownify(mock_html_content)
 
         # Test recursive chunking
         chunker = ContentChunker(chunk_size=100, chunk_overlap=20)
         recursive_chunks = chunker.create_chunks_from_markdown(
-            markdown,
-            source_url="https://example.com",
-            chunking_strategy="recursive"
+            markdown, source_url="https://example.com", chunking_strategy="recursive"
         )
 
         assert len(recursive_chunks) > 0
-        assert all(len(chunk["content"]) <= 120 for chunk in recursive_chunks)  # Allow for overlap
+        assert all(
+            len(chunk["content"]) <= 120 for chunk in recursive_chunks
+        )  # Allow for overlap
 
         # Test semantic chunking
         semantic_chunks = chunker.create_chunks_from_markdown(
-            markdown,
-            source_url="https://example.com",
-            chunking_strategy="semantic"
+            markdown, source_url="https://example.com", chunking_strategy="semantic"
         )
 
         assert len(semantic_chunks) > 0
@@ -309,20 +317,19 @@ class TestE2ERAGWorkflow:
         sliding_chunks = chunker.create_chunks_from_markdown(
             markdown,
             source_url="https://example.com",
-            chunking_strategy="sliding_window"
+            chunking_strategy="sliding_window",
         )
 
         assert len(sliding_chunks) > 0
 
-    @pytest.mark.skipif(not Path(".venv").exists(), reason="Requires virtual environment")
+    @pytest.mark.skipif(
+        not Path(".venv").exists(), reason="Requires virtual environment"
+    )
     def test_save_and_load_pipeline_state(self, tmp_path, mock_vector_store):
         """Test saving and loading pipeline state."""
         from RAGnificent.rag.pipeline import Pipeline
 
-        pipeline = Pipeline(
-            collection_name="test_persistence",
-            data_dir=tmp_path
-        )
+        pipeline = Pipeline(collection_name="test_persistence", data_dir=tmp_path)
 
         # Save pipeline configuration
         config_file = tmp_path / "pipeline_config.yaml"
@@ -334,7 +341,9 @@ class TestE2ERAGWorkflow:
         loaded_pipeline = Pipeline(config=config_file)
         assert loaded_pipeline.collection_name == "test_persistence"
 
-    def test_metadata_preservation(self, mock_scraper, mock_embedding_service, mock_vector_store):
+    def test_metadata_preservation(
+        self, mock_scraper, mock_embedding_service, mock_vector_store
+    ):
         """Test that metadata is preserved throughout the pipeline."""
         from RAGnificent.utils.chunk_utils import ContentChunker
 
@@ -345,7 +354,7 @@ class TestE2ERAGWorkflow:
         chunks = chunker.create_chunks_from_markdown(
             markdown,
             source_url=url,
-            additional_metadata={"doc_type": "tutorial", "version": "1.0"}
+            additional_metadata={"doc_type": "tutorial", "version": "1.0"},
         )
 
         # Verify metadata is preserved

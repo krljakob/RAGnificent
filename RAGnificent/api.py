@@ -194,7 +194,6 @@ async def scrape_endpoint(request: ScrapeRequest, background_tasks: BackgroundTa
                 chunk_size=request.chunk_size,
                 chunk_overlap=request.chunk_overlap,
             ) as scraper:
-
                 if request.use_sitemap:
                     scraped_urls = await scraper.scrape_by_sitemap(
                         request.url,
@@ -243,19 +242,15 @@ async def convert_endpoint(request: ConvertRequest):
             # Use Rust converter if available
             try:
                 from RAGnificent.ragnificent_rs import (
-                    convert_to_json,
-                    convert_to_markdown,
-                    convert_to_xml,
+                    convert_html_to_format,
+                    convert_html_to_markdown,
+                    OutputFormat,
                 )
 
                 if request.to_format == "markdown":
-                    converted = convert_to_markdown(request.content)
-                elif request.to_format == "json":
-                    converted = convert_to_json(request.content)
-                elif request.to_format == "xml":
-                    converted = convert_to_xml(request.content)
+                    converted = convert_html_to_markdown(request.content, "")
                 else:
-                    raise ValueError(f"Unsupported output format: {request.to_format}")
+                    converted = convert_html_to_format(request.content, "", request.to_format)
 
             except ImportError as e:
                 # Fallback to Python implementation

@@ -13,19 +13,10 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-# Use relative imports for internal modules
-try:
-    from ..core.config import EmbeddingModelType, get_config
-except ImportError:
-    # Fallback for direct execution
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from core.config import EmbeddingModelType, get_config
-
 import numpy as np
 from dotenv import load_dotenv
+
+from ..core.config import EmbeddingModelType, get_config
 
 logger = logging.getLogger(__name__)
 
@@ -217,35 +208,34 @@ class OpenAIEmbedding:
 
     def __init__(self, model_name: Optional[str] = None):
         """
-        Initialize OpenAI embedding model.
+        Initialize OpenAI embedding model using the official client.
 
         Args:
             model_name: Model name to use
         """
         try:
-            import openai
+            import httpx
+            from openai import OpenAI
 
             config = get_config()
-            self.api_key = config.openai.api_key
+            self.api_key = config.openai.api_key or os.getenv("OPENAI_API_KEY")
             self.model_name = model_name or config.openai.embedding_model
             self.request_timeout = config.openai.request_timeout
             self.max_retries = config.openai.max_retries
 
             if not self.api_key:
-                self.api_key = os.getenv("OPENAI_API_KEY")
-
-            if not self.api_key:
                 raise EmbeddingModelError("OpenAI API key not found")
 
-            openai.api_key = self.api_key
+            timeout = httpx.Timeout(self.request_timeout)
+            http_client = httpx.Client(timeout=timeout)
+            self.client = OpenAI(api_key=self.api_key, http_client=http_client)
             logger.info(f"Initialized OpenAI embedding with model: {self.model_name}")
 
         except ImportError as e:
             logger.error(
-                "OpenAI package not installed. Please install with: uv pip install openai"
+                "OpenAI package not installed. Please install with: uv pip install openai httpx"
             )
             raise EmbeddingModelError("OpenAI package not installed") from e
-
         except Exception as e:
             logger.error(f"Error initializing OpenAI embedding: {e}")
             raise EmbeddingModelError(
@@ -293,14 +283,13 @@ class OpenAIEmbedding:
         Returns:
             List of embedding vectors
         """
-        import openai
-
         # Retry logic for API calls
         retry_count = 0
         while retry_count <= self.max_retries:
             try:
-                response = openai.embeddings.create(
-                    model=self.model_name, input=texts, timeout=self.request_timeout
+                response = self.client.embeddings.create(
+                    model=self.model_name,
+                    input=texts,
                 )
                 # Process response
                 return [np.array(item.embedding) for item in response.data]
@@ -379,7 +368,6 @@ class OpenAIEmbedding:
             Embedding vector(s)
         """
         try:
-
             # Prepare input for consistent processing
             is_single_text = isinstance(text, str)
             texts = [text] if is_single_text else text

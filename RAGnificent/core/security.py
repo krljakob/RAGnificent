@@ -124,10 +124,7 @@ def validate_file_access(path: str) -> bool:
     try:
         # Resolve symlinks and ensure it points to a regular file
         real_path = os.path.realpath(path)
-        if not os.path.isfile(real_path):
-            return False
-        # Check read permission
-        return os.access(real_path, os.R_OK)
+        return os.access(real_path, os.R_OK) if os.path.isfile(real_path) else False
     except Exception:
         return False
 
