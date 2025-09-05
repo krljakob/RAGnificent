@@ -13,7 +13,7 @@ import re
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple
+from typing import Any, Callable, Dict, List, Optional, Pattern, Tuple, Union
 
 try:
     import diskcache
@@ -64,14 +64,14 @@ class RequestCache(StatsMixin):
         self.cache_backend = self._select_cache_backend(cache_backend)
         self._init_cache_backend(diskcache_size_limit, joblib_compress)
 
-        self.memory_cache: Dict[str, Tuple[str, float, Optional[int], bool]] = {}
+        self.memory_cache: Dict[str, Tuple[Union[str, bytes], float, Optional[int], bool]] = {}
         self.current_memory_usage = 0  # Approximate memory usage in bytes
 
         self.ttl_patterns: List[Tuple[Pattern, int]] = []
 
         logger.info(f"Initialized RequestCache with {self.cache_backend} backend")
 
-        self.stats = {
+        self.stats: Dict[str, Any] = {
             "hits": 0,
             "misses": 0,
             "memory_hits": 0,

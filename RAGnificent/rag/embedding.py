@@ -317,6 +317,10 @@ class OpenAIEmbedding:
             embeddings: The embedding vectors
             original_text: The original input text (single string or list)
         """
+        if len(texts) != len(embeddings):
+            logger.error(f"Mismatch between texts ({len(texts)}) and embeddings ({len(embeddings)}) lengths")
+            return
+
         for i, t in enumerate(texts):
             if isinstance(original_text, str) or t not in (
                 original_text if isinstance(original_text, list) else [original_text]
@@ -387,6 +391,9 @@ class OpenAIEmbedding:
                 return cached_embeddings[0] if is_single_text else cached_embeddings
 
             new_embeddings = self._call_openai_api(texts_to_embed)
+            if new_embeddings is None:
+                raise EmbeddingAPIError("Failed to get embeddings from OpenAI API after all retries")
+
             # Cache the new embeddings
             self._cache_embeddings(texts_to_embed, new_embeddings, text)
             # Return results in the appropriate format

@@ -19,6 +19,23 @@ from RAGnificent.core.logging import get_logger
 from RAGnificent.rag.pipeline import Pipeline
 from RAGnificent.rag.search import SearchResult
 
+# Optional imports for Rust functionality
+try:
+    from RAGnificent.ragnificent_rs import (
+        convert_html_to_format,
+        convert_html_to_markdown,
+        OutputFormat,
+    )
+    RUST_AVAILABLE = True
+except ImportError:
+    RUST_AVAILABLE = False
+
+try:
+    from markdownify import markdownify
+    MARKDOWNIFY_AVAILABLE = True
+except ImportError:
+    MARKDOWNIFY_AVAILABLE = False
+
 logger = get_logger(__name__)
 
 # FastAPI app

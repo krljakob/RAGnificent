@@ -374,10 +374,16 @@ class TestOpenAIEmbedding:
         mock_response = MagicMock()
         mock_response.data = [
             MagicMock(embedding=[0.1, 0.2, 0.3, 0.4]),
-            MagicMock(embedding=[0.5, 0.6, 0.7, 0.8]),
         ]
         mock_openai_module.embeddings.create.return_value = mock_response
         mock_openai_module.api_key = "test-key"
+
+        # Mock the OpenAI class
+        mock_openai_class = MagicMock()
+        mock_client = MagicMock()
+        mock_client.embeddings.create.return_value = mock_response
+        mock_openai_class.return_value = mock_client
+        mock_openai_module.OpenAI = mock_openai_class
 
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with patch.dict("sys.modules", {"openai": mock_openai_module}):
