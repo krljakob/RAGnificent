@@ -7,7 +7,7 @@ import pytest
 def test_get_urls_from_sitemap_uses_package_imports(monkeypatch):
     from RAGnificent.rag.pipeline import Pipeline
 
-    # Fake SitemapURL-like objects with .loc attribute
+    # fake SitemapURL-like objects with .loc attribute
     class URLObj:
         def __init__(self, loc):
             self.loc = loc
@@ -19,7 +19,7 @@ def test_get_urls_from_sitemap_uses_package_imports(monkeypatch):
         def parse_sitemap(self, url):
             return [URLObj("https://example.com/a"), URLObj("https://example.com/b")]
 
-    # Patch the class in the utils module so the local import resolves to this
+    # patch the class in the utils module so the local import resolves to this
     import RAGnificent.utils.sitemap_utils as sm
 
     monkeypatch.setattr(sm, "SitemapParser", FakeSitemapParser, raising=True)
@@ -30,7 +30,7 @@ def test_get_urls_from_sitemap_uses_package_imports(monkeypatch):
 
 
 def test_chunk_helpers_route_to_utils(monkeypatch):
-    # Patch chunking helpers to ensure routing works
+    # patch chunking helpers to ensure routing works
     import RAGnificent.utils.chunk_utils as cu
     from RAGnificent.rag.pipeline import Pipeline
 

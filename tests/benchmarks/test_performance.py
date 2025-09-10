@@ -32,7 +32,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmarks")
 
-# Mark all tests in this module as benchmarks
+# mark all tests in this module as benchmarks
 pytestmark = pytest.mark.benchmark
 
 
@@ -212,8 +212,8 @@ def mock_embedding_service():
 
     class MockEmbeddingService:
         def embed_chunks(self, chunks):
-            # Use minimal delay for testing instead of actual computation time
-            # Original: time.sleep(0.01 * len(chunks)) - too slow for unit tests
+            # use minimal delay for testing instead of actual computation time
+            # original: time.sleep(0.01 * len(chunks)) - too slow for unit tests
             time.sleep(0.001 * len(chunks))  # Reduced 10x for faster tests
             for chunk in chunks:
                 chunk["embedding"] = [0.1] * 384  # Mock embedding vector
@@ -233,13 +233,13 @@ def mock_vector_store():
         def store_documents(
             self, documents, embedding_field="embedding", id_field="id"
         ):
-            # Reduced delay for faster testing: 0.01 -> 0.001 (10x speedup)
+            # reduced delay for faster testing: 0.01 -> 0.001 (10x speedup)
             time.sleep(0.001 * len(documents))
             self.documents.extend(documents)
             return True
 
         def search(self, query_vector, limit=5, threshold=0.7):
-            # Reduced search delay: 0.02 -> 0.002 (10x speedup)
+            # reduced search delay: 0.02 -> 0.002 (10x speedup)
             time.sleep(0.002)
             return self.documents[: min(limit, len(self.documents))]
 
@@ -257,7 +257,7 @@ def test_cache_performance():
     with PerformanceTimer("Cache initialization (default)"):
         cache = RequestCache(cache_dir=str(cache_dir))
 
-    # Track cache operations for validation
+    # track cache operations for validation
     urls_set = []
     with PerformanceTimer("Cache set (100 items)"):
         for i in range(100):
@@ -267,7 +267,7 @@ def test_cache_performance():
             assert success is not False, f"Cache set should succeed for URL {i}"
             urls_set.append(url)
 
-    # Verify all items were cached correctly
+    # verify all items were cached correctly
     cache_hit_count = 0
     with PerformanceTimer("Cache get (100 hits)"):
         for i in range(100):
@@ -280,7 +280,7 @@ def test_cache_performance():
 
     assert cache_hit_count == 100, f"Should have 100 cache hits, got {cache_hit_count}"
 
-    # Verify cache misses behave correctly
+    # verify cache misses behave correctly
     cache_miss_count = 0
     with PerformanceTimer("Cache get (100 misses)"):
         for i in range(100, 200):
@@ -356,7 +356,7 @@ def test_throttler_performance():
             throttler.throttle(f"https://{domain}/page")
 
     def mock_request(url):
-        # Reduced network simulation delay: 0.05 -> 0.005 (10x speedup)
+        # reduced network simulation delay: 0.05 -> 0.005 (10x speedup)
         time.sleep(0.005)  # Simulate network delay
         return type("Response", (), {"status_code": 200})
 
@@ -368,9 +368,9 @@ def test_throttler_performance():
     with PerformanceTimer("Execute parallel (20 requests)"):
         urls = [f"https://example.com/page{i}" for i in range(20)]
 
-        # Create a wrapper function that doesn't need URL parameter
+        # create a wrapper function that doesn't need URL parameter
         def mock_request_wrapper():
-            # Reduced delay for parallel testing: 0.05 -> 0.005 (10x speedup)
+            # reduced delay for parallel testing: 0.05 -> 0.005 (10x speedup)
             time.sleep(0.005)
             return type("Response", (), {"status_code": 200})
 
@@ -519,7 +519,7 @@ def test_parallel_scraping_performance(test_urls):
         )
 
     def mock_scrape_website(url):
-        # Reduced scraping simulation delay: 0.1 -> 0.01 (10x speedup)
+        # reduced scraping simulation delay: 0.1 -> 0.01 (10x speedup)
         time.sleep(0.01)  # Simulate network delay
         return f"<html><body><h1>Title for {url}</h1><p>Content for {url}</p></body></html>"
 

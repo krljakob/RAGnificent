@@ -174,7 +174,7 @@ class SitemapParser:
             ns_map = {"sm": namespace} if namespace else {}
             root = ET.fromstring(content)
 
-            # Determine if this is a sitemap index or a regular sitemap
+            # determine if this is a sitemap index or a regular sitemap
             if root.tag.endswith("sitemapindex"):
                 return self._handle_sitemap_index(root, namespace, ns_map)
             return self._handle_sitemap(root, namespace, ns_map)
@@ -280,17 +280,17 @@ class SitemapParser:
             urls = []
             soup = BeautifulSoup(content, "html.parser")
 
-            # Find all links in the HTML
+            # find all links in the HTML
             for link in soup.find_all("a", href=True):
                 href = link["href"]
-                # Skip empty, javascript, or anchor links
+                # skip empty, javascript, or anchor links
                 if not href or href.startswith("javascript:") or href.startswith("#"):
                     continue
 
-                # Resolve relative URLs
+                # resolve relative URLs
                 full_url = urljoin(base_url, href)
 
-                # Create a SitemapURL object (without priority, lastmod, or changefreq)
+                # create a SitemapURL object (without priority, lastmod, or changefreq)
                 urls.append(SitemapURL(loc=full_url))
 
             logger.info(f"Found {len(urls)} URLs in HTML sitemap")
@@ -330,11 +330,11 @@ class SitemapParser:
             logger.info(f"Detected HTML sitemap at {sitemap_url}")
             return self._parse_html_sitemap(response.text, sitemap_url)
 
-        # Unknown content type
+        # unknown content type
         logger.warning(
             f"Unknown content type for sitemap at {sitemap_url}: {content_type}"
         )
-        # Try to parse as XML anyway as a fallback
+        # try to parse as XML anyway as a fallback
         try:
             return self._process_xml_sitemap(response)
         except Exception as e:
@@ -373,10 +373,10 @@ class SitemapParser:
         base_domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
         domain = parsed_url.netloc
 
-        # List of potential sitemap locations to try
+        # list of potential sitemap locations to try
         sitemap_locations = []
 
-        # First check robots.txt if configured to do so
+        # first check robots.txt if configured to do so
         if self.respect_robots_txt:
             sitemap_locations.extend(self._find_sitemaps_in_robots(base_url))
 
@@ -394,7 +394,7 @@ class SitemapParser:
             if urls := self._process_sitemap(sitemap_url):
                 logger.info(f"Found {len(urls)} URLs in sitemap {sitemap_url}")
                 self.discovered_urls.extend(urls)
-                # If we found URLs in this sitemap, we can stop looking
+                # if we found URLs in this sitemap, we can stop looking
                 break
 
         if filter_by_domain:
@@ -406,7 +406,7 @@ class SitemapParser:
                 f"Filtered {original_count} URLs down to {len(self.discovered_urls)} from domain {domain}"
             )
 
-            # Apply docs path filter if requested
+            # apply docs path filter if requested
             if docs_path_filter and "/docs" in base_url:
                 original_count = len(self.discovered_urls)
                 self.discovered_urls = [
@@ -440,7 +440,7 @@ class SitemapParser:
         """
         filtered_urls = self.discovered_urls.copy()
 
-        # Filter by priority
+        # filter by priority
         if min_priority is not None:
             filtered_urls = [
                 url
@@ -448,7 +448,7 @@ class SitemapParser:
                 if url.priority is None or url.priority >= min_priority
             ]
 
-        # Filter by inclusion patterns
+        # filter by inclusion patterns
         if include_patterns:
             include_compiled = [re.compile(pattern) for pattern in include_patterns]
             filtered_urls = [
@@ -457,7 +457,7 @@ class SitemapParser:
                 if any(pattern.search(url.loc) for pattern in include_compiled)
             ]
 
-        # Filter by exclusion patterns
+        # filter by exclusion patterns
         if exclude_patterns:
             exclude_compiled = [re.compile(pattern) for pattern in exclude_patterns]
             filtered_urls = [
@@ -523,10 +523,10 @@ def discover_site_urls(
     """
     parser = SitemapParser(respect_robots_txt=respect_robots_txt)
 
-    # Parse sitemaps
+    # parse sitemaps
     parser.parse_sitemap(base_url, filter_by_domain=True)
 
-    # Filter URLs
+    # filter URLs
     filtered_urls = parser.filter_urls(
         min_priority=min_priority,
         include_patterns=include_patterns,
@@ -534,7 +534,7 @@ def discover_site_urls(
         limit=limit,
     )
 
-    # Extract URL strings
+    # extract URL strings
     return [url.loc for url in filtered_urls]
 
 
@@ -552,8 +552,8 @@ def get_sitemap_urls(base_url: str) -> List[str]:
     """
     parser = SitemapParser(respect_robots_txt=True)
 
-    # Parse sitemaps with domain filtering and docs path filtering
+    # parse sitemaps with domain filtering and docs path filtering
     parser.parse_sitemap(base_url, filter_by_domain=True, docs_path_filter=True)
 
-    # Extract URL strings
+    # extract URL strings
     return [url.loc for url in parser.discovered_urls]

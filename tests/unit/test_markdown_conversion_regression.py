@@ -18,7 +18,7 @@ def test_markdown_conversion_no_duplicate_elements():
     """
     s = MarkdownScraper()
     md = s.convert_to_markdown(html, url="https://example.com")
-    # Expect title once and paragraphs once each
+    # expect title once and paragraphs once each
     assert md.count("# Header") == 1
     assert md.count("One") == 1
     assert md.count("Two") == 1

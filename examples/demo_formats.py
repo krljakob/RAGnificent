@@ -35,7 +35,7 @@ SAMPLE_HTML = """
     </blockquote>
 
     <pre><code>
-# Sample Python code
+# sample Python code
 from RAGnificent.RAGnificent_rs import convert_html, OutputFormat
 
 result = convert_html(html_content, url, OutputFormat.JSON)
@@ -51,10 +51,10 @@ def main():
     output_dir = Path("examples/demo_output")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Create scraper instance
+    # create scraper instance
     scraper = MarkdownScraper()
 
-    # Convert to all three formats
+    # convert to all three formats
     formats = ["markdown", "json", "xml"]
 
     for format_name in formats:
@@ -66,7 +66,7 @@ def main():
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(content)
 
-            # Show a preview of each format
+            # show a preview of each format
             preview_lines = content.split("\n")[:5]
             preview = "\n".join(preview_lines)
 

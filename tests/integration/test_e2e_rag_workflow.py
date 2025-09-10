@@ -62,13 +62,13 @@ class TestE2ERAGWorkflow:
         with patch("sentence_transformers.SentenceTransformer") as mock_st:
             mock_model = MagicMock()
 
-            # Create deterministic embeddings based on text hash
+            # create deterministic embeddings based on text hash
             def encode_side_effect(texts, *args, **kwargs):
                 if isinstance(texts, str):
                     texts = [texts]
                 embeddings = []
                 for text in texts:
-                    # Generate deterministic embedding based on text length
+                    # generate deterministic embedding based on text length
                     np.random.seed(len(text))
                     embedding = np.random.rand(384)
                     embedding = embedding / np.linalg.norm(embedding)
@@ -101,7 +101,7 @@ class TestE2ERAGWorkflow:
                 if not self.embeddings:
                     return []
 
-                # Simple cosine similarity search
+                # simple cosine similarity search
                 similarities = []
                 for i, emb in enumerate(self.embeddings):
                     similarity = np.dot(query_embedding, emb)
@@ -125,7 +125,7 @@ class TestE2ERAGWorkflow:
         self, mock_scraper, mock_embedding_service, mock_vector_store
     ):
         """Test the complete RAG workflow from scraping to search."""
-        # Step 1: Scrape content
+        # step 1: Scrape content
         url = "https://example.com/test"
         markdown_content = mock_scraper.scrape_website(url)
 
@@ -133,7 +133,7 @@ class TestE2ERAGWorkflow:
         assert "Introduction to RAG" in markdown_content
         assert "Retrieval-Augmented Generation" in markdown_content
 
-        # Step 2: Chunk content
+        # step 2: Chunk content
         from RAGnificent.utils.chunk_utils import ContentChunker
 
         chunker = ContentChunker(chunk_size=200, chunk_overlap=50)
@@ -143,18 +143,18 @@ class TestE2ERAGWorkflow:
         assert all("content" in chunk for chunk in chunks)
         assert all("metadata" in chunk for chunk in chunks)
 
-        # Step 3: Generate embeddings
+        # step 3: Generate embeddings
         texts = [chunk["content"] for chunk in chunks]
         embeddings = mock_embedding_service.embed(texts)
 
         assert len(embeddings) == len(chunks)
         assert all(isinstance(emb, np.ndarray) for emb in embeddings)
 
-        # Step 4: Store in vector database
+        # step 4: Store in vector database
         stored_count = mock_vector_store.store_documents(texts, embeddings)
         assert stored_count == len(chunks)
 
-        # Step 5: Search for content
+        # step 5: Search for content
         query = "What are the main components of RAG?"
         query_embedding = mock_embedding_service.embed(query)
 
@@ -164,7 +164,7 @@ class TestE2ERAGWorkflow:
         assert all("content" in result for result in search_results)
         assert all("score" in result for result in search_results)
 
-        # Verify search relevance
+        # verify search relevance
         top_result = search_results[0] if search_results else None
         assert top_result is not None
         assert (
@@ -196,7 +196,7 @@ class TestE2ERAGWorkflow:
                         cache_enabled=False,
                     )
 
-                    # Process URL
+                    # process URL
                     urls = ["https://example.com/test"]
                     result = pipeline.process_urls(urls)
 
@@ -204,7 +204,7 @@ class TestE2ERAGWorkflow:
                     assert result["chunks_created"] > 0
                     assert result["embeddings_generated"] > 0
 
-                    # Search
+                    # search
                     search_results = pipeline.search("RAG components", top_k=3)
                     assert len(search_results) > 0
 
@@ -212,18 +212,18 @@ class TestE2ERAGWorkflow:
         """Test scraping with different output formats."""
         url = "https://example.com/test"
 
-        # Test markdown output
+        # test markdown output
         markdown = mock_scraper.scrape_website(url, output_format="markdown")
         assert "# Introduction to RAG" in markdown
 
-        # Test JSON output
+        # test JSON output
         json_output = mock_scraper.scrape_website(url, output_format="json")
         parsed = json.loads(json_output)
         assert "title" in parsed
         assert "headers" in parsed
         assert len(parsed["headers"]) > 0
 
-        # Test XML output
+        # test XML output
         xml_output = mock_scraper.scrape_website(url, output_format="xml")
         assert "<?xml version" in xml_output
         assert "<document>" in xml_output
@@ -234,7 +234,7 @@ class TestE2ERAGWorkflow:
         from RAGnificent.rag.pipeline import Pipeline
 
         with patch("RAGnificent.rag.pipeline.MarkdownScraper") as mock_scraper_class:
-            # Simulate scraping failure
+            # simulate scraping failure
             mock_scraper_class.return_value.scrape_website.side_effect = Exception(
                 "Network error"
             )
@@ -243,7 +243,7 @@ class TestE2ERAGWorkflow:
                 collection_name="test_collection", continue_on_error=True
             )
 
-            # Should handle error gracefully
+            # should handle error gracefully
             result = pipeline.process_urls(["https://example.com/fail"])
             assert result["urls_processed"] == 0
             assert result["errors"] == 1
@@ -272,7 +272,7 @@ class TestE2ERAGWorkflow:
                         cache_enabled=False,
                     )
 
-                    # Process multiple URLs
+                    # process multiple URLs
                     urls = [
                         "https://example.com/doc1",
                         "https://example.com/doc2",
@@ -287,14 +287,14 @@ class TestE2ERAGWorkflow:
 
     def test_chunking_strategies(self, mock_html_content):
         """Test different chunking strategies."""
-        # Convert HTML to markdown first
+        # convert HTML to markdown first
         from markdownify import markdownify
 
         from RAGnificent.utils.chunk_utils import ContentChunker
 
         markdown = markdownify(mock_html_content)
 
-        # Test recursive chunking
+        # test recursive chunking
         chunker = ContentChunker(chunk_size=100, chunk_overlap=20)
         recursive_chunks = chunker.create_chunks_from_markdown(
             markdown, source_url="https://example.com", chunking_strategy="recursive"
@@ -305,15 +305,15 @@ class TestE2ERAGWorkflow:
             len(chunk["content"]) <= 120 for chunk in recursive_chunks
         )  # Allow for overlap
 
-        # Test semantic chunking
+        # test semantic chunking
         semantic_chunks = chunker.create_chunks_from_markdown(
             markdown, source_url="https://example.com", chunking_strategy="semantic"
         )
 
         assert len(semantic_chunks) > 0
-        # Semantic chunks should preserve logical sections
+        # semantic chunks should preserve logical sections
 
-        # Test sliding window
+        # test sliding window
         sliding_chunks = chunker.create_chunks_from_markdown(
             markdown,
             source_url="https://example.com",
@@ -331,13 +331,13 @@ class TestE2ERAGWorkflow:
 
         pipeline = Pipeline(collection_name="test_persistence", data_dir=tmp_path)
 
-        # Save pipeline configuration
+        # save pipeline configuration
         config_file = tmp_path / "pipeline_config.yaml"
         pipeline.save_config(config_file)
 
         assert config_file.exists()
 
-        # Load pipeline from configuration
+        # load pipeline from configuration
         loaded_pipeline = Pipeline(config=config_file)
         assert loaded_pipeline.collection_name == "test_persistence"
 
@@ -357,7 +357,7 @@ class TestE2ERAGWorkflow:
             additional_metadata={"doc_type": "tutorial", "version": "1.0"},
         )
 
-        # Verify metadata is preserved
+        # verify metadata is preserved
         for chunk in chunks:
             assert chunk["metadata"]["source_url"] == url
             assert chunk["metadata"]["doc_type"] == "tutorial"

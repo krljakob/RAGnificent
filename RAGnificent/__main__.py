@@ -11,10 +11,10 @@ from RAGnificent.core.scraper import main as scraper_main
 
 def main():
     """Entry point function for console script."""
-    # Configure logging explicitly (no side effects on import)
+    # configure logging explicitly (no side effects on import)
     with contextlib.suppress(Exception):
         get_config().configure_logging()
-    # Re-execute main with the same arguments
+    # re-execute main with the same arguments
     scraper_main(sys.argv[1:])
 
 

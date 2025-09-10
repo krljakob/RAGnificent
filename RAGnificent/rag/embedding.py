@@ -258,7 +258,7 @@ class OpenAIEmbedding:
         if is_single_text:
             cached = get_cached_embedding(self.model_name, texts[0])
             return ([cached], [], []) if cached is not None else ([], texts, [])
-        # For list input, check cache for each text
+        # for list input, check cache for each text
         cached_embeddings = []
         texts_to_embed = []
         original_indices = []
@@ -283,7 +283,7 @@ class OpenAIEmbedding:
         Returns:
             List of embedding vectors
         """
-        # Retry logic for API calls
+        # retry logic for API calls
         retry_count = 0
         while retry_count <= self.max_retries:
             try:
@@ -291,7 +291,7 @@ class OpenAIEmbedding:
                     model=self.model_name,
                     input=texts,
                 )
-                # Process response
+                # process response
                 return [np.array(item.embedding) for item in response.data]
             except Exception as e:
                 retry_count += 1
@@ -348,11 +348,11 @@ class OpenAIEmbedding:
         """
         result = [None] * total_length
 
-        # Place new embeddings in their original positions
+        # place new embeddings in their original positions
         for original_idx, embed in zip(original_indices, new_embeddings, strict=False):
             result[original_idx] = embed
 
-        # Fill in gaps with cached embeddings
+        # fill in gaps with cached embeddings
         cached_idx = 0
         for i in range(total_length):
             if result[i] is None:
@@ -372,11 +372,11 @@ class OpenAIEmbedding:
             Embedding vector(s)
         """
         try:
-            # Prepare input for consistent processing
+            # prepare input for consistent processing
             is_single_text = isinstance(text, str)
             texts = [text] if is_single_text else text
 
-            # Check cache and prepare texts for embedding
+            # check cache and prepare texts for embedding
             (
                 cached_embeddings,
                 texts_to_embed,
@@ -387,20 +387,20 @@ class OpenAIEmbedding:
                 if not is_single_text:
                     return cached_embeddings
 
-                # Everything was in cache
+                # everything was in cache
                 return cached_embeddings[0] if is_single_text else cached_embeddings
 
             new_embeddings = self._call_openai_api(texts_to_embed)
             if new_embeddings is None:
                 raise EmbeddingAPIError("Failed to get embeddings from OpenAI API after all retries")
 
-            # Cache the new embeddings
+            # cache the new embeddings
             self._cache_embeddings(texts_to_embed, new_embeddings, text)
-            # Return results in the appropriate format
+            # return results in the appropriate format
             if is_single_text:
                 return new_embeddings[0]
 
-            # For list input, merge cached and new embeddings
+            # for list input, merge cached and new embeddings
             if original_indices:
                 return self._merge_embeddings(
                     new_embeddings, cached_embeddings, original_indices, len(texts)
@@ -456,25 +456,25 @@ class TFIDFEmbedding:
         try:
             texts = [text] if isinstance(text, str) else text
 
-            # Fit vectorizer if not already fitted
+            # fit vectorizer if not already fitted
             if not self.is_fitted:
                 self.vectorizer.fit(texts)
                 self.is_fitted = True
 
-            # Transform texts to vectors
+            # transform texts to vectors
             tfidf_matrix = self.vectorizer.transform(texts)
 
-            # Convert to normalized dense arrays
+            # convert to normalized dense arrays
             embeddings = []
             for i in range(tfidf_matrix.shape[0]):
                 vec = tfidf_matrix[i].toarray().flatten()
-                # Normalize
+                # normalize
                 norm = np.linalg.norm(vec)
                 if norm > 0:
                     vec = vec / norm
                 embeddings.append(vec)
 
-            # Return single embedding or list
+            # return single embedding or list
             return embeddings[0] if isinstance(text, str) else embeddings
         except Exception as e:
             logger.error(f"Error generating embeddings with TF-IDF: {e}")
@@ -516,7 +516,7 @@ class SimpleCountEmbedding:
         try:
             texts = [text] if isinstance(text, str) else text
 
-            # Build vocabulary if needed
+            # build vocabulary if needed
             for t in texts:
                 tokens = self.tokenize(t)
                 for token in tokens:
@@ -524,7 +524,7 @@ class SimpleCountEmbedding:
                         self.vocab[token] = self.next_index
                         self.next_index += 1
 
-            # Generate count vectors
+            # generate count vectors
             embeddings = []
             for t in texts:
                 vec = np.zeros(len(self.vocab))
@@ -533,13 +533,13 @@ class SimpleCountEmbedding:
                     if token in self.vocab:
                         vec[self.vocab[token]] += 1
 
-                # Normalize
+                # normalize
                 norm = np.linalg.norm(vec)
                 if norm > 0:
                     vec = vec / norm
                 embeddings.append(vec)
 
-            # Return single embedding or list
+            # return single embedding or list
             return embeddings[0] if isinstance(text, str) else embeddings
         except Exception as e:
             logger.error(f"Error generating embeddings with simple count: {e}")
@@ -577,7 +577,7 @@ def get_embedding_model(
         if model_type == EmbeddingModelType.SIMPLER:
             return SimpleCountEmbedding()
 
-        # Default to SentenceTransformer
+        # default to SentenceTransformer
         logger.warning(
             f"Unknown model type '{model_type}', defaulting to SentenceTransformer"
         )
@@ -586,7 +586,7 @@ def get_embedding_model(
     except Exception as e:
         logger.error(f"Failed to initialize {model_type} embedding model: {e}")
 
-        # Fallback chain: ST -> TF-IDF -> SimpleCount
+        # fallback chain: ST -> TF-IDF -> SimpleCount
         try:
             logger.warning("Falling back to TF-IDF embedding model")
             return TFIDFEmbedding()
@@ -650,7 +650,7 @@ def embed_texts_batched(
         config = get_config()
         batch_size = config.embedding.batch_size
 
-    # Process in batches
+    # process in batches
     all_embeddings = []
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
@@ -698,21 +698,21 @@ class EmbeddingService:
             text = chunk
             return {"content": text, "embedding": self.model.embed(text)}
 
-        # If it's a chunk object
+        # if it's a chunk object
         try:
             content = chunk.get("content", "")
             if not content and "text" in chunk:
                 content = chunk["text"]
 
-            # Generate embedding
+            # generate embedding
             embedding = self.model.embed(content)
 
-            # Add embedding to the chunk
+            # add embedding to the chunk
             return {**chunk, "embedding": embedding}
 
         except Exception as e:
             logger.error(f"Error embedding chunk: {e}")
-            # Return original chunk without embedding in case of error
+            # return original chunk without embedding in case of error
             return chunk
 
     def embed_chunks(self, chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -726,7 +726,7 @@ class EmbeddingService:
             List of chunks with embeddings added
         """
         try:
-            # Extract text content for batched embedding
+            # extract text content for batched embedding
             texts = []
             for chunk in chunks:
                 content = chunk.get("content", "")
@@ -734,16 +734,16 @@ class EmbeddingService:
                     content = chunk["text"]
                 texts.append(content)
 
-            # Generate embeddings in batch
+            # generate embeddings in batch
             embeddings = embed_texts_batched(texts, self.model)
 
-            # Add embeddings back to chunks
+            # add embeddings back to chunks
             result = []
             for i, chunk in enumerate(chunks):
                 if i < len(embeddings):
                     result.append({**chunk, "embedding": embeddings[i]})
                 else:
-                    # This should not happen if batching works correctly
+                    # this should not happen if batching works correctly
                     logger.warning(f"Missing embedding for chunk {i}")
                     result.append(chunk)
 
@@ -768,7 +768,7 @@ class EmbeddingService:
         return self.model.embed(texts)
 
 
-# Singleton instance for easy access
+# singleton instance for easy access
 _default_embedding_service = None
 
 

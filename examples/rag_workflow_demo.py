@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-# Set up environment
+# set up environment
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from RAGnificent.core.config import EmbeddingModelType
@@ -157,7 +157,7 @@ class RAGDemo:
                             content = result.get("content", "")[:100]
                             source = result.get("source_url", "Unknown")
                 else:
-                    # Fallback to manual cosine similarity
+                    # fallback to manual cosine similarity
                     results = self._manual_search(query, embedded_chunks, top_k=3)
                     for i, (similarity, chunk) in enumerate(results, 1):
                         content = chunk.get("content", "")[:100]
@@ -215,7 +215,7 @@ class RAGDemo:
         try:
             with open(output_file, "w", encoding="utf-8") as f:
                 for chunk in embedded_chunks:
-                    # Ensure embedding is serializable
+                    # ensure embedding is serializable
                     chunk_data = dict(chunk)
                     if "embedding" in chunk_data and hasattr(
                         chunk_data["embedding"], "tolist"
@@ -287,7 +287,7 @@ def main():
 
     try:
         if args.mode == "full":
-            # Full workflow: scrape, embed, store, search
+            # full workflow: scrape, embed, store, search
             chunks = demo.scrape_and_chunk(args.urls)
             embedded_chunks = demo.generate_embeddings(chunks, limit=args.limit)
             vector_store = demo.store_in_vector_db(embedded_chunks)
@@ -302,7 +302,7 @@ def main():
                 demo.demonstrate_search(vector_store, embedded_chunks)
                 demo.save_results(chunks, embedded_chunks, args.output)
         elif args.mode == "pipeline":
-            # Pipeline demo only
+            # pipeline demo only
             demo.demonstrate_pipeline()
 
         elif args.mode == "basic":

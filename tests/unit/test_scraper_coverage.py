@@ -63,10 +63,10 @@ class TestScraperCoverage:
     def test_scraper_without_rust_module(self):
         """Test scraper fallback when Rust module is not available."""
         scraper = MarkdownScraper()
-        # Test converter works regardless of Rust availability
+        # test converter works regardless of Rust availability
         html = "<html><body><h1>Test</h1><p>Content</p></body></html>"
         result, _ = scraper._convert_content(html, "http://example.com", "markdown")
-        # The converter adds a title line with "No Title" since there's no <title> tag
+        # the converter adds a title line with "No Title" since there's no <title> tag
         assert "No Title" in result or "Test" in result
         assert "Content" in result
 
@@ -80,20 +80,20 @@ class TestScraperCoverage:
         mock_response.elapsed = Mock(total_seconds=Mock(return_value=0.5))
 
         with patch.object(scraper.session, "get", return_value=mock_response):
-            # Test markdown format
+            # test markdown format
             markdown = scraper.scrape_website(
                 "http://example.com", output_format="markdown"
             )
             assert markdown is not None
 
-            # Test JSON format
+            # test JSON format
             json_output = scraper.scrape_website(
                 "http://example.com", output_format="json"
             )
             parsed = json.loads(json_output)
             assert "title" in parsed or "headers" in parsed
 
-            # Test XML format
+            # test XML format
             xml_output = scraper.scrape_website(
                 "http://example.com", output_format="xml"
             )
@@ -198,7 +198,7 @@ class TestScraperCoverage:
 
         scraper._save_chunks(chunks, str(tmp_path))
 
-        # Check that chunk files were created (may be jsonl or json files)
+        # check that chunk files were created (may be jsonl or json files)
         chunk_files = list(tmp_path.glob("*.json*"))  # Include .jsonl files
         assert chunk_files
 
@@ -257,7 +257,7 @@ class TestScraperCoverage:
 
         scraper = MarkdownScraper(domain_specific_limits=domain_limits)
 
-        # Check that domain-specific limits are set on the throttler
+        # check that domain-specific limits are set on the throttler
         assert scraper.throttler.domain_limits == domain_limits
 
     def test_cache_integration(self):
@@ -269,7 +269,7 @@ class TestScraperCoverage:
 
             scraper = MarkdownScraper(cache_enabled=True)
 
-            # Mock response for uncached request
+            # mock response for uncached request
             mock_response = Mock()
             mock_response.text = "<h1>Fresh content</h1>"
             mock_response.status_code = 200
@@ -278,9 +278,9 @@ class TestScraperCoverage:
             mock_response.elapsed = Mock(total_seconds=Mock(return_value=0.5))
 
             with patch.object(scraper.session, "get", return_value=mock_response):
-                # First request should check cache
+                # first request should check cache
                 result = scraper.scrape_website("http://example.com")
-                # The scraper processes cached content, so we check that cache was used
+                # the scraper processes cached content, so we check that cache was used
                 mock_cache.get.assert_called_once()
                 assert result is not None
 
@@ -296,8 +296,8 @@ class TestScraperCoverage:
         with patch.object(scraper.session, "get", return_value=mock_response):
             result = scraper.scrape_website("http://example.com/api.json")
             assert result is not None
-            # The scraper processes all content as HTML/markdown by default
-            # For JSON content, it will parse it through HTML converter
+            # the scraper processes all content as HTML/markdown by default
+            # for JSON content, it will parse it through HTML converter
             assert "No Title" in result  # Default title from HTML conversion
 
     def test_request_timeout(self, scraper):

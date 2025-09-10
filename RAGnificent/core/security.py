@@ -104,7 +104,7 @@ class ThrottledSession:
             time.sleep(wait_time)
 
         self.last_request_time = time.time()
-        # Ensure a sane default timeout is always applied
+        # ensure a sane default timeout is always applied
         kwargs.setdefault("timeout", self.default_timeout)
         return requests.request(method, url, **kwargs)
 
@@ -122,7 +122,7 @@ def validate_file_access(path: str) -> bool:
     import os
 
     try:
-        # Resolve symlinks and ensure it points to a regular file
+        # resolve symlinks and ensure it points to a regular file
         real_path = os.path.realpath(path)
         return os.access(real_path, os.R_OK) if os.path.isfile(real_path) else False
     except Exception:
@@ -184,7 +184,7 @@ def sanitize_headers(headers: Dict[str, str]) -> Dict[str, str]:
     if not headers:
         return {}
 
-    # Build a mapping of lowercase -> original key to preserve original casing
+    # build a mapping of lowercase -> original key to preserve original casing
     original_keys: Dict[str, str] = {k.lower(): k for k in headers}
 
     sensitive_headers = {
@@ -221,13 +221,13 @@ def secure_file_path(base_dir: str, user_path: str) -> str:
 
     base = os.path.abspath(base_dir)
 
-    # Use pathlib for more secure path handling
+    # use pathlib for more secure path handling
     from pathlib import Path
 
-    # Normalize and resolve the user path while preventing traversal
+    # normalize and resolve the user path while preventing traversal
     try:
         user_path_obj = Path(user_path)
-        # Remove any path traversal components
+        # remove any path traversal components
         clean_parts = [
             part for part in user_path_obj.parts if part not in ("..", ".", "~")
         ]
@@ -291,7 +291,7 @@ def sanitize_content(content: str) -> str:
     if not content:
         return ""
 
-    # Use bleach to sanitize content
+    # use bleach to sanitize content
     return bleach.clean(
         content,
         tags=[],  # Remove all HTML tags

@@ -10,9 +10,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-# Use direct import path rather than relying on package structure
-# This allows tests to run even with inconsistent Python package installation
-# Import fix applied
+# use direct import path rather than relying on package structure
+# this allows tests to run even with inconsistent Python package installation
+# import fix applied
 project_root = Path(__file__).parent.parent.parent
 core_path = project_root / "RAGnificent" / "core"
 sys.path.insert(0, str(core_path.parent))
@@ -21,7 +21,7 @@ import pytest
 import requests
 import responses
 
-# Direct imports from the module files
+# direct imports from the module files
 from core.cache import RequestCache
 from core.scraper import MarkdownScraper
 
@@ -36,13 +36,13 @@ class TestScraperErrorHandling(unittest.TestCase):
         self.chunk_dir = os.path.join(self.temp_dir, "chunks")
         self.cache_dir = os.path.join(self.temp_dir, "cache")
 
-        # Create scraper instance for testing
+        # create scraper instance for testing
         self.scraper = MarkdownScraper(
             requests_per_second=10.0,
             cache_enabled=True,  # Fast for testing
         )
 
-        # Replace the request cache with one using our temp directory
+        # replace the request cache with one using our temp directory
         self.scraper.request_cache = RequestCache(cache_dir=self.cache_dir)
 
     def tearDown(self):
@@ -54,17 +54,17 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of connection errors."""
         url = "https://example.com/nonexistent"
 
-        # Mock a connection error
+        # mock a connection error
         responses.add(
             responses.GET,
             url,
             body=requests.exceptions.ConnectionError("Connection refused"),
         )
 
-        # Attempt to scrape with max_retries=1 to speed up the test
+        # attempt to scrape with max_retries=1 to speed up the test
         self.scraper.max_retries = 1
 
-        # Scraper returns None on error rather than raising
+        # scraper returns None on error rather than raising
         result = self.scraper.scrape_website(url)
         self.assertIsNone(result)
 
@@ -73,13 +73,13 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of HTTP errors."""
         url = "https://example.com/not-found"
 
-        # Mock a 404 error
+        # mock a 404 error
         responses.add(responses.GET, url, status=404)
 
-        # Attempt to scrape with max_retries=1 to speed up the test
+        # attempt to scrape with max_retries=1 to speed up the test
         self.scraper.max_retries = 1
 
-        # Scraper returns None on error rather than raising
+        # scraper returns None on error rather than raising
         result = self.scraper.scrape_website(url)
         self.assertIsNone(result)
 
@@ -88,31 +88,31 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of timeout errors."""
         url = "https://example.com/slow-page"
 
-        # Mock a timeout error
+        # mock a timeout error
         responses.add(
             responses.GET, url, body=requests.exceptions.Timeout("Request timed out")
         )
 
-        # Attempt to scrape with max_retries=1 to speed up the test
+        # attempt to scrape with max_retries=1 to speed up the test
         self.scraper.max_retries = 1
 
-        # Scraper returns None on error rather than raising
+        # scraper returns None on error rather than raising
         result = self.scraper.scrape_website(url)
         self.assertIsNone(result)
 
     def test_file_io_error_handling(self):
         """Test handling of file I/O errors."""
-        # The current implementation appears to handle I/O errors differently than expected
-        # We'll skip this test for now
+        # the current implementation appears to handle I/O errors differently than expected
+        # we'll skip this test for now
         self.skipTest(
             "Current implementation handles I/O errors differently than expected"
         )
 
-        # Previous test code:
-        # Create an invalid directory path
+        # previous test code:
+        # create an invalid directory path
         invalid_path = "/nonexistent/directory/file.md"
 
-        # Mock a successful request
+        # mock a successful request
         with (
             patch.object(
                 self.scraper, "convert_to_markdown", return_value="# Test\nContent"
@@ -123,8 +123,8 @@ class TestScraperErrorHandling(unittest.TestCase):
                 return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
             ),
         ):
-            # Attempt to save to an invalid path
-            # In Python 3, IOError is an alias for OSError
+            # attempt to save to an invalid path
+            # in Python 3, IOError is an alias for OSError
             with self.assertRaises((OSError, IOError)):
                 self.scraper._process_single_url(
                     "https://example.com",
@@ -140,17 +140,17 @@ class TestScraperErrorHandling(unittest.TestCase):
     @patch("core.scraper.MarkdownScraper.create_chunks")
     def test_chunking_error_handling(self, mock_create_chunks):
         """Test handling of errors during chunking."""
-        # The current implementation doesn't handle chunking errors as expected
-        # We'll skip this test for now
+        # the current implementation doesn't handle chunking errors as expected
+        # we'll skip this test for now
         self.skipTest(
             "Current implementation doesn't handle chunking errors gracefully"
         )
 
-        # Previous test code:
-        # Mock an error during chunking
+        # previous test code:
+        # mock an error during chunking
         mock_create_chunks.side_effect = Exception("Chunking error")
 
-        # Create a valid output directory
+        # create a valid output directory
         os.makedirs(self.output_dir, exist_ok=True)
 
         # Mock a successful request and conversion
@@ -164,7 +164,7 @@ class TestScraperErrorHandling(unittest.TestCase):
                 return_value="<html><body><h1>Test</h1><p>Content</p></body></html>",
             ),
         ):
-            # Attempt to process with chunking enabled
+            # attempt to process with chunking enabled
             try:
                 self.scraper._process_single_url(
                     "https://example.com",
@@ -184,7 +184,7 @@ class TestScraperErrorHandling(unittest.TestCase):
         """Test handling of cache errors."""
         url = "https://example.com/cached-page"
 
-        # Mock a successful response
+        # mock a successful response
         responses.add(
             responses.GET,
             url,
@@ -193,19 +193,19 @@ class TestScraperErrorHandling(unittest.TestCase):
             content_type="text/html",
         )
 
-        # Skip the test or wrap it in try/except since the implementation
+        # skip the test or wrap it in try/except since the implementation
         # currently doesn't handle cache errors well
         try:
-            # Mock a cache error during storage
+            # mock a cache error during storage
             with patch.object(
                 self.scraper.request_cache, "set", side_effect=IOError("Cache error")
             ):
-                # Should still return content even if caching fails
+                # should still return content even if caching fails
                 content = self.scraper.scrape_website(url)
                 self.assertIsNotNone(
                     content, "Should return content even if caching fails"
                 )
-                # Verify content integrity when cache fails (returns Markdown, not HTML)
+                # verify content integrity when cache fails (returns Markdown, not HTML)
                 self.assertIn(
                     "Test", content, "Content should contain expected heading"
                 )
@@ -213,8 +213,8 @@ class TestScraperErrorHandling(unittest.TestCase):
                     "Content", content, "Content should contain paragraph text"
                 )
         except OSError:
-            # The current implementation doesn't handle cache errors properly
-            # We'll skip this test with a note about it
+            # the current implementation doesn't handle cache errors properly
+            # we'll skip this test with a note about it
             self.skipTest(
                 "Current implementation does not handle cache errors properly"
             )
@@ -222,15 +222,15 @@ class TestScraperErrorHandling(unittest.TestCase):
     @responses.activate
     def test_parallel_processing_error_handling(self):
         """Test error handling with parallel processing."""
-        # Create output directory
+        # create output directory
         os.makedirs(self.output_dir, exist_ok=True)
 
-        # Create a links file
+        # create a links file
         links_file = os.path.join(self.temp_dir, "links.txt")
         with open(links_file, "w") as f:
             f.write("https://example.com/good\nhttps://example.com/bad\n")
 
-        # Mock responses for the URLs
+        # mock responses for the URLs
         responses.add(
             responses.GET,
             "https://example.com/good",
@@ -289,15 +289,15 @@ class TestScraperErrorHandling(unittest.TestCase):
     @responses.activate
     def test_worker_timeout_handling(self):
         """Test handling of worker timeouts in parallel processing."""
-        # Create output directory
+        # create output directory
         os.makedirs(self.output_dir, exist_ok=True)
 
-        # Create a links file
+        # create a links file
         links_file = os.path.join(self.temp_dir, "links.txt")
         with open(links_file, "w") as f:
             f.write("https://example.com/fast\nhttps://example.com/slow\n")
 
-        # Mock responses for the URLs
+        # mock responses for the URLs
         responses.add(
             responses.GET,
             "https://example.com/fast",
@@ -306,7 +306,7 @@ class TestScraperErrorHandling(unittest.TestCase):
             content_type="text/html",
         )
 
-        # Mock a very slow response that will trigger timeout
+        # mock a very slow response that will trigger timeout
         def slow_response(request):
             import time
 
@@ -320,7 +320,7 @@ class TestScraperErrorHandling(unittest.TestCase):
             content_type="text/html",
         )
 
-        # Tests with a very short worker_timeout to simulate timeouts
+        # tests with a very short worker_timeout to simulate timeouts
         with patch(
             "concurrent.futures.Future.result",
             side_effect=TimeoutError("Worker timeout"),
@@ -333,8 +333,8 @@ class TestScraperErrorHandling(unittest.TestCase):
                 worker_timeout=1,  # Very short timeout
             )
 
-            # Should handle worker timeouts gracefully by falling back to sequential processing
-            # Both URLs should still be processed successfully in sequential mode
+            # should handle worker timeouts gracefully by falling back to sequential processing
+            # both URLs should still be processed successfully in sequential mode
             self.assertEqual(
                 len(result),
                 2,
@@ -343,48 +343,48 @@ class TestScraperErrorHandling(unittest.TestCase):
 
     def test_memory_cache_limits(self):
         """Test that memory cache limits are enforced."""
-        # Create a cache with very small limits
+        # create a cache with very small limits
         small_cache = RequestCache(
             cache_dir=self.cache_dir,
             max_memory_items=2,  # Only 2 items allowed
             max_memory_size_mb=0.01,  # Only 10KB allowed
         )
 
-        # Add some items to fill the cache
-        # Create and set multiple large content items at once
+        # add some items to fill the cache
+        # create and set multiple large content items at once
         test_urls = [f"http://example.com/page{i}" for i in range(5)]
         test_contents = [f"Large content {i}" * 1000 for i in range(5)]
 
-        # Use list comprehension to set all cache items
+        # use list comprehension to set all cache items
         [
             small_cache.set(url, content)
             for url, content in zip(test_urls, test_contents, strict=False)
         ]
 
-        # Verify cache enforces limits correctly
+        # verify cache enforces limits correctly
         self.assertLessEqual(
             len(small_cache.memory_cache),
             2,
             "Memory cache should enforce max_memory_items limit",
         )
 
-        # Verify cache eviction actually occurred
+        # verify cache eviction actually occurred
         self.assertGreater(
             len(test_urls),
             len(small_cache.memory_cache),
             "Cache should have evicted items when limits exceeded",
         )
 
-        # Verify memory usage tracking is functional
+        # verify memory usage tracking is functional
         self.assertGreater(
             small_cache.current_memory_usage,
             0,
             "Memory usage tracking should be active",
         )
 
-        # Verify most recently added items are retained (LRU behavior)
+        # verify most recently added items are retained (LRU behavior)
         cached_keys = set(small_cache.memory_cache.keys())
-        # Should contain the last 2 URLs added (stored as URLs, not hashed keys)
+        # should contain the last 2 URLs added (stored as URLs, not hashed keys)
         expected_keys = set(test_urls[-2:])
         remaining_keys = expected_keys.intersection(cached_keys)
         self.assertGreater(

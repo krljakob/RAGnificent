@@ -42,7 +42,7 @@ def create_benchmark_plot(df):
 
     fig = go.Figure()
 
-    # Add bars for mean execution time
+    # add bars for mean execution time
     fig.add_trace(
         go.Bar(
             name="Execution Time",
@@ -53,7 +53,7 @@ def create_benchmark_plot(df):
         )
     )
 
-    # Update layout
+    # update layout
     fig.update_layout(
         title="Benchmark Results",
         xaxis_title="Benchmark",
@@ -63,7 +63,7 @@ def create_benchmark_plot(df):
         hovermode="x",
     )
 
-    # Save the plot
+    # save the plot
     fig.write_html("target/criterion/benchmark_results.html")
 
 

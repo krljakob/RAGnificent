@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.theme import Theme
 
-# Define custom color scheme for logs
+# define custom color scheme for logs
 LOG_THEME = Theme(
     {
         "logging.level.debug": "cyan",
@@ -22,7 +22,7 @@ LOG_THEME = Theme(
     }
 )
 
-# Global console instance with theme
+# global console instance with theme
 console = Console(theme=LOG_THEME)
 
 
@@ -44,24 +44,24 @@ def setup_logger(
     Returns:
         Configured logger instance
     """
-    # Convert string level to logging level if needed
+    # convert string level to logging level if needed
     if isinstance(level, str):
         level = getattr(logging, level.upper())
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Avoid adding handlers multiple times in case of multiple calls
+    # avoid adding handlers multiple times in case of multiple calls
     if logger.handlers:
         return logger
 
-    # Create formatter
+    # create formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # Console handler with rich formatting
+    # console handler with rich formatting
     if enable_rich:
         console_handler = RichHandler(
             console=console,
@@ -79,7 +79,7 @@ def setup_logger(
     console_handler.setLevel(level)
     logger.addHandler(console_handler)
 
-    # File handler if log_file is provided
+    # file handler if log_file is provided
     if log_file:
         log_file = Path(log_file)
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -88,7 +88,7 @@ def setup_logger(
         file_handler.setLevel(level)
         logger.addHandler(file_handler)
 
-    # Prevent propagation to root logger
+    # prevent propagation to root logger
     logger.propagate = False
 
     return logger
@@ -108,7 +108,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     if name is None:
         name = "ragnificent"
 
-    # If logger doesn't exist or has no handlers, set it up
+    # if logger doesn't exist or has no handlers, set it up
     logger = logging.getLogger(name)
     if not logger.handlers:
         setup_logger(name)
@@ -116,7 +116,7 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return logger
 
 
-# Default logger instance
+# default logger instance
 logger = get_logger()
 
 

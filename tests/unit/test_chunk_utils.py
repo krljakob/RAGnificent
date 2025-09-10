@@ -6,22 +6,22 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Direct module import using absolute file paths
-# Import fix applied
+# direct module import using absolute file paths
+# import fix applied
 project_root = Path(__file__).parent.parent.parent
 utils_path = project_root / "RAGnificent" / "utils"
 
-# Add both the project root and the RAGnificent directory to sys.path
+# add both the project root and the RAGnificent directory to sys.path
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "RAGnificent"))
 
-# Import the needed module directly from its file path
+# import the needed module directly from its file path
 chunk_utils_path = utils_path / "chunk_utils.py"
 spec = importlib.util.spec_from_file_location("chunk_utils", chunk_utils_path)
 chunk_utils = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(chunk_utils)
 
-# Extract the classes and functions we need
+# extract the classes and functions we need
 Chunk = chunk_utils.Chunk
 ContentChunker = chunk_utils.ContentChunker
 create_semantic_chunks = chunk_utils.create_semantic_chunks
@@ -38,7 +38,7 @@ class TestChunkUtils(unittest.TestCase):
 
     def test_create_chunks_from_markdown(self):
         """Test chunk creation from markdown content."""
-        # Test markdown with multiple sections
+        # test markdown with multiple sections
         test_markdown = """# Title
 
 ## Section 1
@@ -52,14 +52,14 @@ It also has multiple lines.
 
         chunks = self.chunker.create_chunks_from_markdown(test_markdown, self.test_url)
 
-        # Verify chunk count and structure
+        # verify chunk count and structure
         self.assertGreater(len(chunks), 0, "Should create at least one chunk")
         self.assertLessEqual(
             len(chunks), 5, "Should not create excessive chunks for simple content"
         )
 
-        # Verify actual chunk count matches content structure
-        # Count actual markdown headers (lines starting with #)
+        # verify actual chunk count matches content structure
+        # count actual markdown headers (lines starting with #)
         lines = test_markdown.strip().split("\n")
         header_lines = [line for line in lines if line.strip().startswith("#")]
         expected_sections = len(header_lines)
@@ -69,13 +69,13 @@ It also has multiple lines.
             f"Should create {expected_sections} chunks for {expected_sections} sections",
         )
 
-        # Verify chunk content contains expected headers
+        # verify chunk content contains expected headers
         chunk_contents = [chunk.content for chunk in chunks]
         self.assertIn(
             "# Title", chunk_contents[0], "First chunk should contain main title"
         )
 
-        # Verify all sections are represented in chunks
+        # verify all sections are represented in chunks
         section_headers = ["# Title", "## Section 1", "## Section 2"]
         for header in section_headers:
             found_in_chunk = any(header in content for content in chunk_contents)
@@ -84,7 +84,7 @@ It also has multiple lines.
                 f"Header '{header}' should be found in at least one chunk",
             )
 
-        # Verify metadata structure and completeness
+        # verify metadata structure and completeness
         for i, chunk in enumerate(chunks):
             self.assertIsNotNone(chunk.metadata, f"Chunk {i} should have metadata")
             self.assertIn(
@@ -106,19 +106,19 @@ It also has multiple lines.
 
     def test_create_large_chunks(self):
         """Test handling of sections larger than chunk_size."""
-        # Create a very large section
+        # create a very large section
         large_section = "# Large Section\n" + "This is a word. " * 500
 
-        # Use a smaller chunk size to force chunking
+        # use a smaller chunk size to force chunking
         small_chunker = ContentChunker(chunk_size=100, chunk_overlap=20)
         chunks = small_chunker.create_chunks_from_markdown(large_section, self.test_url)
 
-        # Verify chunking behavior for oversized content
+        # verify chunking behavior for oversized content
         self.assertGreater(
             len(chunks), 1, "Large content should be split into multiple chunks"
         )
 
-        # Verify chunk size constraints are respected
+        # verify chunk size constraints are respected
         for i, chunk in enumerate(chunks):
             self.assertLessEqual(
                 len(chunk.content),
@@ -126,7 +126,7 @@ It also has multiple lines.
                 f"Chunk {i} content length {len(chunk.content)} exceeds reasonable limit",
             )
 
-        # Verify metadata consistency across chunks from same section
+        # verify metadata consistency across chunks from same section
         for chunk in chunks:
             self.assertEqual(
                 chunk.metadata["heading"],
@@ -139,14 +139,14 @@ It also has multiple lines.
                 "All chunks should have correct source URL",
             )
 
-        # Verify content continuity (no content is lost)
+        # verify content continuity (no content is lost)
         combined_content = " ".join(chunk.content for chunk in chunks)
         self.assertIn(
             "Large Section", combined_content, "Header should be preserved in chunks"
         )
         word_count_original = len(large_section.split())
         word_count_chunks = len(combined_content.split())
-        # Allow for some duplication due to overlap but ensure most content is preserved
+        # allow for some duplication due to overlap but ensure most content is preserved
         self.assertGreater(
             word_count_chunks,
             word_count_original * 0.8,
@@ -179,7 +179,7 @@ It also has multiple lines.
         jsonl_path = Path(self.test_dir) / "chunks.jsonl"
         self.assertTrue(jsonl_path.exists())
 
-        # Verify file contents and structure
+        # verify file contents and structure
         with open(jsonl_path, "r") as f:
             lines = f.readlines()
             self.assertEqual(len(lines), len(chunks), "Should write one line per chunk")
@@ -192,7 +192,7 @@ It also has multiple lines.
                 except json.JSONDecodeError as e:
                     self.fail(f"Line {i} is not valid JSON: {e}")
 
-                # Verify required fields are present
+                # verify required fields are present
                 required_fields = [
                     "id",
                     "content",
@@ -205,7 +205,7 @@ It also has multiple lines.
                         field, chunk_data, f"Chunk {i} missing required field: {field}"
                     )
 
-                # Verify field values match original chunks
+                # verify field values match original chunks
                 original_chunk = chunks[i]
                 self.assertEqual(
                     chunk_data["id"], original_chunk.id, f"Chunk {i} ID mismatch"
@@ -228,7 +228,7 @@ It also has multiple lines.
 
     def test_create_semantic_chunks(self):
         """Test the create_semantic_chunks convenience function."""
-        # Test with markdown content
+        # test with markdown content
         markdown_content = "# Test Header\n\nThis is test content with a header."
         markdown_chunks = create_semantic_chunks(markdown_content, self.test_url)
 
@@ -249,7 +249,7 @@ It also has multiple lines.
             "Chunk should have correct source URL",
         )
 
-        # Test with plain text content
+        # test with plain text content
         text_content = "This is just plain text without any markdown headers or special formatting."
         text_chunks = create_semantic_chunks(text_content, self.test_url)
 
@@ -272,11 +272,11 @@ It also has multiple lines.
             "Plain text chunk should have correct source URL",
         )
 
-        # Test with empty content
+        # test with empty content
         empty_chunks = create_semantic_chunks("", self.test_url)
         self.assertEqual(len(empty_chunks), 0, "Empty content should create no chunks")
 
-        # Test with whitespace-only content
+        # test with whitespace-only content
         whitespace_chunks = create_semantic_chunks("   \n\t\n   ", self.test_url)
         self.assertEqual(
             len(whitespace_chunks), 0, "Whitespace-only content should create no chunks"

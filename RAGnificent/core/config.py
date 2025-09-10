@@ -20,16 +20,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-# Load environment variables
+# load environment variables
 load_dotenv()
 
-# Define global constants
+# define global constants
 ROOT_DIR = Path(__file__).parent.parent.parent
 DATA_DIR = ROOT_DIR / "data"
 MODELS_DIR = ROOT_DIR / "models"
 CACHE_DIR = ROOT_DIR / "cache"
 
-# Ensure directories exist
+# ensure directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -377,12 +377,12 @@ class AppConfig:
         self.models_dir = MODELS_DIR
         self.cache_dir = CACHE_DIR
 
-        # Override with provided config if any
+        # override with provided config if any
         if config_dict:
             self.update_from_dict(config_dict)
 
-        # Do not auto-configure logging on import/instantiation to avoid side effects.
-        # Call `configure_logging()` explicitly from entrypoints/CLI.
+        # do not auto-configure logging on import/instantiation to avoid side effects.
+        # call `configure_logging()` explicitly from entrypoints/CLI.
 
     def update_from_dict(self, config: dict[str, Any]) -> None:
         """
@@ -404,7 +404,7 @@ class AppConfig:
             "cache_dir": Path,
         }
 
-        # Use the map for sub-config updates
+        # use the map for sub-config updates
         for key, cls in _UPDATE_MAP.items():
             if key in config:
                 val = config[key]
@@ -415,7 +415,7 @@ class AppConfig:
                 )
                 setattr(self, key, obj)
 
-        # Handle primitive fields separately
+        # handle primitive fields separately
         if "data_dir" in config:
             self.data_dir = Path(config["data_dir"])
 
@@ -429,16 +429,16 @@ class AppConfig:
         """Configure logging based on settings"""
         handlers = []
 
-        # Console handler
+        # console handler
         if self.logging.console:
             handlers.append(logging.StreamHandler())
 
-        # File handler
+        # file handler
         if self.logging.file:
             os.makedirs(os.path.dirname(self.logging.file), exist_ok=True)
             handlers.append(logging.FileHandler(self.logging.file))
 
-        # Configure root logger
+        # configure root logger
         logging.basicConfig(
             level=getattr(logging, self.logging.level.value),
             format=self.logging.format,
@@ -542,10 +542,10 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> AppConfig:
     """
     global _CONFIG_INSTANCE
 
-    # Reset previous config if any
+    # reset previous config if any
     _CONFIG_INSTANCE = None
 
-    # If no config path provided, use environment variables
+    # if no config path provided, use environment variables
     if not config_path:
         return AppConfig()
 
@@ -616,7 +616,7 @@ def load_configs_from_directory(config_dir: Union[str, Path]) -> AppConfig:
 
         suffix = file_path.suffix.lower()
         if suffix == ".env":
-            # For .env files, just load the environment variables
+            # for .env files, just load the environment variables
             load_dotenv(file_path, override=True)
         else:
             if suffix == ".json":

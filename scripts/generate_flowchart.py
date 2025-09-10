@@ -13,7 +13,7 @@ import pydot  # type: ignore
 
 # --- Configuration ---
 
-# Setup logging
+# setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-# Default directories/files to exclude from scanning
+# default directories/files to exclude from scanning
 DEFAULT_EXCLUDE_DIRS: Set[str] = {
     ".git",
     "__pycache__",
@@ -42,7 +42,7 @@ DEFAULT_EXCLUDE_DIRS: Set[str] = {
     "*cache*",
 }
 
-# Styling constants
+# styling constants
 NEON_COLORS: List[str] = [
     "#00ff99",
     "#00ffcc",
@@ -90,26 +90,26 @@ def scan_directory(
 
     structure: Dict[str, Optional[Dict]] = {}
     try:
-        # Use os.scandir for better performance
+        # use os.scandir for better performance
         for entry in os.scandir(path):
             if entry.name in exclude_dirs:
                 continue
 
-            # Skip symlinks gracefully to avoid cycles and potential errors
+            # skip symlinks gracefully to avoid cycles and potential errors
             if entry.is_symlink():
                 structure[f"{entry.name} (symlink)"] = None
                 continue
 
             try:
                 if entry.is_dir(follow_symlinks=False):
-                    # Recurse into subdirectory
+                    # recurse into subdirectory
                     structure[entry.name] = scan_directory(
                         Path(entry.path), max_depth, current_depth + 1, exclude_dirs
                     )
                 elif entry.is_file(follow_symlinks=False):
                     structure[entry.name] = None
-                # Silently ignore other types like block devices, sockets etc.
-                # Or add specific handling if needed:
+                # silently ignore other types like block devices, sockets etc.
+                # or add specific handling if needed:
                 # else:
                 #     structure[f"{entry.name} (type: unknown)"] = None
 
@@ -147,7 +147,7 @@ def create_graph(
         The completed pydot graph.
     """
     if graph is None:
-        # Initialize the graph with defaults
+        # initialize the graph with defaults
         graph = pydot.Dot(
             graph_type="digraph",
             rankdir="LR",  # Left-to-right layout
@@ -169,23 +169,23 @@ def create_graph(
             penwidth="1.2",
         )
 
-    # Sort items for consistent graph layout (optional but nice)
+    # sort items for consistent graph layout (optional but nice)
     sorted_items = sorted(structure.items())
 
     for key, value in sorted_items:
-        # Generate a unique and safe ID for each node
-        # Using UUID ensures valid DOT identifiers regardless of the key content
+        # generate a unique and safe ID for each node
+        # using UUID ensures valid DOT identifiers regardless of the key content
         node_id = f"node_{uuid.uuid4().hex[:10]}"  # Use slightly longer UUID part
 
-        # Escape double quotes and backslashes in labels for DOT compatibility
+        # escape double quotes and backslashes in labels for DOT compatibility
         # pydot usually handles this, but explicit escaping is safer
         escaped_label = key.replace("\\", "\\\\").replace('"', '\\"')
 
-        # Determine node shape and potentially color
+        # determine node shape and potentially color
         is_dir = isinstance(value, dict)
         shape = "box" if is_dir else "ellipse"
 
-        # Vary node border color slightly based on name hash
+        # vary node border color slightly based on name hash
         color_index = hash(key) % len(NEON_COLORS)
         node_color = NEON_COLORS[color_index]
 
@@ -202,7 +202,7 @@ def create_graph(
             edge = pydot.Edge(parent_id, node_id)
             graph.add_edge(edge)
 
-        # Recurse if it's a directory (value is a dictionary)
+        # recurse if it's a directory (value is a dictionary)
         if is_dir and value:  # Check if value is a non-empty dict
             create_graph(value, node_id, graph)
 
@@ -286,8 +286,8 @@ def add_svg_animation(svg_content: str) -> str:
     Returns:
         The modified SVG content with animations.
     """
-    # Improved regex that properly preserves whitespace between attributes
-    # Check if class already exists first
+    # improved regex that properly preserves whitespace between attributes
+    # check if class already exists first
     svg_content = re.sub(
         r'(<g\s+id="node\d+")(?!\s+class=")',  # Match node without class
         r'\1 class="node"',  # Add class with proper space
@@ -295,7 +295,7 @@ def add_svg_animation(svg_content: str) -> str:
         flags=re.IGNORECASE,
     )
 
-    # Same fix for edge groups
+    # same fix for edge groups
     svg_content = re.sub(
         r'(<g\s+id="edge\d+")(?!\s+class=")',  # Match edge without class
         r'\1 class="edge"',  # Add class with proper space
@@ -305,7 +305,7 @@ def add_svg_animation(svg_content: str) -> str:
 
     if svg_tag_match := re.search(r"<svg[^>]*>", svg_content, re.IGNORECASE):
         insert_pos = svg_tag_match.end()
-        # Inject the CSS styles right after the opening <svg> tag
+        # inject the CSS styles right after the opening <svg> tag
         return svg_content[:insert_pos] + SVG_ANIMATION_CSS + svg_content[insert_pos:]
     log.warning("Could not find <svg> tag to inject CSS animations.")
     return svg_content  # Return unmodified content if tag not found
@@ -402,7 +402,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Convert exclude list to set for efficient lookup
+    # convert exclude list to set for efficient lookup
     exclude_set = set(args.exclude)
 
     # --- Dependency Check ---
@@ -437,7 +437,7 @@ def main():
     # --- DOT File Generation ---
     log.info(f"Saving DOT representation to {args.dot_output}...")
     try:
-        # Use write_raw for potentially better compatibility, ensure encoding
+        # use write_raw for potentially better compatibility, ensure encoding
         with open(args.dot_output, "w", encoding="utf-8") as f:
             # pydot's to_string() can sometimes be more reliable than write() methods
             dot_string = graph.to_string()
@@ -473,7 +473,7 @@ def main():
             log.info(f"Animated flowchart saved as {args.output.resolve()}")
 
         except FileNotFoundError:
-            # This shouldn't happen if run_dot succeeded, but check anyway
+            # this shouldn't happen if run_dot succeeded, but check anyway
             log.error(f"SVG file {args.output} not found after generation step.")
             sys.exit(1)
         except IOError as e:

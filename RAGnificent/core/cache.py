@@ -329,7 +329,7 @@ class RequestCache(StatsMixin):
 
         elif self.cache_backend == "joblib":
             try:
-                # Joblib Memory doesn't have built-in TTL, so we store timestamp with data
+                # joblib Memory doesn't have built-in TTL, so we store timestamp with data
                 cached_func = self.memory_backend.cache(lambda key: None)
                 if cached_data := cached_func.call_and_shelve(cache_key).get():
                     content, timestamp, ttl = cached_data
@@ -337,7 +337,7 @@ class RequestCache(StatsMixin):
 
                     if current_time - timestamp <= effective_ttl:
                         return content
-                    # Clear expired item
+                    # clear expired item
                     cached_func.call_and_shelve(cache_key).clear()
             except Exception as e:
                 logger.warning(f"Error accessing joblib cache: {e}")
@@ -369,7 +369,7 @@ class RequestCache(StatsMixin):
         self, url: str, content: str, timestamp: float, ttl: Optional[int] = None
     ) -> None:
         """Add content to memory cache with size management."""
-        # Check if compression is needed
+        # check if compression is needed
         should_compress = len(content.encode("utf-8")) > self.compression_threshold
         if should_compress:
             compressed_content = self._compress_content(content)
@@ -377,7 +377,7 @@ class RequestCache(StatsMixin):
         else:
             self.memory_cache[url] = (content, timestamp, ttl, False)
 
-        # Manage memory cache size
+        # manage memory cache size
         self._check_memory_limits()
 
     def set(self, url: str, content: str, ttl: Optional[int] = None) -> None:
@@ -524,18 +524,18 @@ class RequestCache(StatsMixin):
                 expired_keys.append(k)
 
         for k in expired_keys:
-            # Subtract the content size from memory usage before removing
+            # subtract the content size from memory usage before removing
             content, _, _, _ = self.memory_cache[k]
             self.current_memory_usage -= len(content)
             del self.memory_cache[k]
 
-        # Clear disk cache
+        # clear disk cache
         count = 0
         for cache_file in self.cache_dir.glob("*"):
             if cache_file.name == "metadata":
                 continue
 
-            # Check if this cache file matches the pattern
+            # check if this cache file matches the pattern
             if pattern_obj:
                 metadata_path = self.metadata_dir / f"{cache_file.name}.meta"
                 if not metadata_path.exists():
@@ -603,15 +603,15 @@ class RequestCache(StatsMixin):
             Dictionary of cache statistics
         """
 
-        # Calculate hit rate
+        # calculate hit rate
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_rate = self.stats["hits"] / total_requests if total_requests > 0 else 0
 
-        # Calculate memory usage
+        # calculate memory usage
         memory_usage_mb = self.current_memory_usage / (1024 * 1024)
         max_memory_mb = self.max_memory_size_mb
 
-        # Calculate disk usage
+        # calculate disk usage
         disk_usage = sum(
             f.stat().st_size
             for f in self.cache_dir.glob("**/*")
@@ -660,28 +660,28 @@ def cached_function(cache: RequestCache, ttl: Optional[int] = None):
     Usage:
         @cached_function(cache, ttl=3600)
         def expensive_function(arg1, arg2):
-            # Some expensive computation
+            # some expensive computation
             return result
     """
 
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
-            # Create cache key from function name and arguments
+            # create cache key from function name and arguments
             cache_key = f"{func.__name__}:{hashlib.sha256(str(args + tuple(sorted(kwargs.items()))).encode()).hexdigest()}"
 
-            # Try to get from cache
+            # try to get from cache
             cached_result = cache.get(cache_key)
             if cached_result is not None:
                 try:
                     return json.loads(cached_result)
                 except json.JSONDecodeError:
-                    # Fall back to string result
+                    # fall back to string result
                     return cached_result
 
-            # Compute result and cache it
+            # compute result and cache it
             result = func(*args, **kwargs)
 
-            # Serialize result for caching
+            # serialize result for caching
             try:
                 serialized = json.dumps(result, default=str)
             except (TypeError, ValueError):

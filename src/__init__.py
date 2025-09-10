@@ -6,14 +6,14 @@ __version__ = "0.1.0"
 
 import importlib.util
 
-# Try to import Rust implementations if the module is available
+# try to import Rust implementations if the module is available
 if importlib.util.find_spec("RAGnificent.RAGnificent_rs") is not None:
-    # Import will happen in __all__ section if RUST_AVAILABLE is True
+    # import will happen in __all__ section if RUST_AVAILABLE is True
     RUST_AVAILABLE = True
 else:
     RUST_AVAILABLE = False
     try:
-        # Just check if the module can be imported
+        # just check if the module can be imported
         import importlib.util
 
         if importlib.util.find_spec(".RAGnificent_rs", __name__) is not None:
@@ -30,12 +30,12 @@ else:
 
 from .chunk_utils import Chunk, ContentChunker, create_semantic_chunks
 
-# Import public API
+# import public API
 from .main import MarkdownScraper
 from .sitemap_utils import SitemapParser, SitemapURL, discover_site_urls
 from .throttle import RequestThrottler
 
-# Define what's available through public API
+# define what's available through public API
 __all__ = [
     "MarkdownScraper",
     "Chunk",
@@ -48,7 +48,7 @@ __all__ = [
     "RUST_AVAILABLE",
 ]
 
-# Add Rust functions if available
+# add Rust functions if available
 if RUST_AVAILABLE:
     __all__.extend(
         [

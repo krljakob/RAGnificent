@@ -13,7 +13,7 @@ from typing import Dict, List, Optional
 from RAGnificent.core.config import get_config
 from RAGnificent.rag.vector_store import get_vector_store
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -39,23 +39,23 @@ def view_collection_info(collection_name: Optional[str] = None):
     collection = collection_name or config.qdrant.collection
 
     try:
-        # Get vector store
+        # get vector store
         vector_store = get_vector_store(collection)
 
-        # Get collection info
+        # get collection info
         count = vector_store.count_documents()
 
         if count == 0:
             return
 
-        # Get sample documents
+        # get sample documents
 
-        # Use search with a broad query to get sample results
+        # use search with a broad query to get sample results
         from RAGnificent.rag.search import get_search
 
         search = get_search(collection)
 
-        # Get some sample results by searching for common terms
+        # get some sample results by searching for common terms
         sample_queries = ["the", "a", "and", "is", "of"]
         sample_results = []
 
@@ -69,7 +69,7 @@ def view_collection_info(collection_name: Optional[str] = None):
                 logger.debug(f"Query '{query}' failed: {e}")
                 continue
 
-        # Remove duplicates by ID
+        # remove duplicates by ID
         seen_ids = set()
         unique_results = []
         for result in sample_results:
@@ -83,7 +83,7 @@ def view_collection_info(collection_name: Optional[str] = None):
                 seen_ids.add(result.metadata.get("id"))
                 unique_results.append(result)
 
-        # Display sample documents
+        # display sample documents
         for i, result in enumerate(unique_results[:5], 1):
             content = result.content if hasattr(result, "content") else str(result)
             content_preview = f"{content[:200]}..." if len(content) > 200 else content
@@ -130,9 +130,9 @@ def list_collections():
         config = get_config()
         vector_store = get_vector_store()
 
-        # This is a basic implementation - Qdrant client may have methods to list collections
+        # this is a basic implementation - Qdrant client may have methods to list collections
 
-        # Try to get info about the default collection
+        # try to get info about the default collection
         with contextlib.suppress(Exception):
             count = vector_store.count_documents()
 
@@ -151,17 +151,17 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Info command
+    # info command
     info_parser = subparsers.add_parser("info", help="View collection information")
 
-    # Search command
+    # search command
     search_parser = subparsers.add_parser("search", help="Search the collection")
     search_parser.add_argument("query", help="Search query")
     search_parser.add_argument(
         "--limit", "-l", type=int, default=5, help="Number of results"
     )
 
-    # List command
+    # list command
     list_parser = subparsers.add_parser("list", help="List collections")
 
     args = parser.parse_args()

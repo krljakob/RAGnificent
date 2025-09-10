@@ -16,7 +16,7 @@ from RAGnificent.core.throttle import (
     RequestThrottler,
 )
 
-# Import performance testing utilities
+# import performance testing utilities
 try:
     from tests.utils.performance_testing import (
         PerformanceBudgets,
@@ -26,7 +26,7 @@ try:
         assert_timing_within,
     )
 except ImportError:
-    # Fallback for environments where test utilities aren't available
+    # fallback for environments where test utilities aren't available
     def assert_immediate_operation(duration, description=""):
         assert duration < 0.05, f"{description}: expected < 0.05s, got {duration:.3f}s"
 
@@ -72,11 +72,11 @@ class TestDomainStats:
         """Test that request_times deque has correct maxlen."""
         stats = DomainStats()
 
-        # Add more than 100 items
+        # add more than 100 items
         for i in range(150):
             stats.request_times.append(i)
 
-        # Should only keep last 100
+        # should only keep last 100
         assert len(stats.request_times) == 100
         assert stats.request_times[0] == 50  # First 50 should be dropped
 
@@ -111,15 +111,15 @@ class TestRequestThrottler:
         throttler.throttle()
         first_elapsed = time.time() - start_time
 
-        # First request should go through immediately
+        # first request should go through immediately
         assert_immediate_operation(first_elapsed, "First throttle request")
 
-        # Second request should be throttled
+        # second request should be throttled
         start_time = time.time()
         throttler.throttle()
         second_elapsed = time.time() - start_time
 
-        # Should wait approximately 0.1 seconds with improved precision
+        # should wait approximately 0.1 seconds with improved precision
         assert_rate_limit_timing(second_elapsed, 0.1, "Second throttle request")
 
     def test_throttle_domain_specific(self):
@@ -129,13 +129,13 @@ class TestRequestThrottler:
             domain_specific_limits={"slow.com": 1.0},  # 1s for slow.com
         )
 
-        # Request to slow.com should use domain-specific limit
+        # request to slow.com should use domain-specific limit
         start_time = time.time()
         throttler.throttle("https://slow.com/page")
         first_elapsed = time.time() - start_time
         assert_immediate_operation(first_elapsed, "First domain-specific request")
 
-        # Second request should wait ~1 second with improved tolerance
+        # second request should wait ~1 second with improved tolerance
         start_time = time.time()
         throttler.throttle("https://slow.com/page")
         second_elapsed = time.time() - start_time
@@ -152,13 +152,13 @@ class TestRequestThrottler:
             },
         )
 
-        # Verify that each domain gets its correct rate limit
+        # verify that each domain gets its correct rate limit
         assert throttler._get_domain_rate_limit("api.example.com") == 1.0
         assert throttler._get_domain_rate_limit("www.example.com") == 2.0
         assert throttler._get_domain_rate_limit("example.com") == 5.0
         assert throttler._get_domain_rate_limit("blog.example.com") == 10.0  # default
 
-        # Verify the domains are tracked separately in domain_stats
+        # verify the domains are tracked separately in domain_stats
         throttler.throttle("https://api.example.com/page")
         throttler.throttle("https://www.example.com/page")
         throttler.throttle("https://example.com/page")
@@ -173,7 +173,7 @@ class TestRequestThrottler:
         )
         assert urlparse("https://example.com/page").hostname in throttler.domain_stats
 
-        # Verify that domain without specific limit uses default
+        # verify that domain without specific limit uses default
         throttler.throttle("https://blog.example.com/page")
         assert "blog.example.com" in throttler.domain_stats
 
@@ -187,7 +187,7 @@ class TestRequestThrottler:
             },
         )
 
-        # Exact match should take precedence over wildcard
+        # exact match should take precedence over wildcard
         assert throttler._get_domain_rate_limit("api.example.com") == 1.0  # exact match
         assert (
             throttler._get_domain_rate_limit("www.example.com") == 2.0
@@ -201,14 +201,14 @@ class TestRequestThrottler:
         """Test backpressure mechanism."""
         throttler = RequestThrottler(max_workers=10)
 
-        # Simulate high active requests
+        # simulate high active requests
         throttler.active_requests = 9  # Above threshold (80% of 10 = 8)
 
         start_time = time.time()
         throttler.throttle()
         elapsed = time.time() - start_time
 
-        # Should apply backpressure delay
+        # should apply backpressure delay
         assert throttler.backpressure_delay > 0
         assert_timing_within(
             elapsed, throttler.backpressure_delay, 5.0, "Backpressure delay"
@@ -218,11 +218,11 @@ class TestRequestThrottler:
         """Test that release updates statistics correctly."""
         throttler = RequestThrottler()
 
-        # Start a request
+        # start a request
         throttler.throttle("https://example.com/page")
         assert throttler.active_requests == 1
 
-        # Release with success
+        # release with success
         throttler.release(
             url="https://example.com/page",
             status_code=200,
@@ -241,18 +241,18 @@ class TestRequestThrottler:
         """Test release with error updates error statistics."""
         throttler = RequestThrottler()
 
-        # Start a request
+        # start a request
         throttler.throttle("https://example.com/page")
         assert throttler.active_requests == 1
 
-        # Release with success
+        # release with success
         throttler.release(
             url="https://example.com/page",
             status_code=200,
             response_time=0.5,
         )
 
-        # Test release with TimeoutError
+        # test release with TimeoutError
         throttler.throttle("https://example.com/page")
         assert throttler.active_requests == 1
         throttler.release(
@@ -264,7 +264,7 @@ class TestRequestThrottler:
         stats = throttler.domain_stats["example.com"]
         assert stats.error_count == 1
 
-        # Test release with None as error
+        # test release with None as error
         throttler.throttle("https://example.com/page")
         assert throttler.active_requests == 1
         throttler.release(
@@ -276,7 +276,7 @@ class TestRequestThrottler:
         # error_count should not increment for None error
         assert stats.error_count == 1
 
-        # Test release with string as error
+        # test release with string as error
         throttler.throttle("https://example.com/page")
         assert throttler.active_requests == 1
         throttler.release(
@@ -287,7 +287,7 @@ class TestRequestThrottler:
         )
         assert stats.error_count == 2
 
-        # Test release with custom error object
+        # test release with custom error object
         class CustomError:
             pass
 
@@ -305,7 +305,7 @@ class TestRequestThrottler:
         """Test exponential backoff on consecutive errors."""
         throttler = RequestThrottler(retry_delay=1.0)
 
-        # Simulate consecutive errors
+        # simulate consecutive errors
         for _ in range(3):
             throttler.throttle("https://example.com/page")
             throttler.release(
@@ -322,7 +322,7 @@ class TestRequestThrottler:
         """Test successful execution with throttling."""
         throttler = RequestThrottler()
 
-        # Mock function that returns a response
+        # mock function that returns a response
         mock_func = Mock(return_value=Mock(status_code=200))
 
         result = throttler.execute(mock_func, "https://example.com/page", param="value")
@@ -331,7 +331,7 @@ class TestRequestThrottler:
         assert result.status_code == 200
         mock_func.assert_called_once_with("https://example.com/page", param="value")
 
-        # Check stats were updated
+        # check stats were updated
         stats = throttler.domain_stats["example.com"]
         assert stats.success_count == 1
 
@@ -339,7 +339,7 @@ class TestRequestThrottler:
         """Test execution with retry on failure."""
         throttler = RequestThrottler(max_retries=2, retry_delay=0.1)
 
-        # Mock function that fails twice then succeeds
+        # mock function that fails twice then succeeds
         mock_func = Mock(
             side_effect=[
                 Exception("First failure"),
@@ -358,7 +358,7 @@ class TestRequestThrottler:
         """Test that final error is raised when max_retries is exceeded."""
         throttler = RequestThrottler(max_retries=2, retry_delay=0.1)
 
-        # Mock function that always fails
+        # mock function that always fails
         mock_func = Mock(
             side_effect=[
                 Exception("First failure"),
@@ -367,15 +367,15 @@ class TestRequestThrottler:
             ]
         )
 
-        # Execute should raise the final exception after max_retries
+        # execute should raise the final exception after max_retries
         with pytest.raises(Exception) as exc_info:
             throttler.execute(mock_func, "https://example.com/page")
 
         assert str(exc_info.value) == "Third failure - should not retry"
-        # Should attempt initial call + 2 retries = 3 total calls
+        # should attempt initial call + 2 retries = 3 total calls
         assert mock_func.call_count == 3
 
-        # Check that error stats were updated
+        # check that error stats were updated
         stats = throttler.domain_stats["example.com"]
         assert stats.error_count >= 1
 
@@ -383,7 +383,7 @@ class TestRequestThrottler:
         """Test execution with retry on 429 status."""
         throttler = RequestThrottler()
 
-        # Mock function that returns 429 then 200
+        # mock function that returns 429 then 200
         mock_func = Mock(
             side_effect=[
                 Mock(status_code=429, headers={}),
@@ -401,7 +401,7 @@ class TestRequestThrottler:
         """Test parallel execution."""
         throttler = RequestThrottler(max_workers=2)
 
-        # Mock function that returns different results
+        # mock function that returns different results
         def mock_func(url):
             return Mock(status_code=200, url=url)
 
@@ -424,7 +424,7 @@ class TestRequestThrottler:
             max_workers=3, max_retries=0
         )  # Disable retries for faster test
 
-        # Mock function that returns different results based on URL
+        # mock function that returns different results based on URL
         def mock_func(url):
             if "fail" in url:
                 raise Exception(f"Failed to fetch {url}")
@@ -441,11 +441,11 @@ class TestRequestThrottler:
             "https://example.com/fail2",
         ]
 
-        # Execute parallel should not raise but collect results/exceptions
+        # execute parallel should not raise but collect results/exceptions
         success_count = 0
         failure_count = 0
 
-        # Since execute_parallel raises exceptions, we need to handle each URL separately
+        # since execute_parallel raises exceptions, we need to handle each URL separately
         results = []
         for url in urls:
             try:
@@ -456,12 +456,12 @@ class TestRequestThrottler:
                 results.append(e)
                 failure_count += 1
 
-        # Check we got all results (success and failures)
+        # check we got all results (success and failures)
         assert len(results) == 6
         assert success_count == 3
         assert failure_count == 3
 
-        # Verify stats are updated correctly
+        # verify stats are updated correctly
         stats = throttler.domain_stats["example.com"]
         assert stats.success_count == 3
         assert stats.error_count == 3
@@ -487,44 +487,44 @@ class TestRequestThrottler:
             },
         )
 
-        # Exact match
+        # exact match
         assert throttler._get_domain_rate_limit("slow.com") == 1.0
 
-        # Wildcard match
+        # wildcard match
         assert throttler._get_domain_rate_limit("sub.example.com") == 0.5
         assert throttler._get_domain_rate_limit("api.example.com") == 0.5
 
-        # Default
+        # default
         assert throttler._get_domain_rate_limit("other.com") == 2.0
 
     def test_adaptive_throttling(self):
         """Test adaptive rate limit adjustment."""
         throttler = RequestThrottler(adaptive_throttling=True)
 
-        # Simulate high error rate to trigger significant rate limit adjustment
+        # simulate high error rate to trigger significant rate limit adjustment
         domain = "slow.com"
         stats = throttler.domain_stats[domain]
 
-        # Add some request times (requirement for adjustment)
+        # add some request times (requirement for adjustment)
         for _ in range(10):
             stats.request_times.append(1.0)
 
-        # Set high error rate (> 10% threshold)
+        # set high error rate (> 10% threshold)
         stats.success_count = 8
         stats.error_count = 4  # 4/(8+4) = 33% error rate
 
-        # Should adjust rate limit down due to high error rate
+        # should adjust rate limit down due to high error rate
         original_limit = throttler._get_domain_rate_limit(domain)
         throttler._adjust_rate_limit(domain)
 
-        # Verify rate limit was actually adjusted
+        # verify rate limit was actually adjusted
         new_limit = throttler._get_domain_rate_limit(domain)
         assert domain in throttler.domain_limits, "Domain should be added to limits"
         assert throttler.domain_limits[domain] < original_limit, (
             "Rate limit should be reduced due to high error rate"
         )
 
-        # Verify the adjustment is meaningful (not just a trivial change)
+        # verify the adjustment is meaningful (not just a trivial change)
         reduction_factor = throttler.domain_limits[domain] / original_limit
         assert reduction_factor < 0.9, "Rate limit should be significantly reduced"
         assert reduction_factor > 0.1, "Rate limit should not be reduced to near-zero"
@@ -535,20 +535,20 @@ class TestRequestThrottler:
         domain = "slow.com"
         stats = throttler.domain_stats[domain]
 
-        # Simulate initial high error rate to reduce rate limit
+        # simulate initial high error rate to reduce rate limit
         for _ in range(10):
             stats.request_times.append(0.3)  # Fast response times
         stats.error_count = 5
         stats.success_count = 5  # 50% error rate
         throttler._adjust_rate_limit(domain)
 
-        # Should have reduced rate limit due to high error rate
+        # should have reduced rate limit due to high error rate
         assert domain in throttler.domain_limits
         reduced_rate = throttler.domain_limits[domain]
         assert reduced_rate < throttler.default_rate_limit
 
-        # Now multiple adjustment cycles to simulate recovery
-        # First cycle: error rate drops but still above threshold
+        # now multiple adjustment cycles to simulate recovery
+        # first cycle: error rate drops but still above threshold
         stats.request_times.clear()
         for _ in range(10):
             stats.request_times.append(0.3)
@@ -556,9 +556,9 @@ class TestRequestThrottler:
         stats.success_count = 9  # 10% error rate, just at threshold
 
         stats.error_count = 0
-        # Force multiple adjustments to allow recovery
+        # force multiple adjustments to allow recovery
         for _ in range(3):
-            # Each cycle improves conditions further
+            # each cycle improves conditions further
             stats.request_times.clear()
             for _ in range(10):
                 stats.request_times.append(0.3)  # Fast response times
@@ -566,18 +566,18 @@ class TestRequestThrottler:
             throttler._adjust_rate_limit(domain)
 
         final_rate = throttler._get_domain_rate_limit(domain)
-        # Should have improved from the reduced rate
+        # should have improved from the reduced rate
         assert final_rate >= reduced_rate
 
     def test_get_retry_after(self):
         """Test parsing Retry-After header."""
         throttler = RequestThrottler()
 
-        # Test with numeric value
+        # test with numeric value
         response = Mock(headers={"Retry-After": "30"})
         assert throttler._get_retry_after(response) == 30.0
 
-        # Test with missing header
+        # test with missing header
         response = Mock(headers={})
         retry_after = throttler._get_retry_after(response)
         assert 5.0 <= retry_after <= 10.0  # Default range
@@ -586,7 +586,7 @@ class TestRequestThrottler:
         """Test statistics retrieval."""
         throttler = RequestThrottler()
 
-        # Make some requests
+        # make some requests
         throttler.throttle("https://example.com/page")
         throttler.release(
             "https://example.com/page", status_code=200, response_time=0.5
@@ -622,13 +622,13 @@ class TestAsyncRequestThrottler:
         """Test async throttling."""
         throttler = AsyncRequestThrottler(requests_per_second=10.0)  # 0.1s interval
 
-        # First request should go through quickly
+        # first request should go through quickly
         start_time = time.time()
         await throttler.throttle("https://example.com/page1")
         first_elapsed = time.time() - start_time
         assert_immediate_operation(first_elapsed, "First async throttle request")
 
-        # Second request to same domain should be throttled
+        # second request to same domain should be throttled
         start_time = time.time()
         await throttler.throttle("https://example.com/page2")
         second_elapsed = time.time() - start_time
@@ -642,11 +642,11 @@ class TestAsyncRequestThrottler:
             domain_specific_limits={"slow.com": 1.0},
         )
 
-        # Different domains should not interfere
+        # different domains should not interfere
         await throttler.throttle("https://fast.com/page")
         await throttler.throttle("https://slow.com/page")
 
-        # Second request to slow.com should wait
+        # second request to slow.com should wait
         start_time = time.time()
         await throttler.throttle("https://slow.com/page2")
         elapsed = time.time() - start_time
@@ -657,7 +657,7 @@ class TestAsyncRequestThrottler:
         """Test recording response statistics."""
         throttler = AsyncRequestThrottler()
 
-        # Record successful response
+        # record successful response
         await throttler.record_response("https://example.com/page", 200, 0.5)
 
         stats = throttler._domain_stats["example.com"]
@@ -670,7 +670,7 @@ class TestAsyncRequestThrottler:
         """Test backoff mechanism on consecutive errors."""
         throttler = AsyncRequestThrottler()
 
-        # Record multiple errors
+        # record multiple errors
         for _ in range(3):
             await throttler.record_response("https://example.com/page", 500, 0.1)
 
@@ -686,14 +686,14 @@ class TestAsyncRequestThrottler:
             adaptive_throttling=True,
         )
 
-        # Simulate high error rate
+        # simulate high error rate
         domain = "error.com"
         for _ in range(10):
             await throttler.record_response(f"https://{domain}/page", 200, 0.1)
         for _ in range(5):
             await throttler.record_response(f"https://{domain}/page", 500, 0.1)
 
-        # Rate limit should be reduced
+        # rate limit should be reduced
         rate_limit = throttler._get_domain_rate_limit(domain)
         assert rate_limit < throttler.base_rate_limit
 
@@ -701,7 +701,7 @@ class TestAsyncRequestThrottler:
         """Test statistics retrieval for async throttler."""
         throttler = AsyncRequestThrottler()
 
-        # Add some stats
+        # add some stats
         stats = throttler._domain_stats["example.com"]
         stats.success_count = 10
         stats.error_count = 2

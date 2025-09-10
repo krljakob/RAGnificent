@@ -16,11 +16,11 @@ from urllib.parse import parse_qs, urlparse
 from RAGnificent.core.config import get_config
 from RAGnificent.rag.pipeline import Pipeline
 
-# Configure logging
+# configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global pipeline instance
+# global pipeline instance
 pipeline = None
 
 
@@ -86,7 +86,7 @@ class RAGHandler(BaseHTTPRequestHandler):
     </style>
 </head>
 <body>
-    <h1>🔥 RAGnificent Web UI</h1>
+    <h1>RAGnificent Web UI</h1>
 
     <div class="container">
         <div id="status" class="status">
@@ -96,7 +96,7 @@ class RAGHandler(BaseHTTPRequestHandler):
 
     <div class="container">
         <div class="section">
-            <h2>🔍 Search Documents</h2>
+            <h2> Search Documents</h2>
             <p>Search your indexed documents using semantic similarity.</p>
             <input type="text" id="searchQuery" placeholder="Enter your search query..." />
             <br>
@@ -107,7 +107,7 @@ class RAGHandler(BaseHTTPRequestHandler):
 
     <div class="container">
         <div class="section">
-            <h2>🌐 Scrape & Index URL</h2>
+            <h2> Scrape & Index URL</h2>
             <p>Scrape a new URL and add it to the knowledge base.</p>
             <input type="text" id="scrapeUrl" placeholder="Enter URL to scrape..." />
             <br>
@@ -277,17 +277,17 @@ class RAGHandler(BaseHTTPRequestHandler):
                 self.send_json_response({"error": "Query is required"}, 400)
                 return
 
-            # Validate query length and content
+            # validate query length and content
             if len(query) > 1000:
                 self.send_json_response({"error": "Query too long"}, 400)
                 return
 
-            # Basic sanitization
+            # basic sanitization
             import html
 
             query = html.escape(query)
 
-            # Search documents
+            # search documents
             results = pipeline.search_documents(query, limit=5, as_dict=True)
 
             response = {"query": query, "results": results}
@@ -314,7 +314,7 @@ class RAGHandler(BaseHTTPRequestHandler):
                 self.send_json_response({"error": "URL is required"}, 400)
                 return
 
-            # Validate URL format and scheme
+            # validate URL format and scheme
             from urllib.parse import urlparse
 
             try:
@@ -329,7 +329,7 @@ class RAGHandler(BaseHTTPRequestHandler):
                 self.send_json_response({"error": "Invalid URL format"}, 400)
                 return
 
-            # Run the full pipeline
+            # run the full pipeline
             result = pipeline.run_pipeline(
                 url=url,
                 run_extract=True,
@@ -360,7 +360,7 @@ def main():
     """Run the web server."""
     port = int(os.environ.get("PORT", 8080))
 
-    # Try to open browser automatically
+    # try to open browser automatically
     try:
         webbrowser.open(f"http://localhost:{port}")
     except Exception:

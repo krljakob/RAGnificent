@@ -31,10 +31,10 @@ from RAGnificent.ragnificent_rs import (
 )
 from RAGnificent.utils.chunk_utils import ContentChunker
 
-# Initialize logger
+# initialize logger
 logger = get_logger(__name__)
 
-# Create Typer app
+# create Typer app
 app = typer.Typer(
     name="rag",
     help="RAGnificent CLI for web scraping and content processing",
@@ -42,10 +42,10 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
-# Create console instance
+# create console instance
 console = Console()
 
-# Common options
+# common options
 verbose_option = typer.Option(False, "--verbose", "-v", help="Enable verbose output")
 debug_option = typer.Option(False, "--debug", "-d", help="Enable debug output")
 
@@ -71,7 +71,7 @@ def main(
     debug: bool = debug_option,
 ):
     """Configure logging and global options."""
-    # Configure logging based on verbosity
+    # configure logging based on verbosity
     log_level = "DEBUG" if debug else ("INFO" if verbose else "WARNING")
     setup_logger(level=log_level)
 
@@ -144,7 +144,7 @@ def scrape(
                 )
 
             progress.update(task, description="[green]Scraping completed!")
-            console.print(f"\n✅ Successfully scraped {len(scraped_urls)} pages")
+            console.print(f"\n[SUCCESS] Successfully scraped {len(scraped_urls)} pages")
 
         except Exception as e:
             logger.error(f"Scraping failed: {e}", exc_info=debug)
@@ -174,7 +174,7 @@ async def _async_scrape(
                 chunk_dir=str(chunk_dir) if chunk_dir else None,
             )
         else:
-            # Single URL mode
+            # single URL mode
             await scraper._scrape_and_save(
                 url,
                 str(output_dir),
@@ -210,10 +210,10 @@ def _sync_scrape(
             parallel=parallel,
             max_workers=workers,
         )
-    # Single URL mode - enhanced to support chunks
+    # single URL mode - enhanced to support chunks
     html_content = scraper.scrape_website(url)
 
-    # Convert and save
+    # convert and save
     if scraper.rust_available:
         format_map = {
             "markdown": scraper.OutputFormat.MARKDOWN,
@@ -226,7 +226,7 @@ def _sync_scrape(
     else:
         output = scraper._convert_content(html_content, url, format)
 
-    # Save main output
+    # save main output
     output_dir.mkdir(parents=True, exist_ok=True)
     extension = "md" if format == "markdown" else format
     output_file = output_dir / f"scraped.{extension}"
@@ -234,7 +234,7 @@ def _sync_scrape(
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(output)
 
-    # Save chunks if requested
+    # save chunks if requested
     if save_chunks and format == "markdown":
         chunks = scraper.chunker.create_chunks_from_markdown(output, source_url=url)
         chunks_output_dir = chunk_dir or output_dir
@@ -273,14 +273,14 @@ def convert(
     debug: bool = debug_option,
 ):
     """Convert documents between different formats."""
-    console.print(f"📄 Converting {input_file} to {to_format}...")
+    console.print(f"[CONVERT] Converting {input_file} to {to_format}...")
 
     try:
-        # Read input file
+        # read input file
         with open(input_file, "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Auto-detect input format if not specified
+        # auto-detect input format if not specified
         if not from_format:
             if input_file.suffix.lower() in [".html", ".htm"]:
                 from_format = "html"
@@ -291,7 +291,7 @@ def convert(
             else:
                 from_format = "markdown"
 
-        # Convert based on output format
+        # convert based on output format
         if from_format == "html":
             if to_format == "markdown":
                 converted = convert_to_markdown(content)
@@ -308,28 +308,28 @@ def convert(
                 f"[yellow]Warning: Conversion from {from_format} to {to_format} not yet implemented[/yellow]"
             )
 
-        # Apply chunking if requested
+        # apply chunking if requested
         if chunk and to_format == "markdown":
             chunker = ContentChunker(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
             chunks = chunker.create_chunks_from_markdown(
                 converted, source_url=str(input_file)
             )
-            # Save chunks to separate files
+            # save chunks to separate files
             output_dir = output_file.parent if output_file else input_file.parent
             for i, chunk_data in enumerate(chunks):
                 chunk_file = output_dir / f"{input_file.stem}_chunk_{i:03d}.{to_format}"
                 with open(chunk_file, "w", encoding="utf-8") as f:
                     f.write(chunk_data["content"])
-            console.print(f"✅ Created {len(chunks)} chunks in {output_dir}")
+            console.print(f"[SUCCESS] Created {len(chunks)} chunks in {output_dir}")
         else:
-            # Save converted content
+            # save converted content
             if not output_file:
                 output_file = input_file.with_suffix(f".{to_format}")
 
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(converted)
 
-            console.print(f"✅ Converted file saved to {output_file}")
+            console.print(f"[SUCCESS] Converted file saved to {output_file}")
 
     except Exception as e:
         logger.error(f"Conversion failed: {e}", exc_info=debug)
@@ -354,20 +354,20 @@ def pipeline(
     ),
 ):
     """Execute a RAG pipeline from a configuration file."""
-    console.print(f"🔄 Loading pipeline from {config_file}...")
+    console.print(f"[LOAD] Loading pipeline from {config_file}...")
 
     try:
-        # Load pipeline configuration
+        # load pipeline configuration
         with open(config_file, "r") as f:
             config = yaml.safe_load(f)
 
-        # Override directories if provided
+        # override directories if provided
         if input_dir:
             config["input_dir"] = str(input_dir)
         if output_dir:
             config["output_dir"] = str(output_dir)
 
-        # Show pipeline summary
+        # show pipeline summary
         console.print("\n[bold]Pipeline Configuration:[/bold]")
         console.print(f"  - Name: {config.get('name', 'Unnamed Pipeline')}")
         console.print(f"  - Version: {config.get('version', '1.0')}")
@@ -381,7 +381,7 @@ def pipeline(
                 console.print(f"    Config: {step.get('config', {})}")
             raise typer.Exit(0)
 
-        # Execute pipeline
+        # execute pipeline
         pipeline = Pipeline(config, continue_on_error=continue_on_error)
 
         with Progress() as progress:
@@ -402,7 +402,7 @@ def pipeline(
                     )
                     raise typer.Exit(1)
 
-        console.print("\n✅ Pipeline executed successfully!")
+        console.print("\n[SUCCESS] Pipeline executed successfully!")
 
     except FileNotFoundError as e:
         logger.error(f"Pipeline configuration file not found: {config_file}")
@@ -460,22 +460,22 @@ def embed(
     debug: bool = debug_option,
 ):
     """Generate embeddings for text content."""
-    console.print("🔍 Generating embeddings...")
+    console.print("[EMBED] Generating embeddings...")
 
     try:
         generator = EmbeddingService(model_name=model_name)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         if input_path.is_file():
-            # Process single file
+            # process single file
             generator.embed_file(
                 input_path, output_dir / f"{input_path.stem}_embeddings.json"
             )
         else:
-            # Process directory
+            # process directory
             generator.embed_directory(input_path, output_dir, batch_size=batch_size)
 
-        console.print(f"✅ Embeddings saved to {output_dir}")
+        console.print(f"[SUCCESS] Embeddings saved to {output_dir}")
 
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}", exc_info=debug)
@@ -491,11 +491,11 @@ def serve(
     ),
 ):
     """Start the RAGnificent API server."""
-    console.print("🚀 Starting RAGnificent API server...")
+    console.print("[START] Starting RAGnificent API server...")
     console.print(f"   - Host: {host}")
     console.print(f"   - Port: {port}")
     console.print(f"   - Reload: {reload}")
-    console.print("\n📚 API Documentation:")
+    console.print("\n[DOCS] API Documentation:")
     console.print(f"   - http://{host}:{port}/docs")
     console.print(f"   - http://{host}:{port}/redoc")
 

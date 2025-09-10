@@ -26,7 +26,7 @@ pub enum OutputFormat {
     Xml,
 }
 
-/// Data structure for document representation that can be serialized to different formats
+/// data structure for document representation that can be serialized to different formats
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Document {
     pub title: String,
@@ -70,12 +70,12 @@ pub struct CodeBlock {
     pub code: String,
 }
 
-/// Create a new selector with error handling
+/// create a new selector with error handling
 fn create_selector(selector_str: &str) -> Result<Selector, MarkdownError> {
     Selector::parse(selector_str).map_err(|e| MarkdownError::SelectorError(e.to_string()))
 }
 
-/// Resolve a relative URL against a base URL
+/// resolve a relative URL against a base URL
 fn resolve_url(href: &str, base_url: &Url) -> String {
     base_url
         .join(href)
@@ -83,7 +83,7 @@ fn resolve_url(href: &str, base_url: &Url) -> String {
         .to_string()
 }
 
-/// Extract document title from HTML
+/// extract document title from HTML
 fn extract_title(document_html: &Html) -> Result<String, MarkdownError> {
     let title_selector = create_selector("title")?;
 
@@ -96,7 +96,7 @@ fn extract_title(document_html: &Html) -> Result<String, MarkdownError> {
     Ok(title.trim().to_string())
 }
 
-/// Extract headings from HTML
+/// extract headings from HTML
 fn extract_headings(document_html: &Html) -> Result<Vec<Heading>, MarkdownError> {
     let mut headings = Vec::new();
 
@@ -117,7 +117,7 @@ fn extract_headings(document_html: &Html) -> Result<Vec<Heading>, MarkdownError>
     Ok(headings)
 }
 
-/// Extract paragraphs from HTML
+/// extract paragraphs from HTML
 fn extract_paragraphs(document_html: &Html) -> Result<Vec<String>, MarkdownError> {
     let mut paragraphs = Vec::new();
     let p_selector = create_selector("p")?;
@@ -132,7 +132,7 @@ fn extract_paragraphs(document_html: &Html) -> Result<Vec<String>, MarkdownError
     Ok(paragraphs)
 }
 
-/// Extract links from HTML
+/// extract links from HTML
 fn extract_links(document_html: &Html, base_url: &Url) -> Result<Vec<Link>, MarkdownError> {
     let mut links = Vec::new();
     let a_selector = create_selector("a[href]")?;
@@ -141,7 +141,7 @@ fn extract_links(document_html: &Html, base_url: &Url) -> Result<Vec<Link>, Mark
         if let Some(href) = element.value().attr("href") {
             let text = element.text().collect::<String>().trim().to_string();
             if !text.is_empty() {
-                // Resolve relative URLs
+                // resolve relative URLs
                 let absolute_url = resolve_url(href, base_url);
                 links.push(Link {
                     text,
@@ -154,7 +154,7 @@ fn extract_links(document_html: &Html, base_url: &Url) -> Result<Vec<Link>, Mark
     Ok(links)
 }
 
-/// Extract images from HTML
+/// extract images from HTML
 fn extract_images(document_html: &Html, base_url: &Url) -> Result<Vec<Image>, MarkdownError> {
     let mut images = Vec::new();
     let img_selector = create_selector("img[src]")?;
@@ -163,7 +163,7 @@ fn extract_images(document_html: &Html, base_url: &Url) -> Result<Vec<Image>, Ma
         if let Some(src) = element.value().attr("src") {
             let alt = element.value().attr("alt").unwrap_or("image").to_string();
 
-            // Resolve relative URLs
+            // resolve relative URLs
             let absolute_url = resolve_url(src, base_url);
             images.push(Image {
                 alt,
@@ -175,7 +175,7 @@ fn extract_images(document_html: &Html, base_url: &Url) -> Result<Vec<Image>, Ma
     Ok(images)
 }
 
-/// Extract list items from a list element
+/// extract list items from a list element
 fn extract_list_items(list_element: &scraper::ElementRef, li_selector: &Selector) -> Vec<String> {
     let mut items = Vec::new();
 
@@ -189,14 +189,14 @@ fn extract_list_items(list_element: &scraper::ElementRef, li_selector: &Selector
     items
 }
 
-/// Extract lists from HTML
+/// extract lists from HTML
 fn extract_lists(document_html: &Html) -> Result<Vec<List>, MarkdownError> {
     let mut lists = Vec::new();
     let ul_selector = create_selector("ul")?;
     let ol_selector = create_selector("ol")?;
     let li_selector = create_selector("li")?;
 
-    // Process unordered lists
+    // process unordered lists
     for ul in document_html.select(&ul_selector) {
         let items = extract_list_items(&ul, &li_selector);
         if !items.is_empty() {
@@ -207,7 +207,7 @@ fn extract_lists(document_html: &Html) -> Result<Vec<List>, MarkdownError> {
         }
     }
 
-    // Process ordered lists
+    // process ordered lists
     for ol in document_html.select(&ol_selector) {
         let items = extract_list_items(&ol, &li_selector);
         if !items.is_empty() {
@@ -221,7 +221,7 @@ fn extract_lists(document_html: &Html) -> Result<Vec<List>, MarkdownError> {
     Ok(lists)
 }
 
-/// Extract code blocks from HTML
+/// extract code blocks from HTML
 fn extract_code_blocks(document_html: &Html) -> Result<Vec<CodeBlock>, MarkdownError> {
     let mut code_blocks = Vec::new();
     let pre_selector = create_selector("pre, code")?;
@@ -247,7 +247,7 @@ fn extract_code_blocks(document_html: &Html) -> Result<Vec<CodeBlock>, MarkdownE
     Ok(code_blocks)
 }
 
-/// Extract blockquotes from HTML
+/// extract blockquotes from HTML
 fn extract_blockquotes(document_html: &Html) -> Result<Vec<String>, MarkdownError> {
     let mut blockquotes = Vec::new();
     let blockquote_selector = create_selector("blockquote")?;
@@ -262,12 +262,12 @@ fn extract_blockquotes(document_html: &Html) -> Result<Vec<String>, MarkdownErro
     Ok(blockquotes)
 }
 
-/// Parse HTML into our document structure
+/// parse HTML into our document structure
 pub fn parse_html_to_document(html: &str, base_url_str: &str) -> Result<Document, MarkdownError> {
     let document_html = Html::parse_document(html);
     let base_url = Url::parse(base_url_str)?;
 
-    // Extract document components
+    // extract document components
     let title = extract_title(&document_html)?;
     let headings = extract_headings(&document_html)?;
     let paragraphs = extract_paragraphs(&document_html)?;
@@ -277,7 +277,7 @@ pub fn parse_html_to_document(html: &str, base_url_str: &str) -> Result<Document
     let code_blocks = extract_code_blocks(&document_html)?;
     let blockquotes = extract_blockquotes(&document_html)?;
 
-    // Create document
+    // create document
     let document = Document {
         title,
         base_url: base_url_str.to_string(),
@@ -293,7 +293,7 @@ pub fn parse_html_to_document(html: &str, base_url_str: &str) -> Result<Document
     Ok(document)
 }
 
-/// Render headings to markdown
+/// render headings to markdown
 fn render_headings_markdown(headings: &[Heading]) -> String {
     let mut markdown = String::new();
 
@@ -305,7 +305,7 @@ fn render_headings_markdown(headings: &[Heading]) -> String {
     markdown
 }
 
-/// Render paragraphs to markdown
+/// render paragraphs to markdown
 fn render_paragraphs_markdown(paragraphs: &[String]) -> String {
     let mut markdown = String::new();
 
@@ -316,7 +316,7 @@ fn render_paragraphs_markdown(paragraphs: &[String]) -> String {
     markdown
 }
 
-/// Render links to markdown
+/// render links to markdown
 fn render_links_markdown(links: &[Link]) -> String {
     let mut markdown = String::new();
 
@@ -327,7 +327,7 @@ fn render_links_markdown(links: &[Link]) -> String {
     markdown
 }
 
-/// Render images to markdown
+/// render images to markdown
 fn render_images_markdown(images: &[Image]) -> String {
     let mut markdown = String::new();
 
@@ -338,7 +338,7 @@ fn render_images_markdown(images: &[Image]) -> String {
     markdown
 }
 
-/// Render lists to markdown
+/// render lists to markdown
 fn render_lists_markdown(lists: &[List]) -> String {
     let mut markdown = String::new();
 
@@ -358,7 +358,7 @@ fn render_lists_markdown(lists: &[List]) -> String {
     markdown
 }
 
-/// Render code blocks to markdown
+/// render code blocks to markdown
 fn render_code_blocks_markdown(code_blocks: &[CodeBlock]) -> String {
     let mut markdown = String::new();
 
@@ -372,7 +372,7 @@ fn render_code_blocks_markdown(code_blocks: &[CodeBlock]) -> String {
     markdown
 }
 
-/// Render blockquotes to markdown
+/// render blockquotes to markdown
 fn render_blockquotes_markdown(blockquotes: &[String]) -> String {
     let mut markdown = String::new();
 
@@ -388,7 +388,7 @@ fn render_blockquotes_markdown(blockquotes: &[String]) -> String {
     markdown
 }
 
-/// Clean up extra newlines in markdown
+/// clean up extra newlines in markdown
 fn clean_markdown(markdown: String) -> String {
     markdown
         .replace("\n\n\n\n", "\n\n")
@@ -397,11 +397,11 @@ fn clean_markdown(markdown: String) -> String {
         .to_string()
 }
 
-/// Convert document to markdown format
+/// convert document to markdown format
 pub fn document_to_markdown(document: &Document) -> String {
     let mut markdown_content = format!("# {}\n\n", document.title);
 
-    // Render each document component
+    // render each document component
     markdown_content.push_str(&render_headings_markdown(&document.headings));
     markdown_content.push_str(&render_paragraphs_markdown(&document.paragraphs));
     markdown_content.push_str(&render_links_markdown(&document.links));
@@ -410,17 +410,17 @@ pub fn document_to_markdown(document: &Document) -> String {
     markdown_content.push_str(&render_code_blocks_markdown(&document.code_blocks));
     markdown_content.push_str(&render_blockquotes_markdown(&document.blockquotes));
 
-    // Clean up extra newlines
+    // clean up extra newlines
     clean_markdown(markdown_content)
 }
 
-/// Convert document to JSON format
+/// convert document to JSON format
 pub fn document_to_json(document: &Document) -> Result<String, MarkdownError> {
     serde_json::to_string_pretty(document)
         .map_err(|e| MarkdownError::SerializationError(format!("Failed to serialize to JSON: {e}")))
 }
 
-/// Convert document to XML format
+/// convert document to XML format
 pub fn document_to_xml(document: &Document) -> Result<String, MarkdownError> {
     use quick_xml::se::to_string;
 
@@ -435,7 +435,7 @@ pub fn document_to_xml(document: &Document) -> Result<String, MarkdownError> {
     }
 }
 
-/// Convert HTML to the specified output format
+/// convert HTML to the specified output format
 pub fn convert_html(
     html: &str,
     base_url: &str,
@@ -450,7 +450,7 @@ pub fn convert_html(
     }
 }
 
-/// Backward compatibility function for convert_to_markdown
+/// backward compatibility function for convert_to_markdown
 pub fn convert_to_markdown(html: &str, base_url: &str) -> Result<String, MarkdownError> {
     convert_html(html, base_url, OutputFormat::Markdown)
 }

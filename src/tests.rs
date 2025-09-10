@@ -100,7 +100,7 @@ mod chunker_tests {
         let chunks = create_semantic_chunks(markdown, 20, 10).unwrap();
         assert!(chunks.len() > 1);
 
-        // Check for overlap
+        // check for overlap
         if chunks.len() >= 2 {
             let first_chunk = &chunks[0];
             let second_chunk = &chunks[1];

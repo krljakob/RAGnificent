@@ -69,19 +69,19 @@ class TestEmbeddingUtilities:
         hash2 = compute_text_hash(text2)
         hash3 = compute_text_hash(text3)
 
-        # Same text should produce same hash
+        # same text should produce same hash
         assert hash1 == hash2
-        # Different text should produce different hash
+        # different text should produce different hash
         assert hash1 != hash3
-        # Hash should be valid hexadecimal
+        # hash should be valid hexadecimal
         assert all(c in "0123456789abcdef" for c in hash1)
-        # SHA256 hash should be 64 characters
+        # sHA256 hash should be 64 characters
         assert len(hash1) == 64
 
     def test_embedding_cache_operations(self):
         """Test embedding caching functionality."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Set up temporary cache directory
+            # set up temporary cache directory
             with patch("RAGnificent.rag.embedding.get_config") as mock_config:
                 mock_config.return_value.embedding.use_cache = True
                 mock_config.return_value.embedding.cache_dir = Path(temp_dir)
@@ -90,15 +90,15 @@ class TestEmbeddingUtilities:
                 text = "test text for caching"
                 embedding = np.array([0.1, 0.2, 0.3, 0.4])
 
-                # Initially no cached embedding
+                # initially no cached embedding
                 cached = get_cached_embedding(model_name, text)
                 assert cached is None
 
-                # Save embedding to cache
+                # save embedding to cache
                 success = save_embedding_to_cache(model_name, text, embedding)
                 assert success is True
 
-                # Retrieve cached embedding
+                # retrieve cached embedding
                 cached = get_cached_embedding(model_name, text)
                 assert cached is not None
                 np.testing.assert_array_equal(cached, embedding)
@@ -112,11 +112,11 @@ class TestEmbeddingUtilities:
             text = "test text"
             embedding = np.array([0.1, 0.2, 0.3])
 
-            # Should not cache when disabled
+            # should not cache when disabled
             success = save_embedding_to_cache(model_name, text, embedding)
             assert success is False
 
-            # Should return None when caching disabled
+            # should return None when caching disabled
             cached = get_cached_embedding(model_name, text)
             assert cached is None
 
@@ -199,7 +199,7 @@ class TestSentenceTransformerEmbedding:
         mock_config.embedding.batch_size = 2
         embedding_model = SentenceTransformerEmbedding("test-model")
 
-        # Mock multiple batch calls
+        # mock multiple batch calls
         mock_sentence_transformer.encode.side_effect = [
             np.array([[0.1, 0.2], [0.3, 0.4]]),  # First batch
             np.array([[0.5, 0.6]]),  # Second batch
@@ -223,7 +223,7 @@ class TestTFIDFEmbedding:
             "sklearn.feature_extraction.text.TfidfVectorizer"
         ) as mock_vectorizer:
             mock_instance = MagicMock()
-            # Mock sparse matrix
+            # mock sparse matrix
             mock_matrix = MagicMock()
             mock_matrix.shape = (2, 4)
             mock_matrix.toarray.return_value = np.array(
@@ -254,17 +254,17 @@ class TestTFIDFEmbedding:
         """Test embedding a single text with TF-IDF."""
         embedding_model = TFIDFEmbedding("test-tfidf")
 
-        # Mock single text matrix with proper numpy array behavior
+        # mock single text matrix with proper numpy array behavior
         mock_matrix = MagicMock()
         mock_matrix.shape = (1, 4)
         mock_matrix.toarray.return_value = np.array([[0.0, 0.6, 0.8, 0.0]])
-        # Mock __getitem__ to return the row correctly
+        # mock __getitem__ to return the row correctly
         mock_matrix.__getitem__.return_value.toarray.return_value.flatten.return_value = np.array(
             [0.0, 0.6, 0.8, 0.0]
         )
         mock_tfidf_vectorizer.transform.return_value = mock_matrix
 
-        # Mock the actual embedding method to return proper numpy array
+        # mock the actual embedding method to return proper numpy array
         with patch.object(embedding_model, "embed") as mock_embed:
             expected = np.array([0.0, 0.6, 0.8, 0.0])
             expected = expected / np.linalg.norm(expected)
@@ -279,7 +279,7 @@ class TestTFIDFEmbedding:
         """Test embedding multiple texts with TF-IDF."""
         embedding_model = TFIDFEmbedding("test-tfidf")
 
-        # Mock the actual embedding method to return proper numpy arrays
+        # mock the actual embedding method to return proper numpy arrays
         with patch.object(embedding_model, "embed") as mock_embed:
             expected_embeddings = [
                 np.array([0.5, 0.0, 0.5, 0.0]) / np.linalg.norm([0.5, 0.0, 0.5, 0.0]),
@@ -292,10 +292,10 @@ class TestTFIDFEmbedding:
 
             assert isinstance(result, list)
             assert len(result) == 2
-            # Check that results are normalized
+            # check that results are normalized
             for embedding in result:
                 assert isinstance(embedding, np.ndarray)
-                # Normalized vectors should have unit length (or be zero)
+                # normalized vectors should have unit length (or be zero)
                 norm = np.linalg.norm(embedding)
                 assert norm in [
                     pytest.approx(1.0, abs=1e-6),
@@ -328,7 +328,7 @@ class TestSimpleCountEmbedding:
 
         assert isinstance(result, np.ndarray)
         assert len(result) == 2  # "hello" and "world" in vocab
-        # Should be normalized
+        # should be normalized
         norm = np.linalg.norm(result)
         assert norm == pytest.approx(1.0, abs=1e-6)
 
@@ -340,7 +340,7 @@ class TestSimpleCountEmbedding:
 
         assert isinstance(result, list)
         assert len(result) == 3
-        # All embeddings should be normalized
+        # all embeddings should be normalized
         for embedding in result:
             norm = np.linalg.norm(embedding)
             assert norm in [pytest.approx(1.0, abs=1e-6), pytest.approx(0.0, abs=1e-6)]
@@ -350,14 +350,14 @@ class TestSimpleCountEmbedding:
         embedding_model = SimpleCountEmbedding()
         embedding_model.max_features = 3  # Limit vocabulary size
 
-        # First text builds initial vocabulary
+        # first text builds initial vocabulary
         embedding_model.embed("one two three")
         assert len(embedding_model.vocab) == 3
         assert "one" in embedding_model.vocab
         assert "two" in embedding_model.vocab
         assert "three" in embedding_model.vocab
 
-        # Additional text shouldn't exceed max_features
+        # additional text shouldn't exceed max_features
         embedding_model.embed("four five")
         assert len(embedding_model.vocab) == 3  # Should still be 3
 
@@ -369,7 +369,7 @@ class TestOpenAIEmbedding:
     @pytest.fixture(autouse=True)
     def mock_openai(self):
         """Mock OpenAI API for testing."""
-        # Create a mock module
+        # create a mock module
         mock_openai_module = MagicMock()
         mock_response = MagicMock()
         mock_response.data = [
@@ -378,7 +378,7 @@ class TestOpenAIEmbedding:
         mock_openai_module.embeddings.create.return_value = mock_response
         mock_openai_module.api_key = "test-key"
 
-        # Mock the OpenAI class
+        # mock the OpenAI class
         mock_openai_class = MagicMock()
         mock_client = MagicMock()
         mock_client.embeddings.create.return_value = mock_response
@@ -442,7 +442,7 @@ class TestOpenAIEmbedding:
         """Test OpenAI API retry mechanism."""
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             with patch("openai.embeddings.create") as mock_create:
-                # First two calls fail, third succeeds
+                # first two calls fail, third succeeds
                 mock_create.side_effect = [
                     Exception("API Error"),
                     Exception("API Error"),
@@ -592,7 +592,7 @@ class TestEmbeddingService:
             {"content": "third chunk"},
         ]
 
-        # Mock batch embedding response
+        # mock batch embedding response
         mock_embedding_model.embed.return_value = [
             np.array([0.1, 0.2]),
             np.array([0.3, 0.4]),
@@ -617,11 +617,11 @@ class TestEmbeddingService:
 
     def test_embed_compatibility_method(self, embedding_service, mock_embedding_model):
         """Test compatibility embed method."""
-        # Single string
+        # single string
         result = embedding_service.embed("test text")
         np.testing.assert_array_equal(result, np.array([0.1, 0.2, 0.3, 0.4]))
 
-        # Multiple strings
+        # multiple strings
         mock_embedding_model.embed.return_value = [
             np.array([0.1, 0.2]),
             np.array([0.3, 0.4]),
@@ -637,7 +637,7 @@ class TestEmbeddingService:
             mock_get_model.return_value = mock_embedding_model
             service = EmbeddingService()
 
-            # Should return original chunk without embedding on error
+            # should return original chunk without embedding on error
             chunk = {"content": "test"}
             result = service.embed_chunk(chunk)
             assert result == chunk
@@ -679,7 +679,7 @@ class TestEmbeddingFunctions:
 
     def test_embed_texts_batched_function(self, mock_model):
         """Test embed_texts_batched function."""
-        # Mock batched responses
+        # mock batched responses
         mock_model.embed.side_effect = [
             [np.array([0.1, 0.2]), np.array([0.3, 0.4])],  # First batch
             [np.array([0.5, 0.6])],  # Second batch
@@ -699,15 +699,15 @@ class TestEmbeddingFunctions:
             mock_instance = MagicMock()
             mock_service_class.return_value = mock_instance
 
-            # First call creates instance
+            # first call creates instance
             service1 = get_embedding_service()
             assert service1 == mock_instance
 
-            # Second call returns same instance
+            # second call returns same instance
             service2 = get_embedding_service()
             assert service2 == mock_instance
 
-            # Should only create one instance
+            # should only create one instance
             mock_service_class.assert_called_once()
 
 
@@ -717,12 +717,12 @@ class TestEmbeddingVectorOperations:
 
     def test_vector_similarity_calculation(self):
         """Test cosine similarity between embeddings."""
-        # Create test embeddings
+        # create test embeddings
         embedding1 = np.array([1.0, 0.0, 0.0])
         embedding2 = np.array([0.0, 1.0, 0.0])
         embedding3 = np.array([1.0, 0.0, 0.0])  # Same as embedding1
 
-        # Calculate cosine similarities
+        # calculate cosine similarities
         similarity_12 = np.dot(embedding1, embedding2) / (
             np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
         )
@@ -730,19 +730,19 @@ class TestEmbeddingVectorOperations:
             np.linalg.norm(embedding1) * np.linalg.norm(embedding3)
         )
 
-        # Orthogonal vectors should have 0 similarity
+        # orthogonal vectors should have 0 similarity
         assert similarity_12 == pytest.approx(0.0, abs=1e-6)
-        # Identical vectors should have 1.0 similarity
+        # identical vectors should have 1.0 similarity
         assert similarity_13 == pytest.approx(1.0, abs=1e-6)
 
     def test_embedding_normalization(self):
         """Test that embeddings are properly normalized."""
         embedding_service = SimpleCountEmbedding()
 
-        # Test with known input
+        # test with known input
         result = embedding_service.embed("hello world hello")
 
-        # Should be normalized to unit length
+        # should be normalized to unit length
         norm = np.linalg.norm(result)
         assert norm == pytest.approx(1.0, abs=1e-6)
 
@@ -750,23 +750,23 @@ class TestEmbeddingVectorOperations:
         """Test that embeddings maintain consistent dimensionality."""
         embedding_service = SimpleCountEmbedding()
 
-        # Build vocabulary with all texts first to ensure consistent dimensionality
+        # build vocabulary with all texts first to ensure consistent dimensionality
         all_texts = [
             "short text",
             "this is a much longer text with more words",
             "different content entirely",
         ]
 
-        # Process all texts to build complete vocabulary
+        # process all texts to build complete vocabulary
         for text in all_texts:
             embedding_service.embed(text)
 
-        # Now embed each text - they should all have the same dimensionality
+        # now embed each text - they should all have the same dimensionality
         result1 = embedding_service.embed("short text")
         result2 = embedding_service.embed("this is a much longer text with more words")
         result3 = embedding_service.embed("different content entirely")
 
-        # All embeddings should have same dimensionality after vocabulary is built
+        # all embeddings should have same dimensionality after vocabulary is built
         assert result1.shape == result2.shape == result3.shape
 
 
@@ -778,7 +778,7 @@ class TestEmbeddingIntegration:
     def test_sentence_transformer_real_embedding(self):
         """Test real SentenceTransformer embedding generation."""
         try:
-            # Use a small, fast model for testing
+            # use a small, fast model for testing
             embedding_service = SentenceTransformerEmbedding("all-MiniLM-L6-v2")
 
             text = "This is a test sentence for embedding."
@@ -788,7 +788,7 @@ class TestEmbeddingIntegration:
             assert result.shape[0] > 0  # Should have some dimensions
             assert len(result.shape) == 1  # Should be 1D vector
 
-            # Test batch embedding
+            # test batch embedding
             texts = ["First sentence.", "Second sentence.", "Third sentence."]
             results = embedding_service.embed(texts)
 
@@ -804,7 +804,7 @@ class TestEmbeddingIntegration:
     def test_embedding_service_end_to_end(self):
         """Test EmbeddingService end-to-end functionality."""
         try:
-            # Test with lightweight models
+            # test with lightweight models
             config = EmbeddingConfig(
                 model_type=EmbeddingModelType.SENTENCE_TRANSFORMER,
                 model_name="all-MiniLM-L6-v2",
@@ -812,7 +812,7 @@ class TestEmbeddingIntegration:
 
             service = EmbeddingService(config.model_type, config.model_name)
 
-            # Test chunk embedding
+            # test chunk embedding
             chunks = [
                 {"content": "This is the first chunk of text."},
                 {"content": "This is the second chunk with different content."},
@@ -827,16 +827,16 @@ class TestEmbeddingIntegration:
                 assert isinstance(chunk["embedding"], np.ndarray)
                 assert chunk["embedding"].shape[0] > 0
 
-            # Test similarity between embeddings
+            # test similarity between embeddings
             emb1 = embedded_chunks[0]["embedding"]
             emb2 = embedded_chunks[1]["embedding"]
             emb3 = embedded_chunks[2]["embedding"]
 
-            # Calculate similarities
+            # calculate similarities
             sim_12 = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
             sim_13 = np.dot(emb1, emb3) / (np.linalg.norm(emb1) * np.linalg.norm(emb3))
 
-            # Similarities should be reasonable values between -1 and 1
+            # similarities should be reasonable values between -1 and 1
             assert -1 <= sim_12 <= 1
             assert -1 <= sim_13 <= 1
 

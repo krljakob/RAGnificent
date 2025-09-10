@@ -59,20 +59,20 @@ pub fn convert_html_to_markdown(html: &str, base_url: &str) -> PyResult<String> 
     Ok(result)
 }
 
-/// Converts HTML content to the specified format (markdown, JSON, or XML)
+/// converts HTML content to the specified format (markdown, JSON, or XML)
 ///
-/// Args:
+/// args:
 ///     html (str): The HTML content to convert
 ///     base_url (str): The base URL for resolving relative links
 ///     format (str, optional): The output format - "markdown" (default), "json", or "xml"
 ///
-/// Returns:
+/// returns:
 ///     str: The converted content in the specified format
 ///
-/// Raises:
+/// raises:
 ///     RuntimeError: If conversion fails
 ///
-/// Example:
+/// example:
 ///     >>> html = "<h1>Title</h1><p>Content with <a href='/link'>link</a></p>"
 ///     >>> json_content = convert_html_to_format(html, "https://example.com", "json")
 ///     >>> xml_content = convert_html_to_format(html, "https://example.com", "xml")
@@ -89,20 +89,20 @@ fn convert_html_to_format(html: &str, base_url: &str, format: Option<String>) ->
     Ok(result)
 }
 
-/// Chunks markdown content into semantic sections for RAG (Retrieval Augmented Generation)
+/// chunks markdown content into semantic sections for RAG (Retrieval Augmented Generation)
 ///
-/// Args:
+/// args:
 ///     markdown (str): The markdown content to chunk
 ///     chunk_size (int): Maximum size of chunks in characters
 ///     chunk_overlap (int): Overlap between chunks in characters
 ///
-/// Returns:
-///     List[str]: List of markdown chunks
+/// returns:
+///     list[str]: List of markdown chunks
 ///
-/// Raises:
-///     RuntimeError: If chunking fails
+/// raises:
+///     runtimeError: If chunking fails
 ///
-/// Example:
+/// example:
 ///     >>> markdown = "# Title\n\nContent paragraph 1\n\n## Section\n\nContent paragraph 2"
 ///     >>> chunks = chunk_markdown(markdown, 1000, 200)
 ///     >>> len(chunks)
@@ -118,25 +118,25 @@ fn chunk_markdown(
     Ok(chunks)
 }
 
-/// Renders a JavaScript-enabled page and returns the HTML content
+/// renders a JavaScript-enabled page and returns the HTML content
 ///
-/// This function requires the 'real_rendering' feature to be enabled during compilation.
-/// It uses a headless browser to execute JavaScript and return the fully rendered HTML.
+/// this function requires the 'real_rendering' feature to be enabled during compilation.
+/// it uses a headless browser to execute JavaScript and return the fully rendered HTML.
 ///
-/// Args:
+/// args:
 ///     url (str): The URL of the page to render
 ///     wait_time (int, optional): Time to wait for JavaScript execution in milliseconds (default: 2000)
 ///
-/// Returns:
+/// returns:
 ///     str: The fully rendered HTML content
 ///
-/// Raises:
-///     RuntimeError: If rendering fails or if the 'real_rendering' feature is not enabled
+/// raises:
+///     runtimeError: If rendering fails or if the 'real_rendering' feature is not enabled
 ///
-/// Example:
+/// example:
 ///     >>> html = render_js_page("https://example.com/js-heavy-page", 5000)
 ///     >>> "dynamically-generated-content" in html
-///     True
+///     true
 #[pyfunction]
 fn render_js_page(url: &str, wait_time: Option<u64>) -> PyResult<String> {
     let runtime = tokio::runtime::Runtime::new()

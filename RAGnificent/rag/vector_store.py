@@ -88,7 +88,7 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
                     prefer_grpc=prefer_grpc,
                 )
 
-                # Test connection
+                # test connection
                 client.get_collections()
                 logger.info(f"Successfully connected to Qdrant at {host}:{port}")
                 return client
@@ -106,7 +106,7 @@ def get_qdrant_client(config_override: Optional[Dict[str, Any]] = None) -> Any:
                 logger.error(f"Failed to connect to Qdrant: {e}")
                 raise QdrantConnectionError(f"Failed to connect to Qdrant: {e}") from e
 
-        # If we got here, all retries failed
+        # if we got here, all retries failed
         logger.error(
             f"Failed to connect to Qdrant after {max_retries} retries: {last_exception}"
         )
@@ -223,7 +223,7 @@ class VectorStore:
             self.collection_name = collection_name or config.qdrant.collection
             self.vector_size = vector_size or config.embedding.dimension
 
-            # Initialize Qdrant client and collection
+            # initialize Qdrant client and collection
             self.client, self.collection_name = initialize_collection(
                 collection_name=self.collection_name,
                 vector_size=self.vector_size,
@@ -259,7 +259,7 @@ class VectorStore:
         try:
             from qdrant_client.http import models
 
-            # Ensure all documents have embeddings
+            # ensure all documents have embeddings
             valid_docs = [doc for doc in documents if embedding_field in doc]
 
             if not valid_docs:
@@ -269,14 +269,14 @@ class VectorStore:
             total_docs = len(valid_docs)
             logger.info(f"Storing {total_docs} documents in vector store")
 
-            # Check the actual dimension of the first embedding and recreate collection if necessary
+            # check the actual dimension of the first embedding and recreate collection if necessary
             sample_embedding = valid_docs[0][embedding_field]
             actual_dim = len(sample_embedding)
             if actual_dim != self.vector_size:
                 logger.warning(
                     f"Embedding dimension mismatch. Expected {self.vector_size}, got {actual_dim}. Recreating collection."
                 )
-                # Reinitialize the collection with the actual dimension
+                # reinitialize the collection with the actual dimension
                 self.client, self.collection_name = initialize_collection(
                     collection_name=self.collection_name,
                     vector_size=actual_dim,
@@ -285,22 +285,22 @@ class VectorStore:
                 )
                 self.vector_size = actual_dim
 
-            # Process in batches for efficiency
+            # process in batches for efficiency
             for i in range(0, total_docs, batch_size):
                 batch = valid_docs[i : i + batch_size]
 
-                # Prepare points for insertion
+                # prepare points for insertion
                 points = []
                 for doc in batch:
-                    # Ensure ID is string for Qdrant
+                    # ensure ID is string for Qdrant
                     doc_id = str(doc.get(id_field, "")) or str(
                         hash(frozenset(doc.items()))
                     )
 
-                    # Prepare payload (all fields except embedding)
+                    # prepare payload (all fields except embedding)
                     payload = {k: v for k, v in doc.items() if k != embedding_field}
 
-                    # Get embedding as list
+                    # get embedding as list
                     embedding = doc[embedding_field]
                     if isinstance(embedding, np.ndarray):
                         embedding = embedding.tolist()
@@ -309,7 +309,7 @@ class VectorStore:
                         models.PointStruct(id=doc_id, vector=embedding, payload=payload)
                     )
 
-                # Insert batch to collection
+                # insert batch to collection
                 self.client.upsert(collection_name=self.collection_name, points=points)
 
                 logger.info(
@@ -351,12 +351,12 @@ class VectorStore:
         try:
             from qdrant_client.http import models
 
-            # Get embedding vector from text if not provided
+            # get embedding vector from text if not provided
             if query_vector is None and query_text is not None:
                 embedding_model = get_embedding_model()
                 query_vector = embed_text(query_text, embedding_model)
 
-                # Convert numpy array to list if needed
+                # convert numpy array to list if needed
                 if isinstance(query_vector, np.ndarray):
                     query_vector = query_vector.tolist()
 
@@ -366,7 +366,7 @@ class VectorStore:
             search_filter = (
                 models.Filter(**filter_condition) if filter_condition else None
             )
-            # Perform search
+            # perform search
             search_result = self.client.search(
                 collection_name=self.collection_name,
                 query_vector=query_vector,
@@ -377,7 +377,7 @@ class VectorStore:
                 with_vectors=with_vectors,
             )
 
-            # Convert result to dictionaries
+            # convert result to dictionaries
             results = []
             for scored_point in search_result:
                 result = {
@@ -385,11 +385,11 @@ class VectorStore:
                     "score": scored_point.score,
                 }
 
-                # Add payload if included
+                # add payload if included
                 if with_payload and scored_point.payload:
                     result["payload"] = scored_point.payload
 
-                # Add vector if included
+                # add vector if included
                 if with_vectors and scored_point.vector:
                     result["vector"] = scored_point.vector
 
@@ -419,10 +419,10 @@ class VectorStore:
                 logger.warning("No IDs provided for deletion")
                 return False
 
-            # Convert all IDs to strings
+            # convert all IDs to strings
             string_ids = [str(id) for id in ids]
 
-            # Delete points by IDs
+            # delete points by IDs
             self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=models.PointIdsList(points=string_ids),
@@ -452,10 +452,10 @@ class VectorStore:
                 logger.warning("No filter condition provided for deletion")
                 return False
 
-            # Create filter
+            # create filter
             filter_obj = models.Filter(**filter_condition)
 
-            # Delete points by filter
+            # delete points by filter
             self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=models.FilterSelector(filter=filter_obj),
@@ -484,7 +484,7 @@ class VectorStore:
             from qdrant_client.http import models
 
             filter_obj = models.Filter(**filter_condition) if filter_condition else None
-            # Count documents
+            # count documents
             count = self.client.count(
                 collection_name=self.collection_name, count_filter=filter_obj
             )
@@ -496,7 +496,7 @@ class VectorStore:
             return 0
 
 
-# Singleton instance for easy access
+# singleton instance for easy access
 _default_vector_store = None
 
 

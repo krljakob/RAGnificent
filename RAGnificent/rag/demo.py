@@ -5,8 +5,8 @@ RAGnificent Integrated Demo
 This script demonstrates the integrated RAG pipeline that combines:
 - Rust-optimized scraping and processing from the new RAGnificent implementation
 
-# Use relative imports for internal modules
-# Import fix applied
+# use relative imports for internal modules
+# import fix applied
 sys.path.insert(0, str(Path(__file__).parent.parent))
 - Complete RAG pipeline functionality from the v1 implementation
 
@@ -32,7 +32,7 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.prompt import Prompt
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(message)s",
@@ -84,7 +84,7 @@ def run_pipeline_mode(args):
 
     pipeline = RAGPipeline(collection_name=args.collection)
 
-    # Determine which steps to run
+    # determine which steps to run
     steps_to_run = {"extract": True, "chunk": True, "embed": True, "store": True}
 
     if args.steps != "all":
@@ -103,11 +103,11 @@ def run_pipeline_mode(args):
 
 
 def _configure_pipeline_steps(steps_to_run, args):
-    # Reset all steps to False
+    # reset all steps to False
     for step in steps_to_run:
         steps_to_run[step] = False
 
-    # Enable only requested steps
+    # enable only requested steps
     step_nums = [int(s) for s in args.steps.split(",")]
     if 1 in step_nums:
         steps_to_run["extract"] = True
@@ -134,10 +134,10 @@ def run_chat_mode(args):
         with console.status("[bold yellow]Searching knowledge base..."):
             result = chat.chat(query)
 
-        # Display response
+        # display response
         console.print(f"\n[bold green]RAGnificent[/bold green]: {result['response']}")
 
-        # Show sources if available
+        # show sources if available
         if result["context"]:
             console.print("\n[bold cyan]Sources:[/bold cyan]")
             for i, ctx in enumerate(result["context"], 1):
@@ -161,7 +161,7 @@ def run_search_mode(args):
         with console.status("[bold yellow]Searching knowledge base..."):
             results = pipeline.search_documents(query, limit=5)
 
-        # Display results
+        # display results
         if results:
             console.print(f"\n[bold green]Found {len(results)} results:[/bold green]")
             for i, result in enumerate(results, 1):
@@ -170,7 +170,7 @@ def run_search_mode(args):
                 source_url = payload.get("source_url", "")
                 score = result.get("score", 0)
 
-                # Truncate content for display
+                # truncate content for display
                 display_content = (
                     f"{content[:300]}..." if len(content) > 300 else content
                 )
@@ -187,11 +187,11 @@ def main():
     """Main entry point."""
     args = parse_args()
 
-    # Ensure data directory exists
+    # ensure data directory exists
     data_dir = Path.cwd() / "data"
     os.makedirs(data_dir, exist_ok=True)
 
-    # Run selected mode
+    # run selected mode
     if args.mode == "scrape":
         run_pipeline_mode(args)
     elif args.mode == "chat":

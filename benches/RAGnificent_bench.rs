@@ -11,7 +11,7 @@ fn bench_html_processing(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(10));
     group.sample_size(100);
 
-    // Test data
+    // test data
     let html_samples = [
         (
             "small",
@@ -22,19 +22,19 @@ fn bench_html_processing(c: &mut Criterion) {
     ];
 
     for (size, html) in html_samples.iter() {
-        // Benchmark main content extraction
+        // benchmark main content extraction
         group.bench_with_input(
             BenchmarkId::new("extract_main_content", size),
             html,
             |b, html| b.iter(|| extract_main_content(black_box(html))),
         );
 
-        // Benchmark HTML cleaning
+        // benchmark HTML cleaning
         group.bench_with_input(BenchmarkId::new("clean_html", size), html, |b, html| {
             b.iter(|| clean_html(black_box(html)))
         });
 
-        // Benchmark link extraction
+        // benchmark link extraction
         group.bench_with_input(BenchmarkId::new("extract_links", size), html, |b, html| {
             b.iter(|| extract_links(black_box(html), "https://example.com"))
         });

@@ -53,13 +53,13 @@ class RAGChat:
         """
         logger.info(f"RAG chat query: {query}")
 
-        # Add user message to history
+        # add user message to history
         self.history.append({"role": "user", "content": query})
 
-        # Get relevant context for query
+        # get relevant context for query
         results = self.pipeline.search_documents(query, limit, threshold)
 
-        # Format context for the agent
+        # format context for the agent
         context = []
         for result in results:
             if isinstance(result, dict):
@@ -68,24 +68,24 @@ class RAGChat:
                 source_url = payload.get("source_url", "")
                 score = result.get("score", 0)
             else:
-                # Handle SearchResult objects
+                # handle SearchResult objects
                 content = getattr(result, "content", "")
                 source_url = getattr(result, "source_url", "")
                 score = getattr(result, "score", 0)
 
             context.append({"content": content, "url": source_url, "score": score})
 
-        # Combine with chat history if requested
+        # combine with chat history if requested
         chat_context = ""
         if use_history and len(self.history) > 1:
-            # Only include previous exchanges, not the current query
+            # only include previous exchanges, not the current query
             prev_history = self.history[:-1]
             history_text = "\n".join(
                 [f"{msg['role'].upper()}: {msg['content']}" for msg in prev_history]
             )
             chat_context = f"PREVIOUS CONVERSATION:\n{history_text}\n\n"
 
-        # Generate response using built-in RAG functionality
+        # generate response using built-in RAG functionality
         if context:
             response = self.pipeline.query_with_context(
                 query,
@@ -93,14 +93,14 @@ class RAGChat:
                 threshold=threshold,
                 system_prompt=chat_context or None,
             )
-            # Extract the response text if it's a dict
+            # extract the response text if it's a dict
             if isinstance(response, dict):
                 response = response.get("response", str(response))
         else:
-            # No context found
+            # no context found
             response = "I couldn't find relevant information to answer your query. Could you rephrase or ask something else?"
 
-        # Add assistant response to history
+        # add assistant response to history
         self.history.append({"role": "assistant", "content": response})
 
         return {

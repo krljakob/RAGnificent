@@ -27,7 +27,7 @@ logger = get_logger(__name__)
 class AsyncMarkdownScraper:
     """Async scraper for websites with conversion to markdown, JSON, or XML."""
 
-    # Precompiled regex patterns for better performance
+    # precompiled regex patterns for better performance
     _whitespace_pattern = re.compile(r"\s+")
     _url_path_pattern = re.compile(r'[\\/*?:"<>|]')
 
@@ -59,7 +59,7 @@ class AsyncMarkdownScraper:
             max_workers: Maximum number of parallel workers
             adaptive_throttling: Whether to adjust rate limits based on responses
         """
-        # Configure httpx client with connection pooling
+        # configure httpx client with connection pooling
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(timeout),
             limits=httpx.Limits(
@@ -88,7 +88,7 @@ class AsyncMarkdownScraper:
             RequestCache(max_age=cache_max_age) if cache_enabled else None
         )
 
-        # Try to use the Rust implementation if available
+        # try to use the Rust implementation if available
         try:
             from RAGnificent.ragnificent_rs import OutputFormat, convert_html
 
@@ -98,7 +98,7 @@ class AsyncMarkdownScraper:
         except ImportError:
             self.rust_available = False
 
-            # Define fallback OutputFormat enum-like class
+            # define fallback OutputFormat enum-like class
             class FallbackOutputFormat:
                 MARKDOWN = "markdown"
                 JSON = "json"
@@ -106,7 +106,7 @@ class AsyncMarkdownScraper:
 
             self.OutputFormat = FallbackOutputFormat
 
-            # Define fallback convert_html function
+            # define fallback convert_html function
             def fallback_convert_html(html_content, url, output_format):
                 from markdownify import markdownify
 
@@ -151,10 +151,10 @@ class AsyncMarkdownScraper:
         logger.info(f"Attempting to scrape the website: {redact_sensitive_data(url)}")
 
         try:
-            # Attempt to fetch content with retries
+            # attempt to fetch content with retries
             html_content = await self._fetch_with_retries(url)
 
-            # Cache the response if enabled
+            # cache the response if enabled
             self._cache_response(url, html_content)
 
             logger.info(
@@ -222,12 +222,12 @@ class AsyncMarkdownScraper:
         """Handle request errors with appropriate logging and retries."""
         logger.warning(warning_msg)
 
-        # If this is the last attempt, log error and raise
+        # if this is the last attempt, log error and raise
         if attempt == self.max_retries - 1:
             logger.error(error_msg)
             raise error
 
-        # Otherwise apply exponential backoff
+        # otherwise apply exponential backoff
         await asyncio.sleep(2**attempt)
 
     async def scrape_multiple_urls(
@@ -271,7 +271,7 @@ class AsyncMarkdownScraper:
         bounded_tasks = [bounded_scrape(task) for task in tasks]
         results = await asyncio.gather(*bounded_tasks, return_exceptions=True)
 
-        # Filter successful results
+        # filter successful results
         successful_urls = []
         for url, result in zip(urls, results, strict=False):
             if isinstance(result, Exception):
@@ -291,7 +291,7 @@ class AsyncMarkdownScraper:
     ) -> None:
         """Scrape a single URL and save the output."""
         try:
-            # Scrape the website
+            # scrape the website
             html_content = await self.scrape_website(url)
 
             if self.rust_available:
@@ -319,12 +319,12 @@ class AsyncMarkdownScraper:
             extension = allowed_extensions.get(output_format, "md")
             output_file = Path(output_dir) / f"{base_name}.{extension}"
 
-            # Secure path validation using pathlib
+            # secure path validation using pathlib
             try:
                 normalized_output_file = output_file.resolve()
                 allowed_dir = Path(output_dir).resolve()
 
-                # Check if the resolved path is within the allowed directory using relative_to
+                # check if the resolved path is within the allowed directory using relative_to
                 try:
                     normalized_output_file.relative_to(allowed_dir)
                 except ValueError as e:
@@ -350,12 +350,12 @@ class AsyncMarkdownScraper:
                         Path(chunks_output_dir) / f"{base_name}_chunk_{i:03d}.md"
                     )
 
-                    # Secure path validation using pathlib
+                    # secure path validation using pathlib
                     try:
                         normalized_chunk_file = chunk_file.resolve()
                         allowed_chunks_dir = Path(chunks_output_dir).resolve()
 
-                        # Check if the resolved path is within the allowed directory using relative_to
+                        # check if the resolved path is within the allowed directory using relative_to
                         try:
                             normalized_chunk_file.relative_to(allowed_chunks_dir)
                         except ValueError as exc:
@@ -410,7 +410,7 @@ class AsyncMarkdownScraper:
 
         logger.info(f"Found {len(sitemap_urls)} URLs in sitemap")
 
-        # Scrape all URLs concurrently
+        # scrape all URLs concurrently
         return await self.scrape_multiple_urls(
             [sitemap_url.url for sitemap_url in sitemap_urls],
             output_dir=output_dir,

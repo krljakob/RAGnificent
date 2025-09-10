@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 class MarkdownScraper:
     """Web scraper with multi-format output and chunking support."""
 
-    # Precompiled regex patterns for better performance
+    # precompiled regex patterns for better performance
     _whitespace_pattern = re.compile(r"\s+")
     _url_path_pattern = re.compile(r'[\\/*?:"<>|]')
 
@@ -139,7 +139,7 @@ class MarkdownScraper:
         cached_content = self._check_cache(url, skip_cache)
         if cached_content is not None:
             if return_chunks:
-                # For cached content, convert and return with chunks
+                # for cached content, convert and return with chunks
                 converted_content, markdown_content = self._convert_content(
                     cached_content, url, output_format
                 )
@@ -157,14 +157,14 @@ class MarkdownScraper:
         try:
             html_content = self._fetch_with_retries(url)
 
-            # Try to cache but don't fail if caching fails
+            # try to cache but don't fail if caching fails
             try:
                 self._cache_response(url, html_content)
             except Exception as cache_error:
                 logger.warning(f"Failed to cache response for {url}: {cache_error}")
-                # Continue processing even if caching fails
+                # continue processing even if caching fails
 
-            # Convert to requested format
+            # convert to requested format
             converted_content, markdown_content = self._convert_content(
                 html_content, url, output_format
             )
@@ -227,7 +227,7 @@ class MarkdownScraper:
     def _fetch_with_retries(self, url: str) -> str:
         for attempt in range(self.max_retries):
             try:
-                # Use domain-aware throttling
+                # use domain-aware throttling
                 self.throttler.throttle(url)
                 response = self.session.get(url, timeout=self.timeout)
                 response.raise_for_status()
@@ -278,26 +278,26 @@ class MarkdownScraper:
     ) -> None:
         logger.warning(warning_msg)
 
-        # If this is the last attempt, log error and raise
+        # if this is the last attempt, log error and raise
         if attempt == self.max_retries - 1:
             logger.error(error_msg)
             raise error
 
-        # Otherwise apply exponential backoff
+        # otherwise apply exponential backoff
         time.sleep(2**attempt)
 
     def _get_text_from_element(self, element: Optional[Tag]) -> str:
         """Extract clean text from a BeautifulSoup element."""
         if element is None:
             return ""
-        # Use the precompiled class pattern for better performance
+        # use the precompiled class pattern for better performance
         return self._whitespace_pattern.sub(" ", element.get_text().strip())
 
     def _get_element_markdown(self, element: Tag, base_url: str) -> str:
         """Convert a single HTML element to markdown."""
         element_type = element.name
 
-        # Dispatch to specific handler methods based on element type
+        # dispatch to specific handler methods based on element type
         if element_type in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             return self._convert_heading(element)
         if element_type == "p":
@@ -486,10 +486,10 @@ class MarkdownScraper:
             - markdown_content is always the markdown version (for chunking)
         """
         if self.rust_available:
-            # Use Rust implementation if available
+            # use Rust implementation if available
             rust_format = getattr(self.OutputFormat, output_format.upper())
             content = self.convert_html(html_content, url, rust_format)
-            # Always get markdown content for chunking
+            # always get markdown content for chunking
             markdown_content = (
                 self.convert_html(html_content, url, self.OutputFormat.MARKDOWN)
                 if output_format != "markdown"
@@ -499,24 +499,24 @@ class MarkdownScraper:
             content = self.convert_to_markdown(html_content, url)
             markdown_content = content
         else:
-            # For JSON and XML, first convert to markdown
+            # for JSON and XML, first convert to markdown
             markdown_content = self.convert_to_markdown(html_content, url)
 
-            # Then convert to the requested format
+            # then convert to the requested format
             try:
-                # Parse markdown to structured document
+                # parse markdown to structured document
                 document = self._parse_markdown_to_document(markdown_content, url)
 
                 if output_format == "json":
-                    # Using json that was already imported at the top level
+                    # using json that was already imported at the top level
                     content = json.dumps(document, indent=2)
                 elif output_format == "xml":
                     content = self._document_to_xml(document)
                 else:
-                    # Fallback to markdown if format not supported
+                    # fallback to markdown if format not supported
                     content = markdown_content
             except Exception as e:
-                # Fallback to markdown if conversion functions are not available
+                # fallback to markdown if conversion functions are not available
                 logger.warning(
                     f"Could not convert to {output_format}, using markdown instead. Error: {e}"
                 )
@@ -539,13 +539,13 @@ class MarkdownScraper:
             "blockquotes": [],
         }
 
-        # Extract title (first h1)
+        # extract title (first h1)
         for line in lines:
             if line.startswith("# "):
                 document["title"] = line[2:].strip()
                 break
 
-        # Process other elements
+        # process other elements
         current_block = []
         in_code_block = False
         code_lang = ""
@@ -553,11 +553,11 @@ class MarkdownScraper:
         current_list = []
 
         for line in lines:
-            # Skip title line which we already processed
+            # skip title line which we already processed
             if line.strip() == f"# {document['title']}":
                 continue
 
-            # Handle headings
+            # handle headings
             if line.startswith("#") and not in_code_block:
                 level = 0
                 while level < len(line) and line[level] == "#":
@@ -567,7 +567,7 @@ class MarkdownScraper:
                         {"level": level, "text": line[level + 1 :].strip()}
                     )
 
-            # Handle code blocks
+            # handle code blocks
             elif line.startswith("```") and not in_code_block:
                 in_code_block = True
                 code_lang = line[3:].strip()
@@ -579,11 +579,11 @@ class MarkdownScraper:
                 )
                 current_block = []
 
-            # Collect code block content
+            # collect code block content
             elif in_code_block:
                 current_block.append(line)
 
-            # Handle lists
+            # handle lists
             elif (
                 line.strip().startswith("- ")
                 or line.strip().startswith("* ")
@@ -596,30 +596,30 @@ class MarkdownScraper:
                 if not in_list:
                     in_list = True
                     current_list = []
-                # Remove list marker
+                # remove list marker
                 if line.strip().startswith("- ") or line.strip().startswith("* "):
                     current_list.append(line.strip()[2:])
                 else:
-                    # Numbered list
+                    # numbered list
                     idx = line.strip().find(". ")
                     current_list.append(line.strip()[idx + 2 :])
             elif in_list and (
                 not line.strip()
                 or not (line.strip().startswith("- ") or line.strip().startswith("* "))
             ):
-                # End of list
+                # end of list
                 if current_list:
                     document["lists"].append(current_list)
                 in_list = False
                 current_list = []
 
-            # Handle blockquotes
+            # handle blockquotes
             elif line.startswith(">") and not in_code_block:
                 document["blockquotes"].append(line[1:].strip())
 
-            # Handle paragraphs (very simplified)
+            # handle paragraphs (very simplified)
             elif line.strip() and not in_code_block and not in_list:
-                # Extract links
+                # extract links
                 import re
 
                 link_pattern = r"\[([^\]]+)\]\(([^\)]+)\)"
@@ -628,17 +628,17 @@ class MarkdownScraper:
                         {"text": match.group(1), "url": match.group(2)}
                     )
 
-                # Extract images
+                # extract images
                 img_pattern = r"!\[([^\]]*)\]\(([^\)]+)\)"
                 for match in re.finditer(img_pattern, line):
                     document["images"].append(
                         {"alt": match.group(1), "url": match.group(2)}
                     )
 
-                # Add as paragraph
+                # add as paragraph
                 document["paragraphs"].append(line.strip())
 
-        # Handle any remaining list items
+        # handle any remaining list items
         if in_list and current_list:
             document["lists"].append(current_list)
 
@@ -754,12 +754,12 @@ class MarkdownScraper:
         if not filtered_urls:
             return []
 
-        # Prepare directories
+        # prepare directories
         output_path, chunk_directory = self._prepare_directories(
             output_dir, save_chunks, chunk_dir
         )
 
-        # Extract URL strings from SitemapURL objects
+        # extract URL strings from SitemapURL objects
         urls = [url_info.loc for url_info in filtered_urls]
 
         successfully_scraped = []
@@ -785,20 +785,20 @@ class MarkdownScraper:
                     except Exception as e:
                         return (False, url, str(e))
 
-                # Use the enhanced throttler's parallel execution capabilities
+                # use the enhanced throttler's parallel execution capabilities
                 if hasattr(self.throttler, "execute_parallel"):
                     logger.info(
                         f"Processing {len(urls)} URLs in parallel with enhanced throttling"
                     )
 
-                    # Create a wrapper function that doesn't require the URL parameter
+                    # create a wrapper function that doesn't require the URL parameter
                     def throttled_process(url):
                         idx = urls.index(url) if url in urls else 0
                         return process_url((url, idx))
 
                     results = self.throttler.execute_parallel(throttled_process, urls)
                 else:
-                    # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
+                    # fall back to standard ThreadPoolExecutor if enhanced throttler not available
                     logger.info(
                         f"Processing {len(urls)} URLs in parallel with {max_workers} workers"
                     )
@@ -806,7 +806,7 @@ class MarkdownScraper:
                         max_workers=max_workers
                     ) as executor:
                         if worker_timeout is not None:
-                            # Use submit and as_completed with timeout
+                            # use submit and as_completed with timeout
                             futures = [
                                 executor.submit(process_url, (url, i))
                                 for i, url in enumerate(urls)
@@ -820,7 +820,7 @@ class MarkdownScraper:
                                     result = future.result(timeout=worker_timeout)
                                     results.append(result)
                                 except concurrent.futures.TimeoutError:
-                                    # This worker timed out
+                                    # this worker timed out
                                     idx = futures.index(future)
                                     if idx < len(urls):
                                         url = urls[idx]
@@ -835,7 +835,7 @@ class MarkdownScraper:
                                             )
                                         )
                         else:
-                            # Use map without timeout
+                            # use map without timeout
                             results = list(
                                 executor.map(
                                     process_url,
@@ -843,7 +843,7 @@ class MarkdownScraper:
                                 )
                             )
 
-                # Process results
+                # process results
                 for success, url, error in results:
                     if success:
                         successfully_scraped.append(url)
@@ -856,7 +856,7 @@ class MarkdownScraper:
                 logger.warning("Falling back to sequential processing")
                 parallel = False
 
-        # Sequential processing (if parallel is False or an error occurred)
+        # sequential processing (if parallel is False or an error occurred)
         if not parallel:
             for i, url in enumerate(urls):
                 try:
@@ -876,7 +876,7 @@ class MarkdownScraper:
                     logger.error(f"Error processing URL {url}: {e}")
                     continue
 
-        # Log results
+        # log results
         logger.info(
             f"Successfully scraped {len(successfully_scraped)}/{len(urls)} URLs"
         )
@@ -916,7 +916,7 @@ class MarkdownScraper:
             limit=limit,
         )
 
-        # If no URLs were found, log warning
+        # if no URLs were found, log warning
         if not filtered_urls:
             logger.warning(f"No URLs found in sitemap for {base_url}")
             return []
@@ -943,23 +943,23 @@ class MarkdownScraper:
 
     def _get_filename_from_url(self, url: str, output_format: str) -> str:
         """Generate a filename from a URL with appropriate extension."""
-        # Extract path from URL
+        # extract path from URL
         parsed_url = urlparse(url)
         path_parts = parsed_url.path.strip("/").split("/")
 
-        # Handle empty paths
+        # handle empty paths
         if not path_parts or path_parts[0] == "":
             filename = "index"
         else:
             filename = "_".join(path_parts)
 
-        # Remove or replace invalid characters using the precompiled pattern
+        # remove or replace invalid characters using the precompiled pattern
         filename = self._url_path_pattern.sub("_", filename)
 
-        # Ensure correct file extension based on output format
+        # ensure correct file extension based on output format
         output_ext = ".md" if output_format == "markdown" else f".{output_format}"
         if not filename.endswith(output_ext):
-            # Remove any existing extension and add the correct one
+            # remove any existing extension and add the correct one
             if "." in filename:
                 filename = filename.rsplit(".", 1)[0] + output_ext
             else:
@@ -982,11 +982,11 @@ class MarkdownScraper:
         filename = self._get_filename_from_url(url, output_format)
         output_file = str(output_path / filename)
 
-        # Scrape and convert the page
+        # scrape and convert the page
         logger.info(f"Scraping URL {index + 1}/{total}: {url}")
         html_content = self.scrape_website(url, skip_cache=False)
 
-        # Handle case where scraping failed and returned None
+        # handle case where scraping failed and returned None
         if html_content is None:
             logger.error(f"Failed to scrape content from {url}, skipping...")
             raise RuntimeError(f"Failed to scrape content from {url}")
@@ -1016,7 +1016,7 @@ class MarkdownScraper:
         """Process chunking for a single document."""
         chunks = self.create_chunks(markdown_content, url)
 
-        # Create URL-specific chunk directory to prevent filename collisions
+        # create URL-specific chunk directory to prevent filename collisions
         url_chunk_dir = f"{chunk_dir}/{filename.split('.')[-2]}"
         self.save_chunks(chunks, url_chunk_dir, chunk_format)
 
@@ -1035,7 +1035,7 @@ class MarkdownScraper:
         if title_tag := soup.find("title"):
             metadata["title"] = self._get_text_from_element(title_tag)
 
-        # Extract meta description
+        # extract meta description
         desc_tag = soup.find("meta", attrs={"name": "description"})
         if desc_tag and desc_tag.get("content"):
             content = desc_tag.get("content")
@@ -1043,7 +1043,7 @@ class MarkdownScraper:
                 content = content[0] if content else ""
             metadata["description"] = str(content)
 
-        # Extract meta keywords
+        # extract meta keywords
         keywords_tag = soup.find("meta", attrs={"name": "keywords"})
         if keywords_tag and keywords_tag.get("content"):
             content = keywords_tag.get("content")
@@ -1051,7 +1051,7 @@ class MarkdownScraper:
                 content = content[0] if content else ""
             metadata["keywords"] = str(content)
 
-        # Extract Open Graph title
+        # extract Open Graph title
         og_title_tag = soup.find("meta", attrs={"property": "og:title"})
         if og_title_tag and og_title_tag.get("content"):
             content = og_title_tag.get("content")
@@ -1059,7 +1059,7 @@ class MarkdownScraper:
                 content = content[0] if content else ""
             metadata["og_title"] = str(content)
 
-        # Extract Open Graph image
+        # extract Open Graph image
         og_image_tag = soup.find("meta", attrs={"property": "og:image"})
         if og_image_tag and og_image_tag.get("content"):
             content = og_image_tag.get("content")
@@ -1138,7 +1138,7 @@ class MarkdownScraper:
         Returns:
             List of successfully scraped URLs
         """
-        # Check if links_file exists, if not try the default location
+        # check if links_file exists, if not try the default location
         if not Path(links_file).exists():
             default_path = "links.txt"
             if Path(default_path).exists():
@@ -1152,7 +1152,7 @@ class MarkdownScraper:
                 )
                 return []
 
-        # Read links from file
+        # read links from file
         try:
             with open(links_file, "r", encoding="utf-8") as f:
                 links = [
@@ -1182,7 +1182,7 @@ class MarkdownScraper:
             logger.warning(f"No valid links found in {links_file}")
             return []
 
-        # Prepare directories
+        # prepare directories
         output_path, chunk_directory = self._prepare_directories(
             output_dir, save_chunks, chunk_dir
         )
@@ -1210,20 +1210,20 @@ class MarkdownScraper:
                     except Exception as e:
                         return (False, url, str(e))
 
-                # Use the enhanced throttler's parallel execution capabilities if available
+                # use the enhanced throttler's parallel execution capabilities if available
                 if hasattr(self.throttler, "execute_parallel"):
                     logger.info(
                         f"Processing {len(links)} URLs in parallel with enhanced throttling"
                     )
 
-                    # Create a wrapper function that doesn't require the URL parameter
+                    # create a wrapper function that doesn't require the URL parameter
                     def throttled_process(url):
                         idx = links.index(url) if url in links else 0
                         return process_url((url, idx))
 
                     results = self.throttler.execute_parallel(throttled_process, links)
                 else:
-                    # Fall back to standard ThreadPoolExecutor if enhanced throttler not available
+                    # fall back to standard ThreadPoolExecutor if enhanced throttler not available
                     logger.info(
                         f"Processing {len(links)} URLs in parallel with {max_workers} workers"
                     )
@@ -1231,7 +1231,7 @@ class MarkdownScraper:
                         max_workers=max_workers
                     ) as executor:
                         if worker_timeout is not None:
-                            # Use submit and as_completed with timeout
+                            # use submit and as_completed with timeout
                             futures = [
                                 executor.submit(process_url, (url, i))
                                 for i, url in enumerate(links)
@@ -1245,7 +1245,7 @@ class MarkdownScraper:
                                     result = future.result(timeout=worker_timeout)
                                     results.append(result)
                                 except concurrent.futures.TimeoutError:
-                                    # This worker timed out
+                                    # this worker timed out
                                     idx = futures.index(future)
                                     if idx < len(links):
                                         url = links[idx]
@@ -1260,7 +1260,7 @@ class MarkdownScraper:
                                             )
                                         )
                         else:
-                            # Use map without timeout
+                            # use map without timeout
                             results = list(
                                 executor.map(
                                     process_url,
@@ -1268,7 +1268,7 @@ class MarkdownScraper:
                                 )
                             )
 
-                # Process results
+                # process results
                 for success, url, error in results:
                     if success:
                         successfully_scraped.append(url)
@@ -1281,7 +1281,7 @@ class MarkdownScraper:
                 logger.warning("Falling back to sequential processing")
                 parallel = False
 
-        # Sequential processing (if parallel is False or an error occurred)
+        # sequential processing (if parallel is False or an error occurred)
         if not parallel:
             for i, url in enumerate(links):
                 try:
@@ -1301,7 +1301,7 @@ class MarkdownScraper:
                     logger.error(f"Error processing URL {url}: {e}")
                     continue
 
-        # Log results
+        # log results
         logger.info(
             f"Successfully scraped {len(successfully_scraped)}/{len(links)} URLs"
         )
@@ -1408,7 +1408,7 @@ def main(
 
     try:
         if links_file or Path("links.txt").exists():
-            # Use provided links_file or default to links.txt if it exists
+            # use provided links_file or default to links.txt if it exists
             links_file_path = links_file or "links.txt"
             output_file_resolved = output_file or "output"
             _process_links_file_mode(
@@ -1585,7 +1585,7 @@ def _validate_output_format(output_format: str) -> str:
 def _check_rust_availability() -> None:
     """Check if Rust implementation is available."""
     with contextlib.suppress(ImportError):
-        # Using importlib.util that was already imported at the top level
+        # using importlib.util that was already imported at the top level
         if importlib.util.find_spec("RAGnificent.ragnificent_rs") is not None:
             pass  # Rust implementation is available
 
@@ -1610,7 +1610,7 @@ def _process_sitemap_mode(
     output_path = Path(output_file)
     output_dir = str(output_path.parent) if output_path.is_file() else output_file
 
-    # Scrape by sitemap
+    # scrape by sitemap
     logger.info(f"Scraping website using sitemap: {base_url}")
 
     scraper.scrape_by_sitemap(
@@ -1640,15 +1640,15 @@ def _process_single_url_mode(
     """Process a single URL."""
     result = scraper.scrape_website(url, skip_cache=skip_cache)
 
-    # Handle different return types from scrape_website
+    # handle different return types from scrape_website
     if result is None:
         logger.error(f"Failed to scrape content from {url}")
         return
     if isinstance(result, tuple):
-        # If return_chunks was True, result is (content, chunks)
+        # if return_chunks was True, result is (content, chunks)
         html_content = result[0] or ""
     else:
-        # Single string content
+        # single string content
         html_content = result
 
     if not html_content:
@@ -1659,7 +1659,7 @@ def _process_single_url_mode(
         html_content, url, output_format
     )
 
-    # Ensure correct output filename
+    # ensure correct output filename
     output_file = _ensure_correct_extension(
         output_file, output_format, content, markdown_content
     )
@@ -1684,7 +1684,7 @@ def _process_links_file_mode(
     worker_timeout: Optional[int] = None,
 ) -> None:
     """Process multiple URLs from a links file."""
-    # If links_file is None, use the default links.txt
+    # if links_file is None, use the default links.txt
     if links_file is None:
         links_file = "links.txt"
         logger.info(f"No links file specified, using default: {links_file}")
@@ -1692,7 +1692,7 @@ def _process_links_file_mode(
     output_path = Path(output_file)
     output_dir = str(output_path.parent) if output_path.is_file() else output_file
 
-    # Scrape by links file
+    # scrape by links file
     logger.info(f"Scraping website using links file: {links_file}")
 
     scraper.scrape_by_links_file(
@@ -1714,14 +1714,14 @@ def _ensure_correct_extension(
     """Ensure the output file has the correct extension."""
     output_ext = ".md" if output_format == "markdown" else f".{output_format}"
 
-    # If file doesn't have the correct extension, add it
+    # if file doesn't have the correct extension, add it
     if not output_file.endswith(output_ext):
         base_output = (
             output_file.rsplit(".", 1)[0] if "." in output_file else output_file
         )
         output_file = f"{base_output}{output_ext}"
 
-    # If we had to fall back to markdown, adjust the extension
+    # if we had to fall back to markdown, adjust the extension
     if output_format != "markdown" and content == markdown_content:
         output_file = output_file.replace(f".{output_format}", ".md")
 

@@ -9,7 +9,7 @@ import logging
 
 from RAGnificent.core.scraper import MarkdownScraper
 
-# Configure logging
+# configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 def main():
     """Run a simple scraping example."""
 
-    # Create scraper instance
+    # create scraper instance
     scraper = MarkdownScraper()
 
-    # Example URL - Python's official website
+    # example URL - Python's official website
     url = "https://www.python.org"
 
     try:
@@ -33,10 +33,10 @@ def main():
                 html_content, url, OutputFormat.MARKDOWN
             )
         except (ImportError, AttributeError):
-            # Fallback for different enum structure
+            # fallback for different enum structure
             markdown_content = scraper.convert_html(html_content, url, "markdown")
 
-        # Display first 500 characters
+        # display first 500 characters
         preview = (
             f"{markdown_content[:500]}..."
             if len(markdown_content) > 500

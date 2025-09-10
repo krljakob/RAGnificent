@@ -21,7 +21,7 @@ from .embedding import get_embedding_service
 from .search import SearchResult, get_search
 from .vector_store import get_vector_store
 
-# Optional LLM integration for RAG
+# optional LLM integration for RAG
 try:
     import openai
 except ImportError:
@@ -104,26 +104,26 @@ class Pipeline:
             embedding_model_name or self.pipeline_config.get("embedding_model_name")
         )
 
-        # Set up data directory
+        # set up data directory
         pipeline_data_dir = self.pipeline_config.get(
             "data_dir"
         ) or self.pipeline_config.get("output_dir")
         from ..core.security import secure_file_path
 
-        # Set up data directory path
+        # set up data directory path
         base_data_dir = self.config.data_dir
         if user_data_dir := data_dir or pipeline_data_dir or "":
-            # If user provides an absolute path, resolve it
+            # if user provides an absolute path, resolve it
             user_path = Path(user_data_dir)
             if user_path.is_absolute():
                 resolved_data_dir = user_path.resolve()
             else:
-                # For relative paths, use secure path joining
+                # for relative paths, use secure path joining
                 resolved_data_dir = Path(secure_file_path(base_data_dir, user_data_dir))
         else:
             resolved_data_dir = Path(base_data_dir).resolve()
 
-        # Additional validation - ensure path is within allowed directory
+        # additional validation - ensure path is within allowed directory
         safe_root_dir = Path(base_data_dir).resolve()
         try:
             resolved_data_dir.resolve().relative_to(safe_root_dir)
@@ -132,11 +132,11 @@ class Pipeline:
                 f"Data directory {resolved_data_dir} is outside the allowed root directory {safe_root_dir}"
             ) from e
 
-        # Create directory safely
+        # create directory safely
         self.data_dir = resolved_data_dir
         os.makedirs(self.data_dir, exist_ok=True)
 
-        # Final validation after directory creation
+        # final validation after directory creation
         try:
             self.data_dir.resolve().relative_to(safe_root_dir)
         except ValueError as e:
@@ -144,7 +144,7 @@ class Pipeline:
                 f"Final data directory {self.data_dir} is outside the allowed root directory {safe_root_dir}"
             ) from e
 
-        # Initialize scraper with enhanced throttling and parallel processing
+        # initialize scraper with enhanced throttling and parallel processing
         self.scraper = MarkdownScraper(
             requests_per_second=resolved_requests_per_second,
             chunk_size=resolved_chunk_size,
@@ -167,16 +167,16 @@ class Pipeline:
             ),
         )
 
-        # Initialize chunker
+        # initialize chunker
         self.chunker = ContentChunker(
             resolved_chunk_size,
             resolved_chunk_overlap,
         )
 
-        # Initialize embedding service
+        # initialize embedding service
         from ..core.config import EmbeddingModelType
 
-        # Convert string to EmbeddingModelType enum if provided
+        # convert string to EmbeddingModelType enum if provided
         model_type_enum = None
         if resolved_embedding_model_type:
             if isinstance(resolved_embedding_model_type, str):
@@ -188,10 +188,10 @@ class Pipeline:
             model_type_enum, resolved_embedding_model_name
         )
 
-        # Initialize vector store
+        # initialize vector store
         self.vector_store = get_vector_store(self.collection_name)
 
-        # Initialize search
+        # initialize search
         self.search = get_search(
             self.collection_name,
             resolved_embedding_model_type,
@@ -210,10 +210,10 @@ class Pipeline:
         if isinstance(config, dict):
             return config
 
-        # Load from file path with security validation
+        # load from file path with security validation
         from ..core.security import secure_file_path, validate_file_access
 
-        # Define safe root directories for configuration files
+        # define safe root directories for configuration files
         project_root = Path(__file__).resolve().parent.parent.parent
         safe_roots = [
             project_root / "config",
@@ -221,7 +221,7 @@ class Pipeline:
             Path.cwd(),  # Current working directory
         ]
 
-        # Find the appropriate safe root and secure the path
+        # find the appropriate safe root and secure the path
         config_path = None
         for safe_root in safe_roots:
             try:
@@ -237,7 +237,7 @@ class Pipeline:
                 f"Pipeline configuration file not found or not accessible: {config}"
             )
 
-        # Additional validation
+        # additional validation
         if not validate_file_access(config_path):
             raise ValueError(f"Access denied to configuration file: {config_path}")
 
@@ -312,7 +312,7 @@ class Pipeline:
         for url in urls:
             try:
                 if save_to_disk:
-                    # Use existing scrape_and_index method
+                    # use existing scrape_and_index method
                     result = self.scrape_and_index([url])
                     results.append(
                         {
@@ -324,7 +324,7 @@ class Pipeline:
                         }
                     )
                 else:
-                    # Just scrape without saving
+                    # just scrape without saving
                     content = self.scraper.scrape_website(url)
                     results.append(
                         {
@@ -340,7 +340,7 @@ class Pipeline:
 
     def _execute_embed_step(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Execute an embedding step."""
-        # For now, this is handled as part of the index step
+        # for now, this is handled as part of the index step
         logger.info("Embedding step - handled during indexing")
         return {"status": "embeddings_handled_during_indexing"}
 
@@ -353,7 +353,7 @@ class Pipeline:
         else:
             input_dir = str(self.data_dir)
 
-        # Find all markdown files in input directory
+        # find all markdown files in input directory
         md_files = list(Path(input_dir).glob("*.md"))
 
         indexed_count = 0
@@ -362,12 +362,12 @@ class Pipeline:
                 with open(md_file, "r", encoding="utf-8") as f:
                     content = f.read()
 
-                # Create chunks
+                # create chunks
                 chunks = self.chunker.create_chunks_from_markdown(
                     content, source_url=str(md_file)
                 )
 
-                # Generate embeddings for all chunks and store
+                # generate embeddings for all chunks and store
                 chunk_dicts = [
                     {
                         "content": chunk.content,
@@ -431,7 +431,7 @@ class Pipeline:
         try:
             from RAGnificent.ragnificent_rs import OutputFormat
 
-            # Convert string to OutputFormat enum if it's not already an enum
+            # convert string to OutputFormat enum if it's not already an enum
             output_format_enum = output_format
             if isinstance(output_format, str):
                 output_format_enum = OutputFormat(output_format)
@@ -471,7 +471,7 @@ class Pipeline:
         """
         documents = []
 
-        # Apply limit if specified
+        # apply limit if specified
         if limit and len(urls) > limit:
             urls = urls[:limit]
 
@@ -500,10 +500,10 @@ class Pipeline:
             parser = SitemapParser()
             sitemap_urls = parser.parse_sitemap(sitemap_url)
 
-            # Extract URL strings from SitemapURL objects
+            # extract URL strings from SitemapURL objects
             url_strings = [url.loc for url in sitemap_urls]
 
-            # Then apply limit if specified
+            # then apply limit if specified
             if limit is not None and limit > 0 and url_strings:
                 url_strings = url_strings[:limit]
 
@@ -527,7 +527,7 @@ class Pipeline:
             with open(links_file, "r", encoding="utf-8") as f:
                 file_urls = [line.strip() for line in f if line.strip()]
 
-            # Apply limit if specified
+            # apply limit if specified
             if limit:
                 file_urls = file_urls[:limit]
 
@@ -594,12 +594,12 @@ class Pipeline:
             logger.error(f"Invalid output format: {output_format}")
             return documents
 
-        # Validate limit if provided
+        # validate limit if provided
         if limit is not None and limit <= 0:
             logger.warning(f"Invalid limit value: {limit}, using default")
             limit = None
 
-        # Process single URL
+        # process single URL
         if url:
             if not validate_url(url):
                 logger.error(f"Invalid URL format: {redact_sensitive_data(url)}")
@@ -658,7 +658,7 @@ class Pipeline:
                     file_urls, None, output_format, skip_cache
                 )
 
-        # Save raw documents if output file specified
+        # save raw documents if output file specified
         if output_file:
             if not validate_file_path(output_file, ["json", "jsonl"]):
                 logger.error(
@@ -703,7 +703,7 @@ class Pipeline:
         """
         chunks = self.chunker.create_chunks_from_markdown(content, url)
 
-        # Convert Chunk objects to dictionaries
+        # convert Chunk objects to dictionaries
         return [
             {
                 "id": chunk.id,
@@ -835,11 +835,11 @@ class Pipeline:
         Returns:
             List of chunk dictionaries
         """
-        # Load documents from file if path provided
+        # load documents from file if path provided
         if isinstance(documents, str):
             documents = self._load_documents_from_file(documents)
 
-        # Ensure we have documents
+        # ensure we have documents
         if not documents:
             logger.warning("No documents to chunk")
             return []
@@ -847,10 +847,10 @@ class Pipeline:
         logger.info(f"Chunking {len(documents)} documents")
         all_chunks = []
 
-        # Get chunking strategy from config if not specified
+        # get chunking strategy from config if not specified
         chunking_strategy = strategy or self.config.chunking.strategy
 
-        # Process each document
+        # process each document
         for doc in documents:
             url = doc.get("url", "")
             content = doc.get("content", "")
@@ -873,7 +873,7 @@ class Pipeline:
                 logger.error(f"Error chunking document from {url}: {e}")
                 continue
 
-        # Save chunks if output file specified
+        # save chunks if output file specified
         if output_file:
             self._save_chunks_to_file(all_chunks, output_file)
 
@@ -894,7 +894,7 @@ class Pipeline:
         Returns:
             List of chunk dictionaries with embeddings
         """
-        # Load chunks from file if path provided
+        # load chunks from file if path provided
         if isinstance(chunks, str):
             try:
                 with open(chunks, "r", encoding="utf-8") as f:
@@ -903,7 +903,7 @@ class Pipeline:
                 logger.error(f"Error loading chunks from {chunks}: {e}")
                 return []
 
-        # Ensure we have chunks
+        # ensure we have chunks
         if not chunks:
             logger.warning("No chunks to embed")
             return []
@@ -911,18 +911,18 @@ class Pipeline:
         logger.info(f"Embedding {len(chunks)} chunks")
 
         try:
-            # Generate embeddings in batch
+            # generate embeddings in batch
             chunk_list = chunks if isinstance(chunks, list) else []
             embedded_chunks = self.embedding_service.embed_chunks(chunk_list)
 
-            # Save embedded chunks if output file specified
+            # save embedded chunks if output file specified
             if output_file and embedded_chunks:
                 output_path = self.data_dir / output_file
                 with open(output_path, "w", encoding="utf-8") as f:
-                    # Store chunks without embeddings to save space
+                    # store chunks without embeddings to save space
                     lightweight_chunks = []
                     for chunk in embedded_chunks:
-                        # Store info that we have embeddings but don't store the actual embeddings
+                        # store info that we have embeddings but don't store the actual embeddings
                         chunk_copy = {
                             k: v for k, v in chunk.items() if k != "embedding"
                         }
@@ -938,7 +938,7 @@ class Pipeline:
 
         except Exception as e:
             logger.error(f"Error embedding chunks: {e}")
-            # Ensure we return a list of dictionaries, not a string
+            # ensure we return a list of dictionaries, not a string
             return [] if isinstance(chunks, str) else chunks
 
     def store_chunks(
@@ -958,13 +958,13 @@ class Pipeline:
         Returns:
             Success flag
         """
-        # Load chunks from file if path provided
+        # load chunks from file if path provided
         if isinstance(chunks, str):
             try:
                 with open(chunks, "r", encoding="utf-8") as f:
                     chunks = json.load(f)
 
-                # If these are lightweight chunks without embeddings, we need to re-embed them
+                # if these are lightweight chunks without embeddings, we need to re-embed them
                 if chunks and all(
                     "has_embedding" in chunk and "embedding" not in chunk
                     for chunk in chunks
@@ -977,7 +977,7 @@ class Pipeline:
                 logger.error(f"Error loading embedded chunks from {chunks}: {e}")
                 return False
 
-        # Ensure we have chunks with embeddings
+        # ensure we have chunks with embeddings
         chunk_list = chunks if isinstance(chunks, list) else []
         valid_chunks = [chunk for chunk in chunk_list if embedding_field in chunk]
 
@@ -987,7 +987,7 @@ class Pipeline:
 
         logger.info(f"Storing {len(valid_chunks)} chunks in vector database")
 
-        # Store chunks in vector database
+        # store chunks in vector database
         return self.vector_store.store_documents(
             valid_chunks, embedding_field=embedding_field, id_field=id_field
         )
@@ -1052,7 +1052,7 @@ class Pipeline:
                 "has_context": False,
             }
 
-        # Get relevant documents
+        # get relevant documents
         results = self.search_documents(query, limit, threshold, as_dict=True)
 
         if not results:
@@ -1064,26 +1064,26 @@ class Pipeline:
                 "has_context": False,
             }
 
-        # Use default model from config if not specified
+        # use default model from config if not specified
         if not model:
             model = self.config.openai.completion_model
 
-        # Format context for prompt
-        # Ensure we're working with dictionaries by explicitly requesting as_dict=True
-        # Convert SearchResult objects to dictionaries if needed
+        # format context for prompt
+        # ensure we're working with dictionaries by explicitly requesting as_dict=True
+        # convert SearchResult objects to dictionaries if needed
         context_str = "\n\n".join(
             f"DOCUMENT {i + 1}:\n{result['content'] if isinstance(result, dict) else result.content}"
             for i, result in enumerate(results)
         )
 
-        # Create default system prompt if none provided
+        # create default system prompt if none provided
         if system_prompt is None:
             system_prompt = """You are a helpful assistant. Answer the question based on the provided context.
 If the context doesn't contain the answer, say "I don't have enough information to answer that."
 Always cite your sources by referencing the document numbers.
 """
 
-        # Build messages
+        # build messages
         messages = [
             {"role": "system", "content": system_prompt},
             {
@@ -1093,7 +1093,7 @@ Always cite your sources by referencing the document numbers.
         ]
 
         try:
-            # Generate response (support both legacy and client-style APIs)
+            # generate response (support both legacy and client-style APIs)
             try:
                 from openai import OpenAI  # type: ignore
 
@@ -1154,21 +1154,21 @@ Always cite your sources by referencing the document numbers.
         Returns:
             Tuple of (success_flag, output_data, updated_result_dict)
         """
-        # Skip step if it depends on a previous step that failed
+        # skip step if it depends on a previous step that failed
         if depends_on_previous and not previous_successful:
             logger.error(f"No input data for {step_name} step")
             return self._extracted_from__execute_pipeline_step_27(result, step_name)
         try:
-            # Execute the step function
+            # execute the step function
             output_data = step_fn(input_data)
 
-            # Check for empty results
+            # check for empty results
             if not output_data:
                 logger.error(
                     f"{step_name.capitalize()} step failed - no output created"
                 )
                 return self._handle_pipeline_step_failure(result, step_name)
-            # Log success and update result
+            # log success and update result
             if isinstance(output_data, list):
                 logger.info(
                     f"{step_name.capitalize()} step completed: {len(output_data)} items"
@@ -1181,7 +1181,7 @@ Always cite your sources by referencing the document numbers.
             return True, output_data, result
 
         except Exception as e:
-            # Handle errors consistently
+            # handle errors consistently
             logger.error(f"{step_name.capitalize()} step failed: {e}")
             return self._handle_pipeline_step_failure(result, step_name)
 
@@ -1316,7 +1316,7 @@ Always cite your sources by referencing the document numbers.
 
             return current_batch_size
 
-        # Batch processing function
+        # batch processing function
         def process_in_batches(items, process_func, batch_size_initial=batch_size):
             if not items:
                 return []
@@ -1350,7 +1350,7 @@ Always cite your sources by referencing the document numbers.
             "document_counts": {},
         }
 
-        # Initialize data variables
+        # initialize data variables
         documents = None
         chunks = None
         embedded_chunks = None
@@ -1358,7 +1358,7 @@ Always cite your sources by referencing the document numbers.
         chunk_success = False
         embed_success = False
 
-        # Step 1: Extract content
+        # step 1: Extract content
         if run_extract:
             extract_params = {
                 "url": url,
@@ -1370,7 +1370,7 @@ Always cite your sources by referencing the document numbers.
                 "output_format": output_format,
             }
 
-            # Define the extract function to pass to _execute_pipeline_step
+            # define the extract function to pass to _execute_pipeline_step
             @benchmark("extract_content")
             def extract_fn(_):
                 return self.extract_content(**extract_params)
@@ -1382,13 +1382,13 @@ Always cite your sources by referencing the document numbers.
             if not extract_success and run_chunk:
                 return pipeline_result
 
-        # Step 2: Chunk documents
+        # step 2: Chunk documents
         if run_chunk:
-            # If we didn't run extract, try to load documents from file
+            # if we didn't run extract, try to load documents from file
             if not documents and not run_extract:
                 documents = self._get_default_input("documents", "raw_documents.json")
 
-            # Define the chunking function with batching
+            # define the chunking function with batching
             @benchmark("chunk_documents")
             def chunk_fn(docs):
                 if (
@@ -1396,7 +1396,7 @@ Always cite your sources by referencing the document numbers.
                     and isinstance(docs, list)
                     and len(docs) > batch_size
                 ):
-                    # Process documents in batches
+                    # process documents in batches
                     def process_batch(batch):
                         return self.chunk_documents(documents=batch, output_file=None)
 
@@ -1406,7 +1406,7 @@ Always cite your sources by referencing the document numbers.
                         self._save_chunks_to_file(all_chunks, "document_chunks.json")
 
                     return all_chunks
-                # Process all documents at once if backpressure is disabled or batch is small
+                # process all documents at once if backpressure is disabled or batch is small
                 return self.chunk_documents(
                     documents=docs, output_file="document_chunks.json"
                 )
@@ -1423,13 +1423,13 @@ Always cite your sources by referencing the document numbers.
             if not chunk_success and run_embed:
                 return pipeline_result
 
-        # Step 3: Embed chunks
+        # step 3: Embed chunks
         if run_embed:
-            # If we didn't run chunk, try to load chunks from file
+            # if we didn't run chunk, try to load chunks from file
             if not chunks and not run_chunk:
                 chunks = self._get_default_input("chunks", "document_chunks.json")
 
-            # Define the embedding function with batching
+            # define the embedding function with batching
             @benchmark("embed_chunks")
             def embed_fn(chunk_data):
                 if (
@@ -1437,7 +1437,7 @@ Always cite your sources by referencing the document numbers.
                     and isinstance(chunk_data, list)
                     and len(chunk_data) > batch_size
                 ):
-                    # Process chunks in batches
+                    # process chunks in batches
                     def process_batch(batch):
                         return self.embed_chunks(chunks=batch, output_file=None)
 
@@ -1447,7 +1447,7 @@ Always cite your sources by referencing the document numbers.
                         self._save_chunks_to_file(all_embedded, "embedded_chunks.json")
 
                     return all_embedded
-                # Process all chunks at once if backpressure is disabled or batch is small
+                # process all chunks at once if backpressure is disabled or batch is small
                 return self.embed_chunks(
                     chunks=chunk_data, output_file="embedded_chunks.json"
                 )
@@ -1468,15 +1468,15 @@ Always cite your sources by referencing the document numbers.
             if not embed_success and run_store:
                 return pipeline_result
 
-        # Step 4: Store chunks
+        # step 4: Store chunks
         if run_store:
-            # If we didn't run embed, try to load embedded chunks from file
+            # if we didn't run embed, try to load embedded chunks from file
             if not embedded_chunks and not run_embed:
                 embedded_chunks = self._get_default_input(
                     "embedded_chunks", "embedded_chunks.json"
                 )
 
-            # Define the storage function with batching
+            # define the storage function with batching
             @benchmark("store_chunks")
             def store_fn(embeds):
                 if (
@@ -1484,11 +1484,11 @@ Always cite your sources by referencing the document numbers.
                     and isinstance(embeds, list)
                     and len(embeds) > batch_size
                 ):
-                    # Process embedded chunks in batches
+                    # process embedded chunks in batches
                     def process_batch(batch):
                         return self.store_chunks(batch)
 
-                    # Store in batches but don't collect results (just success/failure)
+                    # store in batches but don't collect results (just success/failure)
                     success = True
                     for i in range(0, len(embeds), batch_size):
                         batch = embeds[i : i + batch_size]
@@ -1502,15 +1502,15 @@ Always cite your sources by referencing the document numbers.
                         apply_backpressure(batch_size)
 
                     if success:
-                        # Count documents in vector store
+                        # count documents in vector store
                         doc_count = self.vector_store.count_documents()
                         pipeline_result["document_counts"]["stored_vectors"] = doc_count
 
                     return success
-                # Process all embedded chunks at once if backpressure is disabled or batch is small
+                # process all embedded chunks at once if backpressure is disabled or batch is small
                 success = self.store_chunks(embeds)
                 if success:
-                    # Count documents in vector store
+                    # count documents in vector store
                     doc_count = self.vector_store.count_documents()
                     pipeline_result["document_counts"]["stored_vectors"] = doc_count
                 return success
@@ -1541,13 +1541,13 @@ Always cite your sources by referencing the document numbers.
 
     def _extract_title(self, content: str, url: str) -> str:
         """Extract title from content."""
-        # For markdown content, extract first h1 heading
+        # for markdown content, extract first h1 heading
         lines = content.split("\n")
         for line in lines:
             if line.startswith("# "):
                 return line[2:].strip()
 
-        # Fallback to URL-based title
+        # fallback to URL-based title
         from urllib.parse import urlparse
 
         parsed_url = urlparse(url)
@@ -1556,7 +1556,7 @@ Always cite your sources by referencing the document numbers.
         return parsed_url.netloc
 
 
-# Singleton instance for easy access
+# singleton instance for easy access
 _default_pipeline = None
 
 

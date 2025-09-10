@@ -7,7 +7,7 @@ Simple demonstration of core scraping and chunking functionality.
 import sys
 from pathlib import Path
 
-# Set up environment
+# set up environment
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from RAGnificent.core.scraper import MarkdownScraper
@@ -16,25 +16,25 @@ from RAGnificent.core.scraper import MarkdownScraper
 def demo_basic_scraping():
     """Demonstrate basic scraping functionality"""
 
-    # Initialize scraper
+    # initialize scraper
     scraper = MarkdownScraper(
         requests_per_second=1.0, chunk_size=1000, chunk_overlap=200
     )
 
-    # Test URL
+    # test URL
     test_url = "https://docs.python.org/3/tutorial/introduction.html"
 
     try:
-        # Scrape content
+        # scrape content
         html_content = scraper.scrape_website(test_url)
 
-        # Convert to markdown
+        # convert to markdown
         markdown_content = scraper.convert_to_markdown(html_content, test_url)
 
-        # Create chunks
+        # create chunks
         chunks = scraper.create_chunks(markdown_content, test_url)
 
-        # Show sample chunk
+        # show sample chunk
         if chunks:
             chunk = chunks[0]
             if hasattr(chunk, "content"):
@@ -48,7 +48,7 @@ def demo_basic_scraping():
 def demo_file_scraping():
     """Demonstrate scraping from URLs file"""
 
-    # Create test URLs file
+    # create test URLs file
     urls_content = """# Test URLs for RAG demo
 https://docs.python.org/3/tutorial/introduction.html
 """
@@ -68,7 +68,7 @@ https://docs.python.org/3/tutorial/introduction.html
             chunk_format="jsonl",
         )
 
-        # Check output
+        # check output
         output_dir = Path("demo_output")
         chunk_dir = Path("demo_chunks")
 
@@ -81,7 +81,7 @@ https://docs.python.org/3/tutorial/introduction.html
     except Exception as e:
         pass
     finally:
-        # Cleanup
+        # cleanup
         if urls_file.exists():
             urls_file.unlink()
 
@@ -93,13 +93,13 @@ def demo_embedding_check():
         from RAGnificent.core.config import EmbeddingModelType
         from RAGnificent.rag.embedding import EmbeddingService
 
-        # Try to initialize embedding service
+        # try to initialize embedding service
         embedding_service = EmbeddingService(
             model_type=EmbeddingModelType.SENTENCE_TRANSFORMER,
             model_name="BAAI/bge-small-en-v1.5",
         )
 
-        # Test with simple text
+        # test with simple text
         test_text = "This is a test sentence for embedding."
         try:
             result = embedding_service.embed_chunk(test_text)
@@ -119,13 +119,13 @@ def demo_embedding_check():
 def main():
     """Run the basic demo"""
     try:
-        # Test basic functionality
+        # test basic functionality
         chunks = demo_basic_scraping()
 
-        # Test file-based scraping
+        # test file-based scraping
         demo_file_scraping()
 
-        # Check embedding functionality
+        # check embedding functionality
         demo_embedding_check()
 
     except Exception as e:

@@ -20,7 +20,7 @@ from RAGnificent.core.security import (
     validate_content_security,
 )
 
-# Import performance testing utilities
+# import performance testing utilities
 try:
     from tests.utils.performance_testing import (
         PerformanceBudgets,
@@ -28,7 +28,7 @@ try:
         assert_rate_limit_timing,
     )
 except ImportError:
-    # Fallback for environments where test utilities aren't available
+    # fallback for environments where test utilities aren't available
     def assert_immediate_operation(duration, description=""):
         assert duration < 0.1, f"{description}: expected < 0.1s, got {duration:.3f}s"
 
@@ -55,12 +55,12 @@ class TestRateLimiter:
         def test_func():
             return time.time()
 
-        # Should allow 3 calls without delay
+        # should allow 3 calls without delay
         times = []
         for _ in range(3):
             times.append(test_func())
 
-        # All calls should happen quickly (within budget)
+        # all calls should happen quickly (within budget)
         total_elapsed = times[-1] - times[0]
         assert_immediate_operation(total_elapsed, "Rate limiter fast calls")
 
@@ -72,16 +72,16 @@ class TestRateLimiter:
         def test_func():
             return time.time()
 
-        # Make 2 calls quickly
+        # make 2 calls quickly
         start_time = time.time()
         test_func()
         test_func()
 
-        # Third call should be delayed
+        # third call should be delayed
         third_call_time = test_func()
         elapsed = third_call_time - start_time
 
-        # Should have waited for rate limit timing
+        # should have waited for rate limit timing
         assert_rate_limit_timing(elapsed, 0.5, "Rate limiter enforcement delay")
 
     def test_rate_limiter_cleans_old_calls(self):
@@ -92,19 +92,19 @@ class TestRateLimiter:
         def test_func():
             return True
 
-        # Make 2 calls
+        # make 2 calls
         test_func()
         test_func()
 
-        # Wait for time frame to expire
+        # wait for time frame to expire
         time.sleep(0.3)
 
-        # Should allow new calls without delay
+        # should allow new calls without delay
         start_time = time.time()
         test_func()
         elapsed = time.time() - start_time
 
-        # Should not have waited - call should be immediate
+        # should not have waited - call should be immediate
         assert_immediate_operation(elapsed, "Rate limiter after cleanup")
 
 
@@ -118,7 +118,7 @@ class TestThrottledSession:
 
         session = ThrottledSession(requests_per_second=2.0)
 
-        # First request should go through immediately
+        # first request should go through immediately
         start_time = time.time()
         session.request("GET", "http://example.com")
         first_elapsed = time.time() - start_time
@@ -134,15 +134,15 @@ class TestThrottledSession:
         # 2 requests per second = 0.5 second minimum interval
         session = ThrottledSession(requests_per_second=2.0)
 
-        # Make first request
+        # make first request
         session.request("GET", "http://example.com")
 
-        # Second request should be delayed
+        # second request should be delayed
         start_time = time.time()
         session.request("GET", "http://example.com")
         elapsed = time.time() - start_time
 
-        # Should have waited the expected rate limit delay
+        # should have waited the expected rate limit delay
         assert_rate_limit_timing(elapsed, 0.5, "Rate limiter enforcement delay")
         assert mock_request.call_count == 2
 
@@ -270,22 +270,22 @@ class TestSanitizeHeaders:
         }
         sanitized_mixed = sanitize_headers(mixed_case_headers)
 
-        # Now both should be redacted preserving original casing
+        # now both should be redacted preserving original casing
         assert sanitized_mixed["Authorization"] == "[REDACTED]"
         assert sanitized_mixed["X-API-KEY"] == "[REDACTED]"
 
-        # Test that lowercase headers are also sanitized
+        # test that lowercase headers are also sanitized
         lowercase_headers = {
             "authorization": "Bearer token",
             "x-api-key": "secret",
         }
         sanitized_lower = sanitize_headers(lowercase_headers)
 
-        # These should be redacted as well
+        # these should be redacted as well
         assert sanitized_lower["authorization"] == "[REDACTED]"
         assert sanitized_lower["x-api-key"] == "[REDACTED]"
 
-        # Test that non-sensitive headers are preserved regardless of case
+        # test that non-sensitive headers are preserved regardless of case
         normal_headers = {"User-Agent": "TestAgent", "Content-Type": "application/json"}
         normal_sanitized = sanitize_headers(normal_headers)
         assert normal_sanitized["User-Agent"] == "TestAgent"
@@ -316,7 +316,7 @@ class TestSecureFilePath:
         base_dir = "/home/user/data"
         base_abs = os.path.abspath(base_dir)
 
-        # Test various path traversal attempts - should return base directory
+        # test various path traversal attempts - should return base directory
         dangerous_paths = [
             "../etc/passwd",
             "../../sensitive.txt",
@@ -327,7 +327,7 @@ class TestSecureFilePath:
 
         for user_path in dangerous_paths:
             result = secure_file_path(base_dir, user_path)
-            # Path traversal attempts should return base directory
+            # path traversal attempts should return base directory
             assert result == base_abs or result.startswith(base_abs)
 
     def test_absolute_path_rejection(self):
@@ -335,7 +335,7 @@ class TestSecureFilePath:
         base_dir = "/home/user/data"
         base_abs = os.path.abspath(base_dir)
 
-        # Absolute paths should return base directory
+        # absolute paths should return base directory
         result = secure_file_path(base_dir, "/etc/passwd")
         assert result == base_abs
 
@@ -420,7 +420,7 @@ class TestSanitizeContent:
         dirty_html = '<p>Hello</p><script>alert("XSS")</script>'
         clean_html = sanitize_content(dirty_html)
 
-        # All HTML tags are removed
+        # all HTML tags are removed
         assert "<p>" not in clean_html
         assert "<script>" not in clean_html
         assert "Hello" in clean_html
@@ -431,7 +431,7 @@ class TestSanitizeContent:
         html = "<p>Paragraph</p><strong>Bold</strong><em>Italic</em>"
         clean_html = sanitize_content(html)
 
-        # All tags should be removed, only text remains
+        # all tags should be removed, only text remains
         assert clean_html == "ParagraphBoldItalic"
 
     def test_link_sanitization(self):
@@ -439,7 +439,7 @@ class TestSanitizeContent:
         html = '<a href="http://example.com">Safe link</a>'
         clean_html = sanitize_content(html)
 
-        # Links are removed, only text remains
+        # links are removed, only text remains
         assert clean_html == "Safe link"
         assert "href" not in clean_html
 
@@ -448,7 +448,7 @@ class TestSanitizeContent:
         html = '<script>alert()</script><iframe src="evil"></iframe>'
         clean_html = sanitize_content(html)
 
-        # Tags are removed but text content remains
+        # tags are removed but text content remains
         assert "<script>" not in clean_html
         assert "<iframe>" not in clean_html
         assert "alert()" in clean_html
@@ -468,16 +468,16 @@ class TestSecurityAuditLogger:
 
         logger = SecurityAuditLogger()
 
-        # Test that logger is properly initialized and can process events
-        # This tests actual behavior rather than mock interactions
+        # test that logger is properly initialized and can process events
+        # this tests actual behavior rather than mock interactions
         assert logger.logger is not None
         assert logger.logger.name == "security_audit"
         assert logger.logger.level == logging.INFO
 
-        # Test that the logger can handle events without errors
+        # test that the logger can handle events without errors
         try:
             logger.log_event("TEST_EVENT", {"key": "value"})
-            # If no exception is raised, initialization is successful
+            # if no exception is raised, initialization is successful
             success = True
         except Exception:
             success = False
@@ -488,7 +488,7 @@ class TestSecurityAuditLogger:
         import io
         import logging
 
-        # Capture log output to verify actual behavior
+        # capture log output to verify actual behavior
         log_stream = io.StringIO()
         handler = logging.StreamHandler(log_stream)
 
@@ -496,7 +496,7 @@ class TestSecurityAuditLogger:
         logger.logger.addHandler(handler)
         logger.logger.setLevel(logging.INFO)
 
-        # Test actual logging behavior
+        # test actual logging behavior
         logger.log_event(
             event_type="AUTH_FAILURE",
             details={"user": "user123", "reason": "Invalid password"},
@@ -504,7 +504,7 @@ class TestSecurityAuditLogger:
 
         log_output = log_stream.getvalue()
 
-        # Verify actual log content and structure
+        # verify actual log content and structure
         assert "Security event" in log_output
         assert "AUTH_FAILURE" in log_output
         assert "user123" in log_output
@@ -515,7 +515,7 @@ class TestSecurityAuditLogger:
         import io
         import logging
 
-        # Capture actual log output
+        # capture actual log output
         log_stream = io.StringIO()
         handler = logging.StreamHandler(log_stream)
 
@@ -523,7 +523,7 @@ class TestSecurityAuditLogger:
         logger.logger.addHandler(handler)
         logger.logger.setLevel(logging.INFO)
 
-        # Test with data that matches the actual redaction patterns
+        # test with data that matches the actual redaction patterns
         sensitive_text_data = {
             "config": 'api_key: "abcdefghijklmnopqrstuvwxyz123456"',
             "email_field": "Contact me at user@example.com for help",
@@ -535,14 +535,14 @@ class TestSecurityAuditLogger:
         logger.log_event("DATA_LEAK", sensitive_text_data)
         log_output = log_stream.getvalue()
 
-        # Verify actual redaction behavior based on the patterns
+        # verify actual redaction behavior based on the patterns
         assert "user@example.com" not in log_output
         assert "abcdefghijklmnopqrstuvwxyz123456" not in log_output
         assert "supersecret123456789" not in log_output
         assert "4111 1111 1111 1111" not in log_output
         assert "192.168.1.100" not in log_output
 
-        # Verify redaction markers are present
+        # verify redaction markers are present
         assert "[EMAIL REDACTED]" in log_output
         assert "[REDACTED]" in log_output
         assert "[IP REDACTED]" in log_output
@@ -553,17 +553,17 @@ class TestSecurityAuditLogger:
         import os
         import tempfile
 
-        # Use actual temporary file to test real file operations
+        # use actual temporary file to test real file operations
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
             temp_path = temp_file.name
 
         try:
             logger = SecurityAuditLogger(log_file=temp_path)
 
-            # Test actual file writing behavior
+            # test actual file writing behavior
             logger.log_event("FILE_TEST", {"message": "test file logging"})
 
-            # Verify file was actually written to
+            # verify file was actually written to
             assert os.path.exists(temp_path)
 
             with open(temp_path, "r") as f:
@@ -572,7 +572,7 @@ class TestSecurityAuditLogger:
                 assert "test file logging" in content
 
         finally:
-            # Clean up temporary file
+            # clean up temporary file
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
 
@@ -580,7 +580,7 @@ class TestSecurityAuditLogger:
         """Test error handling in logging operations."""
         logger = SecurityAuditLogger()
 
-        # Test with problematic data that might cause issues
+        # test with problematic data that might cause issues
         problematic_data = {
             "circular_ref": None,
             "large_data": "x" * 10000,
@@ -590,7 +590,7 @@ class TestSecurityAuditLogger:
         }
         problematic_data["circular_ref"] = problematic_data  # Create circular reference
 
-        # Should handle errors gracefully without crashing
+        # should handle errors gracefully without crashing
         try:
             logger.log_event("ERROR_TEST", problematic_data)
             success = True

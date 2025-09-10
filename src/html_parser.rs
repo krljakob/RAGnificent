@@ -13,12 +13,12 @@ pub enum ParserError {
     Other(String),
 }
 
-/// Extracts the main content from an HTML document by identifying and
+/// extracts the main content from an HTML document by identifying and
 /// cleaning up the most relevant section.
 pub fn extract_main_content(html: &str) -> Result<Html, ParserError> {
     let document = Html::parse_document(html);
 
-    // Try common content container selectors in order of preference
+    // try common content container selectors in order of preference
     let container_selectors = ["main", "article", "#content", ".content", "body"];
 
     for selector_str in container_selectors {
@@ -26,24 +26,24 @@ pub fn extract_main_content(html: &str) -> Result<Html, ParserError> {
             Selector::parse(selector_str).map_err(|e| ParserError::SelectorError(e.to_string()))?;
 
         if let Some(element) = document.select(&selector).next() {
-            // Found a main content container
+            // found a main content container
             return Ok(Html::parse_fragment(&element.html()));
         }
     }
 
-    // Fallback: If no specific content container is found, return the whole document.
-    // Note: Downstream consumers should handle processing of large documents gracefully.
+    // fallback: If no specific content container is found, return the whole document.
+    // note: Downstream consumers should handle processing of large documents gracefully.
     Ok(document)
 }
 
-/// Cleans up HTML by removing unwanted elements like scripts, ads, etc.
+/// cleans up HTML by removing unwanted elements like scripts, ads, etc.
 pub fn clean_html(html: &str) -> Result<String, ParserError> {
     let document = Html::parse_document(html);
 
-    // Create a cleaned document by removing unwanted elements
+    // create a cleaned document by removing unwanted elements
     let mut cleaned_html = document.root_element().html();
 
-    // Elements to remove
+    // elements to remove
     let unwanted_selectors = [
         "script",
         "style",
@@ -76,7 +76,7 @@ pub fn clean_html(html: &str) -> Result<String, ParserError> {
     Ok(cleaned_html)
 }
 
-/// Extracts all unique links from the HTML document
+/// extracts all unique links from the HTML document
 pub fn extract_links(html: &str, base_url: &str) -> Result<Vec<String>, ParserError> {
     let document = Html::parse_document(html);
     let base_url = url::Url::parse(base_url).map_err(|e| ParserError::Other(e.to_string()))?;
@@ -91,11 +91,11 @@ pub fn extract_links(html: &str, base_url: &str) -> Result<Vec<String>, ParserEr
             && !href.starts_with("javascript:")
             && !href.starts_with("#")
         {
-            // For absolute URLs, preserve them exactly as they appear
+            // for absolute URLs, preserve them exactly as they appear
             if href.starts_with("http://") || href.starts_with("https://") {
                 links.push(href.to_string());
             } else {
-                // For relative URLs, resolve them against the base URL
+                // for relative URLs, resolve them against the base URL
                 if let Ok(absolute_url) = base_url.join(href) {
                     links.push(absolute_url.to_string());
                 }
@@ -103,14 +103,14 @@ pub fn extract_links(html: &str, base_url: &str) -> Result<Vec<String>, ParserEr
         }
     }
 
-    // Remove duplicates
+    // remove duplicates
     links.sort();
     links.dedup();
 
     Ok(links)
 }
 
-/// Utility function to get text content of an element, cleaning up whitespace
+/// utility function to get text content of an element, cleaning up whitespace
 pub fn get_element_text(element: &scraper::ElementRef) -> String {
     element
         .text()

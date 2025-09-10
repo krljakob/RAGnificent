@@ -36,7 +36,7 @@ class TestConfigFileSupport(unittest.TestCase):
             "embedding": {"model_type": EmbeddingModelType.OPENAI.value},
         }
         config = AppConfig(config_dict=override)
-        # Overrides should map back to enum values
+        # overrides should map back to enum values
         self.assertEqual(config.chunking.strategy, ChunkingStrategy.SEMANTIC)
         self.assertEqual(config.embedding.model_type, EmbeddingModelType.OPENAI)
 

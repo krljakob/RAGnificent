@@ -19,7 +19,7 @@ from RAGnificent.core.logging import get_logger
 from RAGnificent.rag.pipeline import Pipeline
 from RAGnificent.rag.search import SearchResult
 
-# Optional imports for Rust functionality
+# optional imports for Rust functionality
 try:
     from RAGnificent.ragnificent_rs import (
         convert_html_to_format,
@@ -38,7 +38,7 @@ except ImportError:
 
 logger = get_logger(__name__)
 
-# FastAPI app
+# fastAPI app
 app = FastAPI(
     title="RAGnificent API",
     description="API for web scraping, content processing, and semantic search",
@@ -47,7 +47,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# Add CORS middleware with secure defaults
+# add CORS middleware with secure defaults
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -62,7 +62,7 @@ app.add_middleware(
 )
 
 
-# Pydantic models
+# pydantic models
 class ScrapeRequest(BaseModel):
     """Request model for scraping operations."""
 
@@ -142,7 +142,7 @@ class PipelineResponse(BaseModel):
     results: List[Dict]
 
 
-# Global pipeline instance (consider using dependency injection in production)
+# global pipeline instance (consider using dependency injection in production)
 _pipeline = None
 
 
@@ -180,7 +180,7 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     try:
-        # Basic health checks
+        # basic health checks
         pipeline = get_pipeline()
         return {
             "status": "healthy",
@@ -202,7 +202,7 @@ async def scrape_endpoint(request: ScrapeRequest, background_tasks: BackgroundTa
     try:
         logger.info(f"Scraping request for URL: {request.url}")
 
-        # Create temporary output directory
+        # create temporary output directory
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir)
 
@@ -227,7 +227,7 @@ async def scrape_endpoint(request: ScrapeRequest, background_tasks: BackgroundTa
                     )
                     scraped_urls = [request.url]
 
-            # Count output files
+            # count output files
             output_files = list(output_dir.glob(f"*.{request.format}"))
 
             return ScrapeResponse(
@@ -256,7 +256,7 @@ async def convert_endpoint(request: ConvertRequest):
         )
 
         if request.from_format == "html":
-            # Use Rust converter if available
+            # use Rust converter if available
             try:
                 from RAGnificent.ragnificent_rs import (
                     convert_html_to_format,
@@ -270,7 +270,7 @@ async def convert_endpoint(request: ConvertRequest):
                     converted = convert_html_to_format(request.content, "", request.to_format)
 
             except ImportError as e:
-                # Fallback to Python implementation
+                # fallback to Python implementation
                 from markdownify import markdownify
 
                 if request.to_format == "markdown":
@@ -281,10 +281,10 @@ async def convert_endpoint(request: ConvertRequest):
                         detail="Format conversion not available without Rust components",
                     ) from e
         else:
-            # For non-HTML inputs, return as-is for now
+            # for non-HTML inputs, return as-is for now
             converted = request.content
 
-        # Apply chunking if requested
+        # apply chunking if requested
         chunks = None
         if request.chunk:
             from RAGnificent.utils.chunk_utils import ContentChunker
@@ -324,16 +324,16 @@ async def search_endpoint(request: SearchRequest):
 
         pipeline = get_pipeline()
 
-        # Override collection if specified
+        # override collection if specified
         if request.collection_name:
-            # Create temporary search instance for different collection
+            # create temporary search instance for different collection
             from RAGnificent.rag.search import get_search
 
             search_service = get_search(request.collection_name)
         else:
             search_service = pipeline.search
 
-        # Perform search
+        # perform search
         results = search_service.search(
             request.query, top_k=request.top_k, threshold=request.threshold
         )
@@ -371,7 +371,7 @@ async def query_endpoint(
     try:
         logger.info(f"Query request: {query}")
 
-        # Perform search first
+        # perform search first
         search_request = SearchRequest(
             query=query, collection_name=collection, top_k=top_k, threshold=0.6
         )
@@ -380,11 +380,11 @@ async def query_endpoint(
         if not use_llm:
             return search_response.dict()
 
-        # Generate LLM response using search results
+        # generate LLM response using search results
         try:
             import openai
 
-            # Combine search results into context
+            # combine search results into context
             context = "\n\n".join(
                 [
                     f"Source: {result['source']}\nContent: {result['content']}"
@@ -392,8 +392,8 @@ async def query_endpoint(
                 ]
             )
 
-            # Generate response (requires OpenAI API key)
-            # This is a placeholder - implement according to your LLM setup
+            # generate response (requires OpenAI API key)
+            # this is a placeholder - implement according to your LLM setup
             llm_response = f"Based on the search results, here's what I found about '{query}':\n\n{context}"
 
             return {
@@ -425,13 +425,13 @@ async def pipeline_endpoint(
     try:
         logger.info("Pipeline execution request")
 
-        # Create pipeline from config
+        # create pipeline from config
         pipeline = Pipeline(
             config=request.config,
             continue_on_error=request.continue_on_error,
         )
 
-        # Execute pipeline steps
+        # execute pipeline steps
         results = []
         steps_executed = 0
 
@@ -440,7 +440,7 @@ async def pipeline_endpoint(
             if step_result["status"] == "success":
                 steps_executed += 1
 
-            # Break on error if not continuing
+            # break on error if not continuing
             if step_result["status"] == "error" and not request.continue_on_error:
                 break
 
@@ -465,8 +465,8 @@ async def pipeline_endpoint(
 async def list_collections():
     """List available vector collections."""
     try:
-        # This would need to be implemented based on your vector store
-        # For now, return a placeholder
+        # this would need to be implemented based on your vector store
+        # for now, return a placeholder
         return ["default", "documents", "web_content"]
     except Exception as e:
         logger.error(f"Failed to list collections: {e}")
@@ -479,7 +479,7 @@ async def get_stats():
     try:
         pipeline = get_pipeline()
 
-        # Collect various stats
+        # collect various stats
         return {
             "pipeline_initialized": _pipeline is not None,
             "scraper_stats": {},  # Could add scraper statistics
@@ -492,7 +492,7 @@ async def get_stats():
         raise HTTPException(status_code=500, detail="Failed to get statistics") from e
 
 
-# Error handlers
+# error handlers
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
     """Handle 404 errors."""

@@ -55,28 +55,28 @@ class TestValidateUrl:
 
     def test_url_with_credentials(self):
         """Test URLs with credentials are accepted."""
-        # URLs with credentials should be valid (sanitization removes them)
+        # uRLs with credentials should be valid (sanitization removes them)
         assert validate_url("http://user:pass@example.com") is True
 
     def test_validation_behavior_for_edge_cases(self):
         """Test URL validation behavior for edge cases and error conditions."""
-        # Test empty URL behavior
+        # test empty URL behavior
         result_empty = validate_url("")
         assert result_empty is False
 
-        # Test unsupported protocol behavior
+        # test unsupported protocol behavior
         result_ftp = validate_url("ftp://example.com")
         assert result_ftp is False
 
-        # Test malformed URL behavior
+        # test malformed URL behavior
         result_malformed = validate_url("http://")
         assert result_malformed is False
 
-        # Test javascript protocol (security risk)
+        # test javascript protocol (security risk)
         result_js = validate_url("javascript:alert()")
         assert result_js is False
 
-        # Test that validation correctly identifies these as invalid
+        # test that validation correctly identifies these as invalid
         # rather than just checking if warnings were logged
         invalid_urls = [
             "",
@@ -99,7 +99,7 @@ class TestSanitizeUrl:
         url = "https://example.com/path#fragment"
         sanitized = sanitize_url(url)
 
-        # Fragment should be removed
+        # fragment should be removed
         assert sanitized == "https://example.com/path"
 
     def test_credential_removal(self):
@@ -118,9 +118,9 @@ class TestSanitizeUrl:
 
     def test_malformed_url(self):
         """Test sanitization of malformed URL."""
-        # Malformed URLs may still be processed by urlparse
+        # malformed URLs may still be processed by urlparse
         sanitized_url = sanitize_url("not a url")
-        # Should either return empty or the original string
+        # should either return empty or the original string
         assert sanitized_url in {"", "not a url"}
 
     def test_preserve_query_params(self):
@@ -165,12 +165,12 @@ class TestValidateFilePath:
         """Test file extension validation."""
         allowed_extensions = ["txt", "csv", "json"]
 
-        # Valid extensions
+        # valid extensions
         assert validate_file_path("data.txt", allowed_extensions) is True
         assert validate_file_path("report.csv", allowed_extensions) is True
         assert validate_file_path("config.json", allowed_extensions) is True
 
-        # Invalid extensions
+        # invalid extensions
         assert validate_file_path("script.exe", allowed_extensions) is False
         assert validate_file_path("image.png", allowed_extensions) is False
         assert validate_file_path("no_extension", allowed_extensions) is False
@@ -225,7 +225,7 @@ class TestValidateRegexPattern:
 
     def test_catastrophic_pattern_detection_behavior(self):
         """Test that catastrophic regex patterns are actually rejected."""
-        # Test that the function correctly identifies and rejects dangerous patterns
+        # test that the function correctly identifies and rejects dangerous patterns
         dangerous_patterns = [
             r"(.*)*",  # Exponential backtracking
             r"(.+)+",  # Exponential backtracking
@@ -236,7 +236,7 @@ class TestValidateRegexPattern:
             is_valid = validate_regex_pattern(pattern)
             assert is_valid is False, f"Dangerous pattern should be rejected: {pattern}"
 
-        # Test that normal patterns are still accepted
+        # test that normal patterns are still accepted
         safe_patterns = [
             r"\d+",
             r"[a-zA-Z]+",
@@ -279,7 +279,7 @@ class TestValidateHtmlContent:
 
     def test_suspicious_html(self):
         """Test detection of suspicious HTML with many script tags."""
-        # Create HTML with 21 script tags (threshold is 20)
+        # create HTML with 21 script tags (threshold is 20)
         suspicious_html = (
             "<html><body>" + "<script>alert()</script>" * 21 + "</body></html>"
         )
@@ -316,19 +316,19 @@ class TestValidateOutputFormat:
 
     def test_format_validation_comprehensive_behavior(self):
         """Test output format validation behavior."""
-        # Test valid formats (case insensitive)
+        # test valid formats (case insensitive)
         valid_formats = ["markdown", "json", "xml", "Markdown", "JSON", "XML"]
         for fmt in valid_formats:
             result = validate_output_format(fmt)
             assert result is True, f"Valid format should be accepted: {fmt}"
 
-        # Test invalid formats
+        # test invalid formats
         invalid_formats = ["", None, "pdf", "html", "text", "yaml", "csv", "docx"]
         for fmt in invalid_formats:
             result = validate_output_format(fmt)
             assert result is False, f"Invalid format should be rejected: {fmt}"
 
-        # Test edge cases
+        # test edge cases
         edge_cases = [
             "MARKDOWN",  # All caps
             "Json",  # Mixed case
@@ -336,7 +336,7 @@ class TestValidateOutputFormat:
             "json,xml",  # Multiple formats
         ]
 
-        # Test actual behavior rather than logging
+        # test actual behavior rather than logging
         assert validate_output_format("MARKDOWN") is True
         assert validate_output_format("Json") is True
         assert (
@@ -379,19 +379,19 @@ class TestValidateChunkParams:
 
     def test_chunk_validation_edge_cases_and_boundaries(self):
         """Test chunk parameter validation with edge cases and boundary conditions."""
-        # Test invalid chunk sizes
+        # test invalid chunk sizes
         invalid_sizes = [0, -1, -100, -1000]
         for size in invalid_sizes:
             result = validate_chunk_params(size, 0)
             assert result is False, f"Invalid chunk size should be rejected: {size}"
 
-        # Test invalid overlaps
+        # test invalid overlaps
         invalid_overlaps = [-1, -10, -100]
         for overlap in invalid_overlaps:
             result = validate_chunk_params(1000, overlap)
             assert result is False, f"Invalid overlap should be rejected: {overlap}"
 
-        # Test overlap greater than or equal to chunk size
+        # test overlap greater than or equal to chunk size
         boundary_cases = [
             (100, 100),  # Equal - should be invalid
             (100, 150),  # Greater - should be invalid
@@ -405,7 +405,7 @@ class TestValidateChunkParams:
                 f"Overlap >= size should be invalid: {size}, {overlap}"
             )
 
-        # Test valid boundary cases
+        # test valid boundary cases
         valid_cases = [
             (100, 99),  # Just under
             (1000, 500),  # 50% overlap
@@ -438,31 +438,31 @@ class TestValidateRateLimit:
 
     def test_unusually_high_rates(self):
         """Test warning for unusually high rate limits."""
-        # Rates over 100 should still be valid but log a warning
+        # rates over 100 should still be valid but log a warning
         assert validate_rate_limit(101) is False
         assert validate_rate_limit(1000) is False
 
     def test_rate_limit_boundary_validation_behavior(self):
         """Test rate limit validation with boundary testing."""
-        # Test invalid rates (zero and negative)
+        # test invalid rates (zero and negative)
         invalid_rates = [0, -1, -10, -0.5, 0.0]
         for rate in invalid_rates:
             result = validate_rate_limit(rate)
             assert result is False, f"Invalid rate should be rejected: {rate}"
 
-        # Test unusually high rates (over threshold)
+        # test unusually high rates (over threshold)
         high_rates = [101, 150, 1000, 999999]
         for rate in high_rates:
             result = validate_rate_limit(rate)
             assert result is False, f"Unusually high rate should be rejected: {rate}"
 
-        # Test valid rates within acceptable bounds
+        # test valid rates within acceptable bounds
         valid_rates = [0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0]
         for rate in valid_rates:
             result = validate_rate_limit(rate)
             assert result is True, f"Valid rate should be accepted: {rate}"
 
-        # Test boundary conditions
+        # test boundary conditions
         boundary_cases = [
             (0.001, True),  # Very small but positive
             (100.0, True),  # At upper limit
@@ -551,7 +551,7 @@ class TestInputValidator:
         """Test input validator behavior across all input types."""
         validator = InputValidator()
 
-        # Test all supported input types with valid inputs
+        # test all supported input types with valid inputs
         valid_test_cases = [
             ("url", "https://example.com"),
             ("file_path", "data/file.txt"),
@@ -566,7 +566,7 @@ class TestInputValidator:
             result = validator.validate_input(input_type, value)
             assert result is True, f"Valid {input_type} should be accepted: {value}"
 
-        # Test all supported input types with invalid inputs
+        # test all supported input types with invalid inputs
         invalid_test_cases = [
             ("url", "not a url"),
             ("file_path", "../etc/passwd"),
@@ -581,12 +581,12 @@ class TestInputValidator:
             result = validator.validate_input(input_type, value)
             assert result is False, f"Invalid {input_type} should be rejected: {value}"
 
-        # Test unknown input type behavior
+        # test unknown input type behavior
         result = validator.validate_input("unknown_type", "value")
         assert result is False, "Unknown input type should be rejected"
 
-        # Test edge cases for chunk_params
-        # Note: Missing chunk_overlap defaults to 0, which is valid
+        # test edge cases for chunk_params
+        # note: Missing chunk_overlap defaults to 0, which is valid
         chunk_edge_cases = [
             ({"chunk_size": 1000, "chunk_overlap": 100}, True),
             ({"chunk_size": 0, "chunk_overlap": 0}, False),  # Invalid chunk_size

@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 # NOTE: Header parsing is implemented manually in `_parse_markdown_sections` for flexibility
-# If future refactors prefer a regex approach, introduce a tested pattern there.
+# if future refactors prefer a regex approach, introduce a tested pattern there.
 
 
 @dataclass
@@ -91,7 +91,7 @@ class ContentChunker:
                         context_headers = [
                             parent["markdown"] for parent in parent_headers
                         ]
-                        # Add the current section header
+                        # add the current section header
                         if heading and not " ".join(chunk_words).startswith(heading):
                             context_headers.append(heading)
 
@@ -144,30 +144,30 @@ class ContentChunker:
         sections = []
         lines = markdown_content.split("\n")
 
-        # Track header stack for maintaining hierarchy
+        # track header stack for maintaining hierarchy
         header_stack: List[Dict[str, Any]] = []
         current_section = None
 
         for line in lines:
-            # Manual header detection: up to 3 leading spaces, 1-6 '#'s, at least one space, then text
+            # manual header detection: up to 3 leading spaces, 1-6 '#'s, at least one space, then text
             stripped = line.lstrip(" ")
             leading_spaces = len(line) - len(stripped)
             if 0 <= leading_spaces <= 3 and stripped.startswith("#"):
-                # Count number of consecutive '#' at the start
+                # count number of consecutive '#' at the start
                 i = 0
                 while i < len(stripped) and stripped[i] == "#":
                     i += 1
                 if 1 <= i <= 6 and (i < len(stripped) and stripped[i] == " "):
                     heading_text = stripped[i + 1 :].strip()
                     level = i
-                    # This is a header line
-                    # If we have a current section, finalize it and add to sections list
+                    # this is a header line
+                    # if we have a current section, finalize it and add to sections list
                     if current_section:
                         sections.append(current_section)
-                    # Update header stack based on new header level
+                    # update header stack based on new header level
                     while header_stack and int(header_stack[-1]["level"]) >= level:
                         header_stack.pop()
-                    # Create path representation of current location in hierarchy
+                    # create path representation of current location in hierarchy
                     path_elements = [str(h["text"]) for h in header_stack] + [
                         str(heading_text)
                     ]
@@ -182,11 +182,11 @@ class ContentChunker:
                         }
                         for header in header_stack
                     ]
-                    # Create new header entry
+                    # create new header entry
                     header_entry = {"level": level, "text": heading_text}
-                    # Push to stack
+                    # push to stack
                     header_stack.append(header_entry)
-                    # Start new section
+                    # start new section
                     current_section = {
                         "heading": line,
                         "content": line + "\n",
@@ -197,12 +197,12 @@ class ContentChunker:
                         "nested_level": len(parent_headers),
                     }
                     continue
-            # Not a header line
+            # not a header line
             if current_section:
-                # Add line to current section content
+                # add line to current section content
                 current_section["content"] += line + "\n"
             elif line.strip():
-                # Create a default section for content before first header
+                # create a default section for content before first header
                 current_section = {
                     "heading": "Document Start",
                     "content": line + "\n",
@@ -213,7 +213,7 @@ class ContentChunker:
                     "nested_level": 0,
                 }
 
-        # Add the final section if it exists
+        # add the final section if it exists
         if current_section:
             sections.append(current_section)
 
@@ -262,11 +262,11 @@ def create_semantic_chunks(
     """
     chunker = ContentChunker(chunk_size, chunk_overlap)
 
-    # Check if content is likely markdown
+    # check if content is likely markdown
     if re.search(r"^#+ ", content, re.MULTILINE):
         return chunker.create_chunks_from_markdown(content, source_url)
 
-    # For non-markdown text, create simple overlapping chunks
+    # for non-markdown text, create simple overlapping chunks
     chunks = []
     domain = urlparse(source_url).netloc
     words = content.split()
@@ -316,7 +316,7 @@ def chunk_text(
     if not content:
         return []
 
-    # Split into words for more natural chunking
+    # split into words for more natural chunking
     words = content.split()
 
     avg_word_length = len(content) / max(len(words), 1)
@@ -353,7 +353,7 @@ def recursive_chunk_text(
 
     paragraphs = re.split(r"\n\s*\n", content)
 
-    # If we have multiple paragraphs, try to group them into chunks
+    # if we have multiple paragraphs, try to group them into chunks
     if len(paragraphs) > 1:
         chunks = []
         current_chunk = ""
@@ -361,7 +361,7 @@ def recursive_chunk_text(
         for para in paragraphs:
             if len(current_chunk) + len(para) + 2 > chunk_size and current_chunk:
                 chunks.append(current_chunk)
-                # Start new chunk with overlap from previous chunk
+                # start new chunk with overlap from previous chunk
                 overlap_text = (
                     current_chunk[-chunk_overlap:]
                     if chunk_overlap < len(current_chunk)
@@ -373,7 +373,7 @@ def recursive_chunk_text(
             else:
                 current_chunk = para
 
-        # Add the last chunk if it's not empty
+        # add the last chunk if it's not empty
         if current_chunk:
             chunks.append(current_chunk)
 

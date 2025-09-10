@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from xml.dom import minidom
 
-# Library code should avoid mutating sys.path; use package imports
+# library code should avoid mutating sys.path; use package imports
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ class OutputFormat(str, Enum):
     XML = "xml"
 
 
-# Try to import the Rust extension
+# try to import the Rust extension
 try:
     from .ragnificent_rs import chunk_markdown as _rs_chunk_markdown
     from .ragnificent_rs import convert_html_to_markdown as _rs_convert_html_to_markdown
@@ -39,16 +39,16 @@ try:
     try:
         from .ragnificent_rs import convert_html_to_format as _rs_convert_html_to_format
     except ImportError:
-        # Define a function that uses the markdown converter and then converts to the desired format
+        # define a function that uses the markdown converter and then converts to the desired format
         def _rs_convert_html_to_format(html, base_url, format_name):
             """Convert HTML to the specified format using Rust implementations."""
             if format_name.lower() == "markdown":
                 return _rs_convert_html_to_markdown(html, base_url)
 
-            # First convert to markdown
+            # first convert to markdown
             markdown = _rs_convert_html_to_markdown(html, base_url)
 
-            # Then convert to the requested format
+            # then convert to the requested format
             document = parse_markdown_to_document(markdown, base_url)
 
             if format_name.lower() == "json":
@@ -106,7 +106,7 @@ def convert_html(
                 f"Error in Rust HTML conversion to {output_format}, falling back to Python: {e}"
             )
 
-    # Fall back to Python implementation
+    # fall back to Python implementation
     from RAGnificent.core.scraper import MarkdownScraper
 
     scraper = MarkdownScraper()
@@ -114,11 +114,11 @@ def convert_html(
     if output_format == OutputFormat.MARKDOWN:
         return scraper.convert_to_markdown(html, base_url)
 
-    # For JSON and XML, first convert to markdown to get structured content
-    # This is a simplified implementation - the real one would parse the HTML directly
+    # for JSON and XML, first convert to markdown to get structured content
+    # this is a simplified implementation - the real one would parse the HTML directly
     markdown_content = scraper.convert_to_markdown(html, base_url)
 
-    # Parse markdown into our document structure
+    # parse markdown into our document structure
     document = parse_markdown_to_document(markdown_content, base_url)
 
     if output_format == OutputFormat.JSON:
@@ -126,7 +126,7 @@ def convert_html(
     if output_format == OutputFormat.XML:
         return document_to_xml(document)
 
-    # Fallback to markdown if format not recognized
+    # fallback to markdown if format not recognized
     return markdown_content
 
 
@@ -155,24 +155,24 @@ def parse_markdown_to_document(markdown: str, base_url: str) -> Dict:
         "blockquotes": [],
     }
 
-    # Extract title (first h1)
+    # extract title (first h1)
     for line in lines:
         if line.startswith("# "):
             document["title"] = line[2:].strip()
             break
 
-    # Process other elements with a very simple parser
-    # This is just a fallback implementation
+    # process other elements with a very simple parser
+    # this is just a fallback implementation
     current_block = []
     in_code_block = False
     code_lang = ""
 
     for line in lines:
-        # Skip title line which we already processed
+        # skip title line which we already processed
         if line.strip() == f"# {document['title']}":
             continue
 
-        # Handle headings
+        # handle headings
         if line.startswith("#") and not in_code_block:
             level = 0
             while level < len(line) and line[level] == "#":
@@ -182,7 +182,7 @@ def parse_markdown_to_document(markdown: str, base_url: str) -> Dict:
                     {"level": level, "text": line[level + 1 :].strip()}
                 )
 
-        # Handle code blocks
+        # handle code blocks
         elif line.startswith("```") and not in_code_block:
             in_code_block = True
             code_lang = line[3:].strip()
@@ -194,15 +194,15 @@ def parse_markdown_to_document(markdown: str, base_url: str) -> Dict:
             )
             current_block = []
 
-        # Collect code block content
+        # collect code block content
         elif in_code_block:
             current_block.append(line)
 
-        # Handle blockquotes
+        # handle blockquotes
         elif line.startswith(">") and not in_code_block:
             document["blockquotes"].append(line[1:].strip())
 
-        # Handle paragraphs (very simplified)
+        # handle paragraphs (very simplified)
         elif line.strip() and not in_code_block:
             document["paragraphs"].append(line.strip())
 
@@ -221,31 +221,31 @@ def document_to_xml(document: Dict) -> str:
     """
     root = ET.Element("document")
 
-    # Add title
+    # add title
     title = ET.SubElement(root, "title")
     title.text = document["title"]
 
-    # Add base URL
+    # add base URL
     base_url = ET.SubElement(root, "base_url")
     base_url.text = document["base_url"]
 
-    # Add headings
+    # add headings
     headings = ET.SubElement(root, "headings")
     for h in document["headings"]:
         heading = ET.SubElement(headings, "heading")
         heading.set("level", str(h["level"]))
         heading.text = h["text"]
 
-    # Add paragraphs
+    # add paragraphs
     paragraphs = ET.SubElement(root, "paragraphs")
     for p in document["paragraphs"]:
         paragraph = ET.SubElement(paragraphs, "paragraph")
         paragraph.text = p
 
-    # Add other elements similarly
-    # This is simplified for brevity
+    # add other elements similarly
+    # this is simplified for brevity
 
-    # Convert to string with pretty formatting
+    # convert to string with pretty formatting
     rough_string = ET.tostring(root, "utf-8")
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
@@ -272,7 +272,7 @@ def chunk_markdown(
         except Exception as e:
             logger.warning(f"Error in Rust chunking, falling back to Python: {e}")
 
-    # Fall back to Python implementation
+    # fall back to Python implementation
     from RAGnificent.utils.chunk_utils import create_semantic_chunks
 
     chunks = create_semantic_chunks(
@@ -303,9 +303,9 @@ def render_js_page(url: str, wait_time_ms: Optional[int] = None) -> str:
         except Exception as e:
             logger.warning(f"Error in Rust JS rendering, falling back to Python: {e}")
 
-    # Fall back to Python implementation
-    # This would require a JS renderer like Playwright or Selenium
-    # For now, we'll just log a warning and return None
+    # fall back to Python implementation
+    # this would require a JS renderer like Playwright or Selenium
+    # for now, we'll just log a warning and return None
     logger.warning(
         "JS rendering requires the Rust extension or an external browser automation tool"
     )

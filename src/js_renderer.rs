@@ -12,8 +12,8 @@ pub enum RendererError {
     TimeoutError,
 }
 
-/// Renders a JavaScript-enabled page and returns the HTML content.
-/// Uses headless Chrome/Chromium via WebDriver protocol.
+/// renders a JavaScript-enabled page and returns the HTML content.
+/// uses headless Chrome/Chromium via WebDriver protocol.
 pub async fn render_page(url: &str, _wait_time: u64) -> Result<String, RendererError> {
     #[cfg(feature = "real_rendering")]
     {
@@ -60,7 +60,7 @@ pub async fn render_page(url: &str, _wait_time: u64) -> Result<String, RendererE
 }
 
 fn enhanced_html(html: &str) -> Result<String, RendererError> {
-    // Basic HTML enhancement logic
+    // basic HTML enhancement logic
     Ok(html.to_string())
 }
 

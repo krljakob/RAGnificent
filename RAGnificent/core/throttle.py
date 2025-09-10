@@ -382,12 +382,12 @@ class AsyncRequestThrottler:
         self.max_workers = max_workers
         self.adaptive_throttling = adaptive_throttling
 
-        # Async synchronization primitives
+        # async synchronization primitives
         self._domain_locks = defaultdict(lambda: asyncio.Lock())
         self._domain_stats = defaultdict(DomainStats)
         self._last_request_times = defaultdict(float)
 
-        # Global semaphore to limit concurrent requests
+        # global semaphore to limit concurrent requests
         self._global_semaphore = asyncio.Semaphore(max_workers)
 
     async def throttle(self, url: str) -> None:
@@ -419,11 +419,11 @@ class AsyncRequestThrottler:
             await asyncio.sleep(backoff_time)
             domain_stats.backoff_until = None
 
-        # Calculate rate limit for this domain
+        # calculate rate limit for this domain
         rate_limit = self._get_domain_rate_limit(domain)
         min_interval = 1.0 / rate_limit
 
-        # Calculate time since last request
+        # calculate time since last request
         current_time = time.time()
         last_request_time = self._last_request_times[domain]
         time_since_last = current_time - last_request_time
@@ -443,7 +443,7 @@ class AsyncRequestThrottler:
         if self.adaptive_throttling:
             domain_stats = self._domain_stats[domain]
 
-            # Adjust rate based on error rate
+            # adjust rate based on error rate
             if domain_stats.success_count + domain_stats.error_count > 10:
                 error_rate = domain_stats.error_count / (
                     domain_stats.success_count + domain_stats.error_count

@@ -128,21 +128,21 @@ def timing_context(description: str = "Operation"):
 class PerformanceBudgets:
     """Centralized performance budgets for consistent validation."""
 
-    # Rate limiting operation budgets
+    # rate limiting operation budgets
     RATE_LIMIT_CHECK = 0.01  # 10ms for rate limit check
     THROTTLE_IMMEDIATE = 0.05  # 50ms for immediate throttle pass
     THROTTLE_DELAY = 1.0  # 1s base delay + tolerance
 
-    # Cache operation budgets
+    # cache operation budgets
     CACHE_GET = 0.01  # 10ms for cache retrieval
     CACHE_SET = 0.02  # 20ms for cache storage
     CACHE_CLEAR = 0.1  # 100ms for cache clear operation
 
-    # Network operation budgets (mocked)
+    # network operation budgets (mocked)
     MOCK_REQUEST = 0.01  # 10ms for mocked network request
     MOCK_RESPONSE = 0.005  # 5ms for mocked response processing
 
-    # Security operation budgets
+    # security operation budgets
     INPUT_VALIDATION = 0.01  # 10ms for input validation
     DATA_SANITIZATION = 0.02  # 20ms for data sanitization
 
@@ -155,18 +155,18 @@ class PerformanceBudgets:
 class TimingCategories:
     """Standard timing categories with appropriate tolerance levels."""
 
-    # Critical timing operations - tight tolerance
+    # critical timing operations - tight tolerance
     CRITICAL_TOLERANCE = 5.0  # ±5%
 
-    # Rate limiting operations - medium tolerance for system variations
+    # rate limiting operations - medium tolerance for system variations
     RATE_LIMIT_TOLERANCE = (
         12.0  # ±12% (slightly increased to handle system timing variations)
     )
 
-    # Integration test operations - relaxed tolerance
+    # integration test operations - relaxed tolerance
     INTEGRATION_TOLERANCE = 15.0  # ±15%
 
-    # Network operation simulations - very relaxed tolerance
+    # network operation simulations - very relaxed tolerance
     NETWORK_TOLERANCE = 20.0  # ±20%
 
 
@@ -185,14 +185,14 @@ def create_mock_delay_function(target_delay: float) -> Callable[[], None]:
     """
 
     def mock_delay():
-        # In real tests, this would be mocked to not actually delay
+        # in real tests, this would be mocked to not actually delay
         # but to return a predictable timing result
         time.sleep(target_delay)
 
     return mock_delay
 
 
-# Convenience functions for common timing patterns
+# convenience functions for common timing patterns
 def assert_immediate_operation(
     duration: float, description: str = "Immediate operation"
 ) -> None:

@@ -77,13 +77,13 @@ Integration testing verifies that components work together correctly.
             strategy=ChunkingStrategy.SEMANTIC,
         )
 
-        # Verify chunking results
+        # verify chunking results
         self.assertGreater(len(chunks), 0, "Should create chunks from test document")
         self.assertLess(
             len(chunks), 20, "Should not create excessive chunks from test document"
         )
 
-        # Verify chunk structure and content
+        # verify chunk structure and content
         for i, chunk in enumerate(chunks):
             self.assertIn("content", chunk, f"Chunk {i} should have content field")
             self.assertIn("url", chunk, f"Chunk {i} should have url field")
@@ -96,7 +96,7 @@ Integration testing verifies that components work together correctly.
                 f"Chunk {i} should have correct source URL",
             )
 
-        # Verify content preservation
+        # verify content preservation
         chunk_text = " ".join(chunk["content"] for chunk in chunks)
         self.assertIn(
             "Test Document", chunk_text, "Document title should be preserved in chunks"
@@ -111,10 +111,10 @@ Integration testing verifies that components work together correctly.
             chunks, output_file="test_embedded_chunks.json"
         )
 
-        # Verify embedding results
+        # verify embedding results
         self.assertEqual(len(embedded_chunks), len(chunks), "Should embed all chunks")
 
-        # Verify embedding structure and quality
+        # verify embedding structure and quality
         for i, chunk in enumerate(embedded_chunks):
             self.assertIn("embedding", chunk, f"Chunk {i} should have an embedding")
             embedding = chunk["embedding"]
@@ -147,25 +147,25 @@ Integration testing verifies that components work together correctly.
                     f"Chunk {i} embedding should have reasonable size",
                 )
 
-            # Verify original chunk data is preserved
+            # verify original chunk data is preserved
             self.assertIn(
                 "content", chunk, f"Embedded chunk {i} should preserve content"
             )
             self.assertIn("url", chunk, f"Embedded chunk {i} should preserve url")
 
-        # Verify storage succeeded
+        # verify storage succeeded
         success = self.pipeline.store_chunks(embedded_chunks)
         self.assertTrue(success, "Should successfully store embedded chunks")
 
-        # Test search functionality
+        # test search functionality
         query = "RAG systems"
         results = self.pipeline.search_documents(query)
 
-        # Verify search results
+        # verify search results
         self.assertGreater(len(results), 0, "Should find results for query")
         self.assertLessEqual(len(results), 10, "Should not return excessive results")
 
-        # Verify result structure
+        # verify result structure
         for i, result in enumerate(results):
             self.assertIn("content", result, f"Result {i} should have content")
             self.assertIn("score", result, f"Result {i} should have relevance score")
@@ -179,7 +179,7 @@ Integration testing verifies that components work together correctly.
                 result["content"].strip(), "", f"Result {i} content should not be empty"
             )
 
-        # Verify search relevance
+        # verify search relevance
         found_relevant_content = any(
             "RAG systems" in result["content"]
             or "Retrieval Augmented Generation" in result["content"]
@@ -190,7 +190,7 @@ Integration testing verifies that components work together correctly.
             found_relevant_content, "Should find chunk containing query-related terms"
         )
 
-        # Verify results are ranked by relevance (scores should be in descending order)
+        # verify results are ranked by relevance (scores should be in descending order)
         scores = [result["score"] for result in results]
         self.assertEqual(
             scores,
@@ -200,7 +200,7 @@ Integration testing verifies that components work together correctly.
 
     def test_pipeline_with_different_chunking_strategies(self):
         """Test the pipeline with different chunking strategies."""
-        # Test different chunking strategies
+        # test different chunking strategies
         strategies = [
             (ChunkingStrategy.SEMANTIC, "Semantic"),
             (ChunkingStrategy.SLIDING_WINDOW, "Sliding window"),
@@ -214,13 +214,13 @@ Integration testing verifies that components work together correctly.
                 [self.test_document], strategy=strategy
             )
 
-            # Verify each strategy produces chunks
+            # verify each strategy produces chunks
             self.assertGreater(len(chunks), 0, f"{name} chunking should create chunks")
             self.assertLess(
                 len(chunks), 50, f"{name} chunking should not create excessive chunks"
             )
 
-            # Verify chunk quality
+            # verify chunk quality
             for i, chunk in enumerate(chunks):
                 self.assertIn("content", chunk, f"{name} chunk {i} should have content")
                 self.assertNotEqual(
@@ -230,16 +230,16 @@ Integration testing verifies that components work together correctly.
                 )
                 self.assertIn("url", chunk, f"{name} chunk {i} should have url")
 
-            # Store results for comparison
+            # store results for comparison
             strategy_results[name] = chunks
 
-        # Verify strategies produce different results (implementation-dependent)
+        # verify strategies produce different results (implementation-dependent)
         chunk_counts = [len(chunks) for chunks in strategy_results.values()]
         self.assertGreater(
             max(chunk_counts), 0, "At least one strategy should produce chunks"
         )
 
-        # Verify content preservation across strategies
+        # verify content preservation across strategies
         for strategy_name, chunks in strategy_results.items():
             combined_content = " ".join(chunk["content"] for chunk in chunks)
             self.assertIn(
